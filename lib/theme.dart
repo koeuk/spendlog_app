@@ -12,6 +12,10 @@ abstract final class AppTheme {
   static const cardRadius = 28.0;
   static const pillRadius = 28.0;
 
+  /// Room a scrollable must leave at its bottom so its last row clears the
+  /// floating nav bar, which the tabs' content now runs underneath.
+  static const navBarClearance = 104.0;
+
   static ThemeData light() {
     final scheme = ColorScheme.fromSeed(
       seedColor: green,

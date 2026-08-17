@@ -121,7 +121,8 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
             onRefresh: () => refreshQuietly(ref.refresh(expensesProvider.future)),
             child: ListView.separated(
               controller: _scroll,
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
+              // Clears the floating nav bar and the FAB stacked above it.
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, AppTheme.navBarClearance + 72),
               itemCount: state.items.length + (state.hasMore ? 1 : 0),
               separatorBuilder: (context, index) => const SizedBox(height: 10),
               itemBuilder: (context, index) {

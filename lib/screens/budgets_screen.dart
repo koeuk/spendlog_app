@@ -46,7 +46,7 @@ class BudgetsScreen extends ConsumerWidget {
           color: AppTheme.green,
           onRefresh: () => refreshQuietly(ref.refresh(budgetSummaryProvider.future)),
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, AppTheme.navBarClearance),
             children: [
               _OverallCard(line: data.overall, month: month),
               const SizedBox(height: 16),

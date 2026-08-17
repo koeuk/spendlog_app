@@ -99,7 +99,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, AppTheme.navBarClearance),
         children: [
           Card(
             child: Padding(
