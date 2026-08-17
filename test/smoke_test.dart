@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spendlog_app/api/api_client.dart';
+import 'package:spendlog_app/api/env.dart';
 import 'package:spendlog_app/main.dart';
 import 'package:spendlog_app/models/user.dart';
 import 'package:spendlog_app/providers/auth_provider.dart';
@@ -50,6 +51,18 @@ void main() {
     // word "over", so the sign must not be printed as well.
     expect(moneyAbs('-6.00'), '\$6.00');
     expect(moneyAbs('6.00'), '\$6.00');
+  });
+
+  test('the API base URL is a reachable address carrying the port', () {
+    final url = Uri.parse(Env.baseUrl);
+
+    // This file has been flattened to placeholder hosts before, which compiles
+    // and analyzes clean but points every request at nowhere.
+    expect(url.scheme, anyOf('http', 'https'));
+    expect(url.host, matches(RegExp(r'^[a-z0-9.\-]+$')));
+    expect(url.host, isNot(contains('[')));
+    expect(url.hasPort, isTrue, reason: 'the PORT knob must reach the URL');
+    expect(url.path, '/api/v1');
   });
 
   test('the router survives an auth change', () async {
