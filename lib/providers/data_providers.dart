@@ -4,12 +4,42 @@ import '../api/api_client.dart';
 import '../models/category.dart';
 import '../models/dashboard.dart';
 import '../models/expense.dart';
+import '../models/report.dart';
 import '../repositories/spendlog_repository.dart';
 import '../utils/format.dart';
 
 final repositoryProvider = Provider<SpendLogRepository>(
   (ref) => SpendLogRepository(ApiClient.instance),
 );
+
+// ------------------------------------------------------------------ reports
+
+/// Which period the Reports screen is looking at: the granularity and the
+/// anchor within it. Held together because changing the granularity has to
+/// clear the anchor — '2026-08' means nothing to a year view.
+class ReportPeriod {
+  const ReportPeriod({this.granularity = 'month', this.anchor});
+
+  final String granularity;
+
+  /// Null means "the current one", which is what the server defaults to.
+  final String? anchor;
+
+  ReportPeriod withGranularity(String value) => ReportPeriod(granularity: value);
+
+  ReportPeriod withAnchor(String value) =>
+      ReportPeriod(granularity: granularity, anchor: value);
+}
+
+final reportPeriodProvider = StateProvider<ReportPeriod>((ref) => const ReportPeriod());
+
+final reportProvider = FutureProvider.autoDispose<Report>((ref) {
+  final period = ref.watch(reportPeriodProvider);
+
+  return ref
+      .watch(repositoryProvider)
+      .report(period: period.granularity, at: period.anchor);
+});
 
 // ---------------------------------------------------------------- dashboard
 

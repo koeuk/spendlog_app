@@ -54,6 +54,13 @@ abstract final class CategoryStyle {
 
   static IconData icon(String? name) => _icons[name] ?? Icons.category_outlined;
 
+  /// The values the category form offers. These mirror the server's
+  /// CategoryColor / CategoryIcon enums, which reject anything else with a
+  /// `422` — so the picker must not invent options.
+  static List<String> get colorNames => _colors.keys.toList();
+
+  static List<String> get iconNames => _icons.keys.toList();
+
   /// Budget status → the color its bar and label render in.
   static Color statusColor(String status) => switch (status) {
         'over' => const Color(0xFFDC2626),

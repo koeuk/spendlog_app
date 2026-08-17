@@ -4,6 +4,7 @@ import '../models/budget_summary.dart';
 import '../models/category.dart';
 import '../models/dashboard.dart';
 import '../models/expense.dart';
+import '../models/report.dart';
 import '../models/user.dart';
 
 /// Every data call the app makes, one thin method per endpoint. Shapes follow
@@ -77,6 +78,21 @@ class SpendLogRepository {
 
   Future<void> deleteExpense(String uuid) => _client.dio.delete('/expenses/$uuid');
 
+  // -------------------------------------------------------------- reports
+
+  /// [period] is week | month | year | all; [at] anchors it (`2026-08` for a
+  /// month, `2026-08-17` for a week, `2026` for a year) and is ignored for all.
+  Future<Report> report({String period = 'month', String? at}) async {
+    final response = await _client.dio.get('/reports', queryParameters: {
+      'period': period,
+      'at': ?at,
+    });
+
+    return Report.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
   // ----------------------------------------------------------- categories
 
   Future<List<Category>> categories() async {
@@ -86,6 +102,38 @@ class SpendLogRepository {
         .map((e) => Category.fromJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  /// Creating and editing need the `categories:write` ability *and* the admin
+  /// policy behind it — a non-admin's token never carries the ability, so the
+  /// screen hides these rather than offering a guaranteed 403.
+  Future<void> createCategory({
+    required String name,
+    required String color,
+    required String icon,
+  }) async {
+    await _client.dio.post('/categories', data: {
+      'name': name,
+      'color': color,
+      'icon': icon,
+    });
+  }
+
+  Future<void> updateCategory(
+    String uuid, {
+    required String name,
+    required String color,
+    required String icon,
+  }) async {
+    await _client.dio.patch('/categories/$uuid', data: {
+      'name': name,
+      'color': color,
+      'icon': icon,
+    });
+  }
+
+  /// `409` when expenses or budgets still reference it — the foreign keys
+  /// restrict rather than cascade, so a busy category is a conflict.
+  Future<void> deleteCategory(String uuid) => _client.dio.delete('/categories/$uuid');
 
   // -------------------------------------------------------------- budgets
 

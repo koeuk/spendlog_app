@@ -4,11 +4,13 @@ import 'package:go_router/go_router.dart';
 
 import 'providers/auth_provider.dart';
 import 'screens/budgets_screen.dart';
+import 'screens/categories_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/expenses_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/reports_screen.dart';
 import 'screens/reset_password_screen.dart';
 import 'screens/shell_screen.dart';
 import 'screens/splash_screen.dart';
@@ -18,7 +20,7 @@ import 'screens/splash_screen.dart';
 /// The router must be built exactly once. Watching [authProvider] here instead
 /// would hand `MaterialApp.router` a brand new [GoRouter] on every auth
 /// change — including the [AuthNotifier.setUser] that follows a profile save —
-/// which re-applies `initialLocation` and destroys all four tabs' navigation
+/// which re-applies `initialLocation` and destroys every tab's navigation
 /// state. Refreshing only re-runs `redirect` against the current location.
 class _AuthRefresh extends ChangeNotifier {
   _AuthRefresh(Ref ref) {
@@ -64,7 +66,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) =>
             ResetPasswordScreen(email: state.uri.queryParameters['email'] ?? ''),
       ),
-      // The signed-in app: four tabs behind one bottom bar, each branch
+      // The signed-in app: five tabs behind one bottom bar, each branch
       // keeping its own state when you switch away and back.
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
@@ -80,7 +82,22 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: '/budgets', builder: (context, state) => const BudgetsScreen()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: '/profile', builder: (context, state) => const ProfileScreen()),
+            GoRoute(path: '/reports', builder: (context, state) => const ReportsScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: '/profile',
+              builder: (context, state) => const ProfileScreen(),
+              // Managing categories is occasional and admin-gated, so it sits
+              // under Profile rather than spending a tab. Nested, so the bar
+              // stays put and back returns to Profile.
+              routes: [
+                GoRoute(
+                  path: 'categories',
+                  builder: (context, state) => const CategoriesScreen(),
+                ),
+              ],
+            ),
           ]),
         ],
       ),

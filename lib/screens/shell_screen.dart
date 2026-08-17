@@ -39,6 +39,7 @@ const _destinations = <_Destination>[
   (icon: Icons.grid_view_outlined, active: Icons.grid_view_rounded, label: 'Dashboard'),
   (icon: Icons.receipt_long_outlined, active: Icons.receipt_long_rounded, label: 'Expenses'),
   (icon: Icons.savings_outlined, active: Icons.savings_rounded, label: 'Budgets'),
+  (icon: Icons.insights_outlined, active: Icons.insights_rounded, label: 'Reports'),
   (icon: Icons.person_outline, active: Icons.person_rounded, label: 'Profile'),
 ];
 
@@ -128,7 +129,9 @@ class _NavItem extends StatelessWidget {
         child: AnimatedContainer(
           duration: _motion,
           curve: Curves.easeOutCubic,
-          padding: EdgeInsets.symmetric(horizontal: selected ? 14 : 12, vertical: 12),
+          // Tight on purpose: five tabs plus the active one's label have to fit
+          // 320px, the narrowest width worth supporting.
+          padding: EdgeInsets.symmetric(horizontal: selected ? 12 : 9, vertical: 11),
           decoration: BoxDecoration(
             color: selected ? AppTheme.green : Colors.transparent,
             borderRadius: BorderRadius.circular(99),
@@ -141,7 +144,7 @@ class _NavItem extends StatelessWidget {
                 child: Icon(
                   selected ? destination.active : destination.icon,
                   key: ValueKey(selected),
-                  size: 22,
+                  size: 21,
                   color: selected ? Colors.white : Colors.black.withValues(alpha: 0.45),
                 ),
               ),
@@ -158,7 +161,7 @@ class _NavItem extends StatelessWidget {
                   // screen.
                   heightFactor: 1,
                   child: Padding(
-                    padding: const EdgeInsets.only(left: 7),
+                    padding: const EdgeInsets.only(left: 6),
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 72),
                       child: Text(
@@ -167,7 +170,7 @@ class _NavItem extends StatelessWidget {
                         overflow: TextOverflow.clip,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 12.5,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
