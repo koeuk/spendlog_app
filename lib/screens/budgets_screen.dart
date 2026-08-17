@@ -228,6 +228,10 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
   final _formKey = GlobalKey<FormState>();
   late final _amount = TextEditingController(text: widget.line.budget ?? '');
 
+  /// What the *entered* amount is denominated in. Storage is always USD,
+  /// converted server-side — see App\Enums\Currency in the backend.
+  String _currency = 'USD';
+
   bool _busy = false;
 
   @override
@@ -258,6 +262,7 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
             month: widget.month,
             amount: _amount.text.trim(),
             categoryUuid: widget.overall ? null : widget.line.uuid,
+            currency: _currency,
           );
 
       _refreshMoneyOnScreen();
@@ -321,20 +326,82 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
                     ?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 18),
-              TextFormField(
-                controller: _amount,
-                decoration: const InputDecoration(hintText: 'Amount', prefixText: '\$ '),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                autofocus: true,
-                textInputAction: TextInputAction.done,
-                onFieldSubmitted: (_) => _save(),
-                validator: (v) {
-                  final parsed = double.tryParse(v?.trim() ?? '');
-                  if (parsed == null || parsed < 0) return 'Enter an amount.';
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _amount,
+                      decoration: InputDecoration(
+                        hintText: 'Amount',
+                        prefixText: _currency == 'USD' ? '\$ ' : '៛ ',
+                      ),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      autofocus: true,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _save(),
+                      validator: (v) {
+                        final parsed = double.tryParse(v?.trim() ?? '');
+                        if (parsed == null || parsed < 0) return 'Enter an amount.';
 
-                  return null;
-                },
+                        // Mirrors Currency::minimumInput — ៛100 is the smallest
+                        // note in circulation, so anything under it is not an
+                        // amount that can be paid. The server rejects it too;
+                        // this just says so before the round trip.
+                        if (_currency == 'KHR' && parsed < 100) {
+                          return 'At least ៛100.';
+                        }
+
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'USD', label: Text('\$')),
+                      ButtonSegment(value: 'KHR', label: Text('៛')),
+                    ],
+                    selected: {_currency},
+                    onSelectionChanged: (selection) {
+                      setState(() {
+                        _currency = selection.first;
+                        // The field is prefilled with the *stored* budget, which
+                        // is USD. Keeping that figure while the prefix says ៛
+                        // would label $200.00 as ៛200 and store it back as five
+                        // cents. The web form converts instead, but it has the
+                        // rate from Inertia props — no API endpoint exposes
+                        // khr_per_usd, so clearing is the only honest option.
+                        _amount.clear();
+                      });
+                    },
+                    showSelectedIcon: false,
+                    style: ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                      backgroundColor: WidgetStateProperty.resolveWith(
+                        (states) => states.contains(WidgetState.selected)
+                            ? AppTheme.green
+                            : Colors.white,
+                      ),
+                      foregroundColor: WidgetStateProperty.resolveWith(
+                        (states) => states.contains(WidgetState.selected)
+                            ? Colors.white
+                            : AppTheme.ink,
+                      ),
+                    ),
+                  ),
+                ],
               ),
+              if (_currency == 'KHR') ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Entered in riel, stored in US dollars.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.black.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
               const SizedBox(height: 18),
               FilledButton(
                 onPressed: _busy ? null : _save,

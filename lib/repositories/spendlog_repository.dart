@@ -112,11 +112,13 @@ class SpendLogRepository {
     required String month,
     required String amount,
     String? categoryUuid,
+    String currency = 'USD',
   }) async {
     await _client.dio.post('/budgets', data: {
       'month': month,
       'amount': amount,
       'category_uuid': ?categoryUuid,
+      if (currency != 'USD') 'currency': currency,
     });
   }
 
