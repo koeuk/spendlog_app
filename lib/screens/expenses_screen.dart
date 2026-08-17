@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
 import '../models/expense.dart';
+import '../models/expense_filters.dart';
 import '../providers/data_providers.dart';
 import '../theme.dart';
 import '../utils/async.dart';
