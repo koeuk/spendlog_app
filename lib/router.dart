@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -12,19 +13,40 @@ import 'screens/reset_password_screen.dart';
 import 'screens/shell_screen.dart';
 import 'screens/splash_screen.dart';
 
-final routerProvider = Provider<GoRouter>((ref) {
-  final auth = ref.watch(authProvider);
+/// Turns auth changes into a `refreshListenable` tick.
+///
+/// The router must be built exactly once. Watching [authProvider] here instead
+/// would hand `MaterialApp.router` a brand new [GoRouter] on every auth
+/// change — including the [AuthNotifier.setUser] that follows a profile save —
+/// which re-applies `initialLocation` and destroys all four tabs' navigation
+/// state. Refreshing only re-runs `redirect` against the current location.
+class _AuthRefresh extends ChangeNotifier {
+  _AuthRefresh(Ref ref) {
+    ref.listen(authProvider, (_, _) => notifyListeners());
+  }
+}
 
-  return GoRouter(
+final routerProvider = Provider<GoRouter>((ref) {
+  final refresh = _AuthRefresh(ref);
+  ref.onDispose(refresh.dispose);
+
+  final router = GoRouter(
     initialLocation: '/splash',
+    refreshListenable: refresh,
     // Auth is the only routing rule: signed out belongs on the auth screens,
     // signed in belongs in the app, and restoring belongs on the splash.
     redirect: (context, state) {
+      // Read rather than watch: the listenable above drives re-evaluation.
+      final auth = ref.read(authProvider);
+
       final onAuthPages = state.matchedLocation == '/login' ||
           state.matchedLocation.startsWith('/forgot-password') ||
           state.matchedLocation.startsWith('/reset-password');
 
-      if (auth.restoring) return '/splash';
+      // Returning the location we are already on would be a redirect loop.
+      if (auth.restoring) {
+        return state.matchedLocation == '/splash' ? null : '/splash';
+      }
       if (!auth.signedIn && !onAuthPages) return '/login';
       if (auth.signedIn && (onAuthPages || state.matchedLocation == '/splash')) return '/';
 
@@ -64,4 +86,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+
+  ref.onDispose(router.dispose);
+
+  return router;
 });

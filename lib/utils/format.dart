@@ -7,6 +7,12 @@ const _months = [
 
 String money(String value) => '\$$value';
 
+/// Money with any leading minus dropped.
+///
+/// The API reports an overspend as `remaining: "-6.00"`. Every screen says
+/// "over" in words, so the sign would read twice: "$-6.00 over budget".
+String moneyAbs(String value) => money(value.replaceFirst('-', ''));
+
 String currentYm() {
   final now = DateTime.now();
 

@@ -100,7 +100,7 @@ class _MonthCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 overall.status == 'over'
-                    ? '${money(overall.remaining ?? '0.00')} over the ${money(overall.budget!)} budget'
+                    ? '${moneyAbs(overall.remaining ?? '0.00')} over the ${money(overall.budget!)} budget'
                     : '${money(overall.remaining ?? '0.00')} left of ${money(overall.budget!)}',
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13),
               ),

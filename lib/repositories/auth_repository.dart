@@ -35,14 +35,19 @@ class AuthRepository {
     return User.fromJson((response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>);
   }
 
+  /// Never throws. Revoking the token server-side is best effort: the local
+  /// token goes regardless, because a dead server must not trap the user in a
+  /// session they asked to leave. A token we failed to revoke is left to
+  /// expire on its own rather than blocking the sign-out.
   Future<void> logout() async {
     try {
       await _client.dio.post('/logout');
-    } finally {
-      // The local token goes regardless — a dead server must not trap the
-      // user in a session they asked to leave.
-      await _client.clearToken();
+    } catch (_) {
+      // Offline, or the token was already revoked elsewhere. Either way the
+      // only thing left to do is forget it locally.
     }
+
+    await _client.clearToken();
   }
 
   Future<void> requestResetCode(String email) async {

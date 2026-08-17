@@ -54,25 +54,43 @@ class ExpensesState {
 }
 
 class ExpensesNotifier extends AutoDisposeAsyncNotifier<ExpensesState> {
+  /// Guards against overlapping page fetches. The scroll listener fires many
+  /// times per drag, and without this every one of those calls reads the same
+  /// `page` and appends the same page of results.
+  bool _loadingMore = false;
+
   @override
   Future<ExpensesState> build() async {
+    _loadingMore = false;
     final first = await ref.watch(repositoryProvider).expenses();
 
     return ExpensesState(items: first.items, hasMore: first.hasMore, page: 1);
   }
 
-  /// Appends the next page; safe to call repeatedly from scroll callbacks.
+  /// Appends the next page. Safe to call repeatedly from scroll callbacks:
+  /// extra calls while a fetch is in flight are dropped.
   Future<void> loadMore() async {
     final current = state.valueOrNull;
-    if (current == null || !current.hasMore) return;
+    if (_loadingMore || current == null || !current.hasMore) return;
 
-    final next = await ref.read(repositoryProvider).expenses(page: current.page + 1);
+    _loadingMore = true;
 
-    state = AsyncData(ExpensesState(
-      items: [...current.items, ...next.items],
-      hasMore: next.hasMore,
-      page: current.page + 1,
-    ));
+    try {
+      final next = await ref.read(repositoryProvider).expenses(page: current.page + 1);
+
+      state = AsyncData(ExpensesState(
+        items: [...current.items, ...next.items],
+        hasMore: next.hasMore,
+        page: current.page + 1,
+      ));
+    } catch (_) {
+      // Callers are scroll callbacks that cannot await this, so an escaping
+      // error would surface as an unhandled exception. Swallowing keeps the
+      // pages already on screen; the next scroll retries, and pull-to-refresh
+      // reports the failure properly.
+    } finally {
+      _loadingMore = false;
+    }
   }
 }
 

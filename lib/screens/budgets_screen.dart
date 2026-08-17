@@ -123,7 +123,7 @@ class _OverallCard extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Text(
                   line.status == 'over'
-                      ? 'Over by ${money((line.remaining ?? '0').replaceFirst('-', ''))}'
+                      ? 'Over by ${moneyAbs(line.remaining ?? '0.00')}'
                       : '${money(line.remaining ?? '0.00')} left',
                   style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13),
                 ),
