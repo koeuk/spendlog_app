@@ -171,6 +171,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           const SizedBox(height: 16),
           Card(
             child: InkWell(
+              onTap: () => context.go('/profile/workouts'),
+              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                child: Row(
+                  children: [
+                    Icon(Icons.fitness_center_outlined,
+                        size: 20, color: Colors.black.withValues(alpha: 0.55)),
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: Text('Workouts',
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                    ),
+                    Icon(Icons.chevron_right, color: Colors.black.withValues(alpha: 0.25)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: InkWell(
               onTap: () => context.go('/profile/categories'),
               borderRadius: BorderRadius.circular(AppTheme.cardRadius),
               child: Padding(

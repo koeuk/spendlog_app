@@ -6,6 +6,7 @@ import '../models/dashboard.dart';
 import '../models/expense.dart';
 import '../models/expense_filters.dart';
 import '../models/report.dart';
+import '../models/workout.dart';
 import '../repositories/spendlog_repository.dart';
 import '../utils/format.dart';
 
@@ -134,3 +135,62 @@ class ExpensesNotifier extends AutoDisposeAsyncNotifier<ExpensesState> {
 
 final expensesProvider =
     AsyncNotifierProvider.autoDispose<ExpensesNotifier, ExpensesState>(ExpensesNotifier.new);
+
+// ----------------------------------------------------------------- workouts
+
+final workoutMonthProvider = StateProvider<String>((ref) => currentYm());
+
+final workoutSummaryProvider = FutureProvider.autoDispose<WorkoutSummary>(
+  (ref) => ref
+      .watch(repositoryProvider)
+      .workoutSummary(month: ref.watch(workoutMonthProvider)),
+);
+
+final exercisesProvider = FutureProvider.autoDispose<List<ExerciseType>>(
+  (ref) => ref.watch(repositoryProvider).exercises(),
+);
+
+class WorkoutsState {
+  const WorkoutsState({required this.items, required this.hasMore, required this.page});
+
+  final List<Workout> items;
+  final bool hasMore;
+  final int page;
+}
+
+class WorkoutsNotifier extends AutoDisposeAsyncNotifier<WorkoutsState> {
+  bool _loadingMore = false;
+
+  @override
+  Future<WorkoutsState> build() async {
+    _loadingMore = false;
+    final first = await ref.watch(repositoryProvider).workouts();
+
+    return WorkoutsState(items: first.items, hasMore: first.hasMore, page: 1);
+  }
+
+  Future<void> loadMore() async {
+    final current = state.valueOrNull;
+    if (_loadingMore || current == null || !current.hasMore) return;
+
+    _loadingMore = true;
+
+    try {
+      final next = await ref.read(repositoryProvider).workouts(page: current.page + 1);
+
+      state = AsyncData(WorkoutsState(
+        items: [...current.items, ...next.items],
+        hasMore: next.hasMore,
+        page: current.page + 1,
+      ));
+    } catch (_) {
+      // Same reasoning as ExpensesNotifier.loadMore: scroll callbacks cannot
+      // await, so failures keep the loaded pages and the next scroll retries.
+    } finally {
+      _loadingMore = false;
+    }
+  }
+}
+
+final workoutsProvider =
+    AsyncNotifierProvider.autoDispose<WorkoutsNotifier, WorkoutsState>(WorkoutsNotifier.new);

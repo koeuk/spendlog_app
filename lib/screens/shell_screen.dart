@@ -44,6 +44,9 @@ const _destinations = <_Destination>[
 ];
 
 const _radius = 30.0;
+
+/// The gap between the active pill and the bar around it, on every side.
+const _inset = 8.0;
 const _motion = Duration(milliseconds: 320);
 
 /// A detached, translucent pill holding the four tabs. Only the active tab
@@ -84,9 +87,16 @@ class _FloatingNavBar extends StatelessWidget {
                   border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                  // Uniform, so the active pill sits the same distance from the
+                  // bar's edge whichever tab it is on.
+                  padding: const EdgeInsets.all(_inset),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    // spaceBetween, not spaceEvenly: evenly also inserts a share
+                    // of the leftover width *before* the first item, which added
+                    // to the padding and left the pill further from the left edge
+                    // than from the top and bottom. Between keeps the outer gap
+                    // equal to the padding on all four sides.
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       for (var i = 0; i < _destinations.length; i++)
                         _NavItem(

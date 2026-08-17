@@ -6,6 +6,7 @@ import '../models/dashboard.dart';
 import '../models/expense.dart';
 import '../models/expense_filters.dart';
 import '../models/report.dart';
+import '../models/workout.dart';
 import '../models/user.dart';
 
 /// Every data call the app makes, one thin method per endpoint. Shapes follow
@@ -181,6 +182,65 @@ class SpendLogRepository {
   }
 
   Future<void> deleteBudget(String uuid) => _client.dio.delete('/budgets/$uuid');
+
+  // ------------------------------------------------------------- workouts
+
+  Future<({List<Workout> items, bool hasMore})> workouts({int page = 1}) async {
+    final response = await _client.dio.get('/workouts', queryParameters: {'page': page});
+
+    final data = response.data as Map<String, dynamic>;
+
+    return (
+      items: (data['data'] as List<dynamic>)
+          .map((e) => Workout.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      hasMore: (data['links'] as Map<String, dynamic>?)?['next'] != null,
+    );
+  }
+
+  Future<WorkoutSummary> workoutSummary({String? month}) async {
+    final response = await _client.dio.get('/workouts/summary', queryParameters: {
+      'month': ?month,
+    });
+
+    return WorkoutSummary.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
+  /// The movements available to the caller: the global catalogue plus their own.
+  Future<List<ExerciseType>> exercises() async {
+    final response = await _client.dio.get('/exercises');
+
+    return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>)
+        .map((e) => ExerciseType.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// A workout is submitted whole — the session plus its sets. Weights ride in
+  /// [weightUnit]; the server stores kilograms either way, mirroring currency.
+  Future<void> saveWorkout({
+    String? uuid,
+    required String performedOn,
+    int? durationSeconds,
+    String? notes,
+    required List<Map<String, dynamic>> sets,
+    String weightUnit = 'kg',
+  }) async {
+    final payload = {
+      'performed_on': performedOn,
+      'duration_seconds': durationSeconds,
+      'notes': notes,
+      'sets': sets,
+      if (weightUnit != 'kg') 'weight_unit': weightUnit,
+    };
+
+    uuid == null
+        ? await _client.dio.post('/workouts', data: payload)
+        : await _client.dio.patch('/workouts/$uuid', data: payload);
+  }
+
+  Future<void> deleteWorkout(String uuid) => _client.dio.delete('/workouts/$uuid');
 
   // -------------------------------------------------------------- profile
 

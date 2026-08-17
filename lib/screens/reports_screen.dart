@@ -8,6 +8,7 @@ import '../theme.dart';
 import '../utils/async.dart';
 import '../utils/category_style.dart';
 import '../utils/format.dart';
+import '../utils/report_export.dart';
 import '../widgets/common.dart';
 import '../widgets/spending_chart.dart';
 
@@ -31,6 +32,15 @@ class ReportsScreen extends ConsumerWidget {
           'Reports',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
         ),
+        actions: [
+          if (canExportReports)
+            IconButton(
+              tooltip: 'Export',
+              icon: const Icon(Icons.ios_share, size: 21),
+              onPressed: () => _pickExportFormat(context, ref),
+            ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: report.when(
         loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.green)),
@@ -458,4 +468,45 @@ class _SliceRow extends StatelessWidget {
       ],
     );
   }
+}
+
+/// PDF for reading, Excel/CSV for spreadsheets — same three the web offers.
+Future<void> _pickExportFormat(BuildContext context, WidgetRef ref) async {
+  final period = ref.read(reportPeriodProvider);
+
+  final format = await showModalBottomSheet<String>(
+    context: context,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
+    builder: (context) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 12),
+          for (final (format, label, icon) in [
+            ('pdf', 'PDF report', Icons.picture_as_pdf_outlined),
+            ('xlsx', 'Excel spreadsheet', Icons.table_chart_outlined),
+            ('csv', 'CSV file', Icons.description_outlined),
+          ])
+            ListTile(
+              leading: Icon(icon, color: AppTheme.green),
+              title: Text(label),
+              onTap: () => Navigator.of(context).pop(format),
+            ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
+
+  if (format == null || !context.mounted) return;
+
+  await exportReport(
+    context,
+    format: format,
+    period: period.granularity,
+    anchor: period.anchor,
+  );
 }

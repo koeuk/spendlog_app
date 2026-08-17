@@ -14,6 +14,7 @@ import 'screens/reports_screen.dart';
 import 'screens/reset_password_screen.dart';
 import 'screens/shell_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/workouts_screen.dart';
 
 /// Turns auth changes into a `refreshListenable` tick.
 ///
@@ -95,6 +96,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 GoRoute(
                   path: 'categories',
                   builder: (context, state) => const CategoriesScreen(),
+                ),
+                GoRoute(
+                  path: 'workouts',
+                  builder: (context, state) => const WorkoutsScreen(),
                 ),
               ],
             ),
