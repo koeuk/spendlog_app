@@ -27,6 +27,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   bool _savingProfile = false;
   bool _savingPassword = false;
+  bool _showPassword = false;
 
   User? get _user => ref.read(authProvider).user;
 
@@ -230,15 +231,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _password,
-                      obscureText: true,
-                      decoration: const InputDecoration(hintText: 'New password'),
+                      obscureText: !_showPassword,
+                      decoration: InputDecoration(
+                        hintText: 'New password',
+                        suffixIcon: IconButton(
+                          onPressed: () =>
+                              setState(() => _showPassword = !_showPassword),
+                          icon: Icon(
+                            _showPassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            size: 20,
+                          ),
+                        ),
+                      ),
                       validator: (v) =>
                           (v == null || v.length < 8) ? 'At least 8 characters.' : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _confirm,
-                      obscureText: true,
+                      obscureText: !_showPassword,
                       decoration:
                           const InputDecoration(hintText: 'Confirm new password'),
                       validator: (v) =>

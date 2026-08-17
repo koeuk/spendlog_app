@@ -153,6 +153,10 @@ class _NavItem extends StatelessWidget {
                   curve: Curves.easeOutCubic,
                   alignment: Alignment.centerLeft,
                   widthFactor: selected ? 1 : 0,
+                  // Without this the Align takes every pixel of height the
+                  // Scaffold's loose constraints offer, and the bar fills the
+                  // screen.
+                  heightFactor: 1,
                   child: Padding(
                     padding: const EdgeInsets.only(left: 7),
                     child: ConstrainedBox(
