@@ -55,6 +55,25 @@ final dashboardProvider = FutureProvider.autoDispose<Dashboard>((ref) {
   return ref.watch(repositoryProvider).dashboard(month: month);
 });
 
+/// Which period the dashboard's spending chart covers.
+///
+/// Its own provider rather than a share of [reportPeriodProvider]: flipping the
+/// dashboard chart to "All" should not rewrite what the Reports tab is showing
+/// when you get there. Same reasoning that keeps [dashboardMonthProvider] and
+/// [budgetsMonthProvider] apart.
+///
+/// Month to start, matching the web dashboard's own default.
+final dashboardTrendProvider = StateProvider<String>((ref) => 'month');
+
+/// The chart on the home screen. Always the current period — the dashboard is
+/// "how am I doing now", so it sends no `at`; browsing back through history is
+/// what the Reports tab is for.
+final dashboardTrendReportProvider = FutureProvider.autoDispose<Report>(
+  (ref) => ref
+      .watch(repositoryProvider)
+      .report(period: ref.watch(dashboardTrendProvider)),
+);
+
 // --------------------------------------------------------------- categories
 
 final categoriesProvider = FutureProvider.autoDispose<List<Category>>(

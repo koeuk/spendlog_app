@@ -1,3 +1,16 @@
+/// The periods `GET /reports` will chart, in the order the toggle shows them.
+/// Values match App\Enums\TrendGranularity on the server; anything else falls
+/// back to `month` there rather than erroring.
+///
+/// Lives with the model rather than in one screen because the Reports tab and
+/// the dashboard's spending card both offer the same four.
+const trendGranularities = [
+  (value: 'week', label: 'Week'),
+  (value: 'month', label: 'Month'),
+  (value: 'year', label: 'Year'),
+  (value: 'all', label: 'All'),
+];
+
 /// GET /api/v1/reports — the trend chart, breakdown and headline stats.
 ///
 /// Money fields arrive as strings per the API convention; only the chart

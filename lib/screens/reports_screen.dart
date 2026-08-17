@@ -12,13 +12,6 @@ import '../utils/report_export.dart';
 import '../widgets/common.dart';
 import '../widgets/spending_chart.dart';
 
-const _granularities = [
-  (value: 'week', label: 'Week'),
-  (value: 'month', label: 'Month'),
-  (value: 'year', label: 'Year'),
-  (value: 'all', label: 'All'),
-];
-
 class ReportsScreen extends ConsumerWidget {
   const ReportsScreen({super.key});
 
@@ -88,11 +81,11 @@ class _PeriodBar extends ConsumerWidget {
       children: [
         Row(
           children: [
-            for (final option in _granularities)
+            for (final option in trendGranularities)
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(right: 6),
-                  child: _Segment(
+                  child: PillSegment(
                     label: option.label,
                     selected: data.granularity == option.value,
                     onTap: () => notifier.state = period.withGranularity(option.value),
@@ -107,44 +100,6 @@ class _PeriodBar extends ConsumerWidget {
           _PeriodPicker(data: data),
         ],
       ],
-    );
-  }
-}
-
-class _Segment extends StatelessWidget {
-  const _Segment({required this.label, required this.selected, required this.onTap});
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: selected ? AppTheme.green : Colors.white,
-      borderRadius: BorderRadius.circular(99),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(99),
-        child: Container(
-          height: 40,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(99),
-            border: Border.all(
-              color: selected ? AppTheme.green : Colors.black.withValues(alpha: 0.10),
-            ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : AppTheme.ink,
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

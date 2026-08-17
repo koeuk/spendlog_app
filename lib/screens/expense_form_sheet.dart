@@ -5,6 +5,7 @@ import '../api/api_client.dart';
 import '../models/expense.dart';
 import '../providers/data_providers.dart';
 import '../theme.dart';
+import '../utils/format.dart';
 import '../utils/category_style.dart';
 
 /// Add / edit an expense in a bottom sheet. On save the sheet closes and
@@ -119,6 +120,58 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
       setState(() => _error = apiErrorMessage(e, fallback: 'Could not save the expense.'));
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Deleting from the sheet, alongside the list's long-press. A long-press is
+  /// a shortcut for people who know it is there; nothing on the row advertises
+  /// it, so the edit form has to offer the same thing in the open — as the
+  /// category form already does.
+  Future<void> _delete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Delete this expense?'),
+        content: Text('${widget.expense!.item} — ${money(widget.expense!.price)}'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+
+    try {
+      await ref.read(repositoryProvider).deleteExpense(widget.expense!.uuid);
+
+      ref
+        ..invalidate(expensesProvider)
+        ..invalidate(dashboardProvider)
+        ..invalidate(budgetSummaryProvider)
+        ..invalidate(reportProvider);
+
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _error = apiErrorMessage(e, fallback: 'Could not delete the expense.');
+        });
+      }
     }
   }
 
@@ -303,6 +356,16 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                       )
                     : Text(_editing ? 'Save changes' : 'Add expense'),
               ),
+              if (_editing) ...[
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: _busy ? null : _delete,
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFFDC2626),
+                  ),
+                  child: const Text('Delete expense'),
+                ),
+              ],
             ],
           ),
         ),

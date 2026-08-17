@@ -98,6 +98,58 @@ class LoadFailed extends StatelessWidget {
   }
 }
 
+/// One pill in a segmented row — the Week / Month / Year / All toggle the
+/// Reports tab and the dashboard's spending card both wear. Shared so the two
+/// cannot drift into looking like two different controls for the same choice.
+///
+/// [height] is the only thing they disagree on: the dashboard's copy sits
+/// inside a card beside other content, so it runs shorter than the one heading
+/// the Reports screen.
+class PillSegment extends StatelessWidget {
+  const PillSegment({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.height = 40,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? AppTheme.green : Colors.white,
+      borderRadius: BorderRadius.circular(99),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(99),
+        child: Container(
+          height: height,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(99),
+            border: Border.all(
+              color: selected ? AppTheme.green : Colors.black.withValues(alpha: 0.10),
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: selected ? Colors.white : AppTheme.ink,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Month stepper: ‹ August 2026 ›
 class MonthStepper extends StatelessWidget {
   const MonthStepper({

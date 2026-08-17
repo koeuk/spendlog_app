@@ -55,6 +55,8 @@ class DashboardScreen extends ConsumerWidget {
               _MonthCard(data: data),
               const SizedBox(height: 16),
               _TodayCard(total: data.todayTotal),
+              const SizedBox(height: 16),
+              const _SpendingCard(),
               if (data.breakdown.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 _BreakdownCard(data: data),
