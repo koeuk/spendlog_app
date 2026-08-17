@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 import '../api/api_client.dart';
 import '../models/user.dart';
@@ -15,8 +15,12 @@ class AuthRepository {
       'email': email,
       'password': password,
       // Names the token in the user's token list so it can be revoked
-      // individually later ("Pixel 8" rather than "token #4").
-      'device_name': Platform.isAndroid ? 'Android app' : 'iOS app',
+      // individually later. kIsWeb first: dart-io Platform checks throw on web.
+      'device_name': kIsWeb
+          ? 'Web app'
+          : defaultTargetPlatform == TargetPlatform.iOS
+              ? 'iOS app'
+              : 'Android app',
     });
 
     final data = response.data as Map<String, dynamic>;
