@@ -24,7 +24,7 @@ class Env {
   /// Laravel app, and pointing at the wrong one fails as a *login error*
   /// ("Please sign in through the admin panel") rather than a connection
   /// error — which reads like a bad password.
-  static const _port = String.fromEnvironment('PORT', defaultValue: '8000');
+  static const _port = String.fromEnvironment('PORT', defaultValue: '8001');
 
   static const _host = '127.0.0.1';
 

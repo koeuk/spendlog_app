@@ -51,7 +51,9 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
       final trimmed = value.trim();
-      ref.read(expenseFiltersProvider.notifier).update(
+      ref
+          .read(expenseFiltersProvider.notifier)
+          .update(
             (f) => f.copyWith(search: () => trimmed.isEmpty ? null : trimmed),
           );
     });
@@ -76,8 +78,13 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
     String day(DateTime d) =>
         '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-    ref.read(expenseFiltersProvider.notifier).update(
-          (f) => f.copyWith(from: () => day(picked.start), to: () => day(picked.end)),
+    ref
+        .read(expenseFiltersProvider.notifier)
+        .update(
+          (f) => f.copyWith(
+            from: () => day(picked.start),
+            to: () => day(picked.end),
+          ),
         );
   }
 
@@ -95,7 +102,9 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFDC2626),
+            ),
             child: const Text('Delete'),
           ),
         ],
@@ -127,8 +136,8 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
       appBar: AppBar(
         title: Text(
           'Expenses',
-          style:
-              Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          style: Theme.of(context).textTheme.titleLarge
+              ?.copyWith(fontWeight: FontWeight.w700),
         ),
       ),
       floatingActionButton: Padding(
@@ -155,66 +164,82 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
     );
   }
 
-  Widget _buildList(AsyncValue<ExpensesState> expenses, ExpenseFilters filters) {
+  Widget _buildList(
+    AsyncValue<ExpensesState> expenses,
+    ExpenseFilters filters,
+  ) {
     return expenses.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.green)),
-        error: (e, _) => LoadFailed(
-          message: apiErrorMessage(e),
-          onRetry: () => ref.invalidate(expensesProvider),
-        ),
-        data: (state) {
-          if (state.items.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.receipt_long_outlined,
-                      size: 44, color: Colors.black.withValues(alpha: 0.25)),
-                  const SizedBox(height: 12),
-                  Text(filters.active
+      loading: () =>
+          const Center(child: CircularProgressIndicator(color: AppTheme.green)),
+      error: (e, _) => LoadFailed(
+        message: apiErrorMessage(e),
+        onRetry: () => ref.invalidate(expensesProvider),
+      ),
+      data: (state) {
+        if (state.items.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.receipt_long_outlined,
+                  size: 44,
+                  color: Colors.black.withValues(alpha: 0.25),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  filters.active
                       ? 'Nothing matches these filters.'
-                      : 'No expenses yet — add your first one.'),
-                ],
-              ),
-            );
-          }
-
-          return RefreshIndicator(
-            color: AppTheme.green,
-            onRefresh: () => refreshQuietly(ref.refresh(expensesProvider.future)),
-            child: ListView.separated(
-              controller: _scroll,
-              // Clears the floating nav bar and the FAB stacked above it.
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, AppTheme.navBarClearance + 72),
-              itemCount: state.items.length + (state.hasMore ? 1 : 0),
-              separatorBuilder: (context, index) => const SizedBox(height: 10),
-              itemBuilder: (context, index) {
-                if (index >= state.items.length) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Center(
-                      child: SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: AppTheme.green),
-                      ),
-                    ),
-                  );
-                }
-
-                final expense = state.items[index];
-
-                return _ExpenseTile(
-                  expense: expense,
-                  onTap: () => showExpenseForm(context, expense: expense),
-                  onDelete: () => _delete(expense),
-                );
-              },
+                      : 'No expenses yet — add your first one.',
+                ),
+              ],
             ),
           );
-        },
-      );
+        }
+
+        return RefreshIndicator(
+          color: AppTheme.green,
+          onRefresh: () => refreshQuietly(ref.refresh(expensesProvider.future)),
+          child: ListView.separated(
+            controller: _scroll,
+            // Clears the floating nav bar and the FAB stacked above it.
+            padding: const EdgeInsets.fromLTRB(
+              20,
+              8,
+              20,
+              AppTheme.navBarClearance + 72,
+            ),
+            itemCount: state.items.length + (state.hasMore ? 1 : 0),
+            separatorBuilder: (context, index) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              if (index >= state.items.length) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(
+                    child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppTheme.green,
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              final expense = state.items[index];
+
+              return _ExpenseTile(
+                expense: expense,
+                onTap: () => showExpenseForm(context, expense: expense),
+                onDelete: () => _delete(expense),
+              );
+            },
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -257,7 +282,9 @@ class _FilterBar extends ConsumerWidget {
                         icon: const Icon(Icons.close, size: 18),
                         onPressed: () {
                           search.clear();
-                          notifier.update((f) => f.copyWith(search: () => null));
+                          notifier.update(
+                            (f) => f.copyWith(search: () => null),
+                          );
                         },
                       )
                     : null,
@@ -267,76 +294,105 @@ class _FilterBar extends ConsumerWidget {
           const SizedBox(height: 8),
           SizedBox(
             height: 36,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
+            child: Row(
               children: [
-                ActionChip(
-                  avatar: Icon(
-                    Icons.calendar_today_outlined,
-                    size: 15,
-                    color: filters.from != null ? Colors.white : AppTheme.ink,
-                  ),
-                  label: Text(
-                    filters.from != null
-                        ? '${dayLabel(filters.from!)} – ${dayLabel(filters.to!)}'
-                        : 'Dates',
-                  ),
-                  labelStyle: TextStyle(
-                    fontSize: 12.5,
-                    color: filters.from != null ? Colors.white : AppTheme.ink,
-                  ),
-                  backgroundColor:
-                      filters.from != null ? AppTheme.green : Colors.white,
-                  shape: const StadiumBorder(),
-                  side: BorderSide(color: Colors.black.withValues(alpha: 0.10)),
-                  onPressed: onPickDates,
-                ),
-                const SizedBox(width: 8),
-                for (final category in categories) ...[
-                  FilterChip(
-                    selected: filters.categoryUuid == category.uuid,
-                    showCheckmark: false,
-                    avatar: Icon(
-                      CategoryStyle.icon(category.icon),
-                      size: 15,
-                      color: filters.categoryUuid == category.uuid
-                          ? Colors.white
-                          : CategoryStyle.color(category.color),
-                    ),
-                    label: Text(category.name),
-                    labelStyle: TextStyle(
-                      fontSize: 12.5,
-                      color: filters.categoryUuid == category.uuid
-                          ? Colors.white
-                          : AppTheme.ink,
-                    ),
-                    selectedColor: CategoryStyle.color(category.color),
-                    backgroundColor: Colors.white,
-                    shape: const StadiumBorder(),
-                    side: BorderSide(color: Colors.black.withValues(alpha: 0.10)),
-                    onSelected: (selected) => notifier.update(
-                      (f) => f.copyWith(
-                        categoryUuid: () => selected ? category.uuid : null,
+                Expanded(
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      ActionChip(
+                        avatar: Icon(
+                          Icons.calendar_today_outlined,
+                          size: 15,
+                          color: filters.from != null
+                              ? Colors.white
+                              : AppTheme.ink,
+                        ),
+                        label: Text(
+                          filters.from != null
+                              ? '${dayLabel(filters.from!)} – ${dayLabel(filters.to!)}'
+                              : 'Dates',
+                        ),
+                        labelStyle: TextStyle(
+                          fontSize: 12.5,
+                          color: filters.from != null
+                              ? Colors.white
+                              : AppTheme.ink,
+                        ),
+                        backgroundColor: filters.from != null
+                            ? AppTheme.green
+                            : Colors.white,
+                        shape: const StadiumBorder(),
+                        side: BorderSide(
+                          color: Colors.black.withValues(alpha: 0.10),
+                        ),
+                        onPressed: onPickDates,
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      for (final category in categories) ...[
+                        FilterChip(
+                          selected: filters.categoryUuid == category.uuid,
+                          showCheckmark: false,
+                          avatar: Icon(
+                            CategoryStyle.icon(category.icon),
+                            size: 15,
+                            color: filters.categoryUuid == category.uuid
+                                ? Colors.white
+                                : CategoryStyle.color(category.color),
+                          ),
+                          label: Text(category.name),
+                          labelStyle: TextStyle(
+                            fontSize: 12.5,
+                            color: filters.categoryUuid == category.uuid
+                                ? Colors.white
+                                : AppTheme.ink,
+                          ),
+                          selectedColor: CategoryStyle.color(category.color),
+                          backgroundColor: Colors.white,
+                          shape: const StadiumBorder(),
+                          side: BorderSide(
+                            color: Colors.black.withValues(alpha: 0.10),
+                          ),
+                          onSelected: (selected) => notifier.update(
+                            (f) => f.copyWith(
+                              categoryUuid: () =>
+                                  selected ? category.uuid : null,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                    ],
                   ),
+                ),
+                // Pinned beside the scrolling chips rather than trailing them.
+                // As the row's last child it sat past every category, so the one
+                // control that undoes a filter was itself hidden behind that
+                // filter — exactly when you most need it.
+                if (filters.active) ...[
                   const SizedBox(width: 8),
-                ],
-                if (filters.active)
                   ActionChip(
-                    avatar: const Icon(Icons.filter_alt_off_outlined,
-                        size: 15, color: Color(0xFFDC2626)),
+                    avatar: const Icon(
+                      Icons.filter_alt_off_outlined,
+                      size: 15,
+                      color: Color(0xFFDC2626),
+                    ),
                     label: const Text('Clear'),
-                    labelStyle:
-                        const TextStyle(fontSize: 12.5, color: Color(0xFFDC2626)),
+                    labelStyle: const TextStyle(
+                      fontSize: 12.5,
+                      color: Color(0xFFDC2626),
+                    ),
                     backgroundColor: Colors.white,
                     shape: const StadiumBorder(),
-                    side: BorderSide(color: Colors.black.withValues(alpha: 0.10)),
+                    side: BorderSide(
+                      color: Colors.black.withValues(alpha: 0.10),
+                    ),
                     onPressed: () {
                       search.clear();
                       notifier.state = const ExpenseFilters();
                     },
                   ),
+                ],
               ],
             ),
           ),
@@ -377,8 +433,11 @@ class _ExpenseTile extends StatelessWidget {
                   color: color.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(CategoryStyle.icon(expense.category?.icon),
-                    size: 20, color: color),
+                child: Icon(
+                  CategoryStyle.icon(expense.category?.icon),
+                  size: 20,
+                  color: color,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -406,7 +465,10 @@ class _ExpenseTile extends StatelessWidget {
               ),
               Text(
                 money(expense.price),
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                ),
               ),
             ],
           ),
