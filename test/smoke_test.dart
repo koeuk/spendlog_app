@@ -1,6 +1,8 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:spendlog_app/api/api_client.dart';
 import 'package:spendlog_app/main.dart';
 import 'package:spendlog_app/models/user.dart';
 import 'package:spendlog_app/providers/auth_provider.dart';
@@ -72,4 +74,68 @@ void main() {
     // would bounce the user back to the dashboard.
     expect(identical(before, container.read(routerProvider)), isTrue);
   });
+
+  group('a rejected token', () {
+    late HttpClientAdapter original;
+
+    setUp(() {
+      original = ApiClient.instance.dio.httpClientAdapter;
+      ApiClient.instance.dio.httpClientAdapter = _StatusAdapter(401);
+    });
+
+    tearDown(() => ApiClient.instance.dio.httpClientAdapter = original);
+
+    test('drops the session when an authenticated call is refused', () async {
+      final fired = ApiClient.instance.onUnauthorized.first;
+
+      await expectLater(
+        ApiClient.instance.dio.get<void>('/expenses'),
+        throwsA(isA<DioException>()),
+      );
+
+      // Times out — and fails — if the interceptor stayed quiet.
+      await fired.timeout(const Duration(seconds: 2));
+    });
+
+    test('stays quiet for the endpoints reached without a token', () async {
+      var fired = false;
+      final subscription =
+          ApiClient.instance.onUnauthorized.listen((_) => fired = true);
+      addTearDown(subscription.cancel);
+
+      await expectLater(
+        ApiClient.instance.dio.post<void>('/login'),
+        throwsA(isA<DioException>()),
+      );
+      await pumpEventQueue();
+
+      // Signing the user out over a failed *sign in* would be nonsense.
+      expect(fired, isFalse);
+    });
+  });
+}
+
+/// A Dio adapter that answers everything with one status and a Laravel-shaped
+/// error body.
+class _StatusAdapter implements HttpClientAdapter {
+  _StatusAdapter(this.statusCode);
+
+  final int statusCode;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async =>
+      ResponseBody.fromString(
+        '{"message":"Unauthenticated."}',
+        statusCode,
+        headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType],
+        },
+      );
+
+  @override
+  void close({bool force = false}) {}
 }

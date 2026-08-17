@@ -5,6 +5,7 @@ import '../api/api_client.dart';
 import '../models/budget_summary.dart';
 import '../providers/data_providers.dart';
 import '../theme.dart';
+import '../utils/async.dart';
 import '../utils/category_style.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
@@ -43,7 +44,7 @@ class BudgetsScreen extends ConsumerWidget {
         ),
         data: (data) => RefreshIndicator(
           color: AppTheme.green,
-          onRefresh: () => ref.refresh(budgetSummaryProvider.future),
+          onRefresh: () => refreshQuietly(ref.refresh(budgetSummaryProvider.future)),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
             children: [
@@ -82,20 +83,20 @@ class BudgetsScreen extends ConsumerWidget {
   }
 }
 
-class _OverallCard extends ConsumerWidget {
+class _OverallCard extends StatelessWidget {
   const _OverallCard({required this.line, required this.month});
 
   final BudgetLine line;
   final String month;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
     return Card(
       color: AppTheme.green,
       child: InkWell(
-        onTap: () => showBudgetSheet(context, ref, month: month, line: line, overall: true),
+        onTap: () => showBudgetSheet(context, month: month, line: line, overall: true),
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -140,18 +141,18 @@ class _OverallCard extends ConsumerWidget {
   }
 }
 
-class _CategoryRow extends ConsumerWidget {
+class _CategoryRow extends StatelessWidget {
   const _CategoryRow({required this.line, required this.month});
 
   final BudgetLine line;
   final String month;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final color = CategoryStyle.color(line.color);
 
     return InkWell(
-      onTap: () => showBudgetSheet(context, ref, month: month, line: line),
+      onTap: () => showBudgetSheet(context, month: month, line: line),
       borderRadius: BorderRadius.circular(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -186,14 +187,11 @@ class _CategoryRow extends ConsumerWidget {
 /// never needs to know whether the slot already exists — except for Remove,
 /// which needs the row's uuid from GET /budgets.
 Future<void> showBudgetSheet(
-  BuildContext context,
-  WidgetRef ref, {
+  BuildContext context, {
   required String month,
   required BudgetLine line,
   bool overall = false,
 }) {
-  final controller = TextEditingController(text: line.budget ?? '');
-
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -201,88 +199,158 @@ Future<void> showBudgetSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),
-    builder: (sheetContext) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(sheetContext).viewInsets.bottom),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+    builder: (context) => Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: _BudgetForm(month: month, line: line, overall: overall),
+    ),
+  );
+}
+
+/// A widget rather than a bare builder so the sheet owns its controller, its
+/// form state and — crucially — its own `ref`. Borrowing the tapped row's
+/// `WidgetRef` would outlive that row whenever the list rebuilt underneath.
+class _BudgetForm extends ConsumerStatefulWidget {
+  const _BudgetForm({
+    required this.month,
+    required this.line,
+    required this.overall,
+  });
+
+  final String month;
+  final BudgetLine line;
+  final bool overall;
+
+  @override
+  ConsumerState<_BudgetForm> createState() => _BudgetFormState();
+}
+
+class _BudgetFormState extends ConsumerState<_BudgetForm> {
+  final _formKey = GlobalKey<FormState>();
+  late final _amount = TextEditingController(text: widget.line.budget ?? '');
+
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _amount.dispose();
+    super.dispose();
+  }
+
+  void _refreshMoneyOnScreen() {
+    ref
+      ..invalidate(budgetSummaryProvider)
+      ..invalidate(budgetRowsProvider)
+      ..invalidate(dashboardProvider);
+  }
+
+  void _report(Object error) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(apiErrorMessage(error))));
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _busy = true);
+
+    try {
+      await ref.read(repositoryProvider).setBudget(
+            month: widget.month,
+            amount: _amount.text.trim(),
+            categoryUuid: widget.overall ? null : widget.line.uuid,
+          );
+
+      _refreshMoneyOnScreen();
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _busy = false);
+        _report(e);
+      }
+    }
+  }
+
+  Future<void> _remove() async {
+    setState(() => _busy = true);
+
+    try {
+      // Summary rows carry no budget uuid; the stored rows do.
+      final rows = await ref.read(repositoryProvider).budgets(widget.month);
+      final match = rows.where(
+        (b) => widget.overall
+            ? b.category == null
+            : b.category?.uuid == widget.line.uuid,
+      );
+
+      if (match.isNotEmpty) {
+        await ref.read(repositoryProvider).deleteBudget(match.first.uuid);
+      }
+
+      // Refresh either way: no matching row means the summary is showing a
+      // budget the server no longer has, and closing on a stale figure would
+      // look like the button did nothing.
+      _refreshMoneyOnScreen();
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _busy = false);
+        _report(e);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+        child: Form(
+          key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                overall
-                    ? 'Overall budget — ${monthLabel(month)}'
-                    : '${line.name} — ${monthLabel(month)}',
+                widget.overall
+                    ? 'Overall budget — ${monthLabel(widget.month)}'
+                    : '${widget.line.name} — ${monthLabel(widget.month)}',
                 textAlign: TextAlign.center,
-                style: Theme.of(sheetContext)
+                style: Theme.of(context)
                     .textTheme
                     .titleMedium
                     ?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 18),
-              TextField(
-                controller: controller,
+              TextFormField(
+                controller: _amount,
                 decoration: const InputDecoration(hintText: 'Amount', prefixText: '\$ '),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 autofocus: true,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _save(),
+                validator: (v) {
+                  final parsed = double.tryParse(v?.trim() ?? '');
+                  if (parsed == null || parsed < 0) return 'Enter an amount.';
+
+                  return null;
+                },
               ),
               const SizedBox(height: 18),
               FilledButton(
-                onPressed: () async {
-                  final amount = controller.text.trim();
-                  if (double.tryParse(amount) == null) return;
-
-                  try {
-                    await ref.read(repositoryProvider).setBudget(
-                          month: month,
-                          amount: amount,
-                          categoryUuid: overall ? null : line.uuid,
-                        );
-
-                    ref
-                      ..invalidate(budgetSummaryProvider)
-                      ..invalidate(budgetRowsProvider)
-                      ..invalidate(dashboardProvider);
-                    if (sheetContext.mounted) Navigator.of(sheetContext).pop();
-                  } catch (e) {
-                    if (sheetContext.mounted) {
-                      ScaffoldMessenger.of(sheetContext)
-                          .showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
-                    }
-                  }
-                },
-                child: const Text('Save budget'),
+                onPressed: _busy ? null : _save,
+                child: _busy
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Save budget'),
               ),
-              if (line.budget != null) ...[
+              if (widget.line.budget != null) ...[
                 const SizedBox(height: 8),
                 TextButton(
-                  onPressed: () async {
-                    try {
-                      // Summary rows carry no budget uuid; the stored rows do.
-                      final rows = await ref.read(repositoryProvider).budgets(month);
-                      final match = rows.where(
-                        (b) => overall
-                            ? b.category == null
-                            : b.category?.uuid == line.uuid,
-                      );
-
-                      if (match.isNotEmpty) {
-                        await ref.read(repositoryProvider).deleteBudget(match.first.uuid);
-                        ref
-                          ..invalidate(budgetSummaryProvider)
-                          ..invalidate(budgetRowsProvider)
-                          ..invalidate(dashboardProvider);
-                      }
-
-                      if (sheetContext.mounted) Navigator.of(sheetContext).pop();
-                    } catch (e) {
-                      if (sheetContext.mounted) {
-                        ScaffoldMessenger.of(sheetContext)
-                            .showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
-                      }
-                    }
-                  },
+                  onPressed: _busy ? null : _remove,
                   style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
                   child: const Text('Remove budget'),
                 ),
@@ -291,6 +359,6 @@ Future<void> showBudgetSheet(
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }

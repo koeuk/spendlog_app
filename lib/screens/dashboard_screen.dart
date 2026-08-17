@@ -6,6 +6,7 @@ import '../models/dashboard.dart';
 import '../providers/auth_provider.dart';
 import '../providers/data_providers.dart';
 import '../theme.dart';
+import '../utils/async.dart';
 import '../utils/category_style.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
@@ -47,7 +48,7 @@ class DashboardScreen extends ConsumerWidget {
         ),
         data: (data) => RefreshIndicator(
           color: AppTheme.green,
-          onRefresh: () => ref.refresh(dashboardProvider.future),
+          onRefresh: () => refreshQuietly(ref.refresh(dashboardProvider.future)),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
             children: [

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -12,6 +14,26 @@ class ApiClient {
 
   static const _storage = FlutterSecureStorage();
   static const _tokenKey = 'api_token';
+
+  /// Endpoints reachable without a token. A `401` from one of these says
+  /// nothing about a stored session, so it must not sign anyone out.
+  static const _publicPaths = {
+    '/login',
+    '/register',
+    '/forgot-password',
+    '/reset-password',
+  };
+
+  final _unauthorized = StreamController<void>.broadcast();
+
+  /// Fires when the server rejects the stored token — revoked from the web's
+  /// token list, or expired. `AuthNotifier` listens and drops the session, so
+  /// the router returns the user to login instead of leaving every screen
+  /// stuck on "Unauthenticated."
+  ///
+  /// Only `401` counts. Per the API doc a bad password is a `422` and a
+  /// missing token ability is a `403` — neither means the session is dead.
+  Stream<void> get onUnauthorized => _unauthorized.stream;
 
   late final Dio dio = Dio(
     BaseOptions(
@@ -28,6 +50,16 @@ class ApiClient {
             options.headers['Authorization'] = 'Bearer $token';
           }
           handler.next(options);
+        },
+        onError: (error, handler) async {
+          if (error.response?.statusCode == 401 &&
+              !_publicPaths.contains(error.requestOptions.path)) {
+            await clearToken();
+            _unauthorized.add(null);
+          }
+
+          // The caller still sees the failure and shows its own message.
+          handler.next(error);
         },
       ),
     );

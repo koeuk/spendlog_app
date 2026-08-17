@@ -12,6 +12,14 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 class Env {
   static const _selected = String.fromEnvironment('API', defaultValue: 'auto');
 
+  /// The port `php artisan serve` is on. Worth a knob rather than a constant:
+  /// this machine runs more than one Laravel app, and pointing at the wrong
+  /// one fails as a *login error* ("Please sign in through the admin panel"),
+  /// not as a connection error — which reads like a bad password.
+  ///
+  ///   flutter run -d chrome --dart-define=PORT=8000
+  static const _port = String.fromEnvironment('PORT', defaultValue: '8001');
+
   static const _urls = {
     'lan': 'http://192.168.1.100:8000/api/v1', // adjust to your PC's LAN IP
     'prod': 'https://spendlog.example.com/api/v1', // adjust once deployed
@@ -20,6 +28,6 @@ class Env {
   static String get baseUrl =>
       _urls[_selected] ??
       (kIsWeb
-          ? 'http://127.0.0.1:8000/api/v1'
-          : 'http://10.0.2.2:8000/api/v1');
+          ? 'http://127.0.0.1:$_port/api/v1'
+          : 'http://10.0.2.2:$_port/api/v1');
 }

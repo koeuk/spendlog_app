@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
+import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../providers/data_providers.dart';
 import '../theme.dart';
@@ -27,7 +28,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _savingProfile = false;
   bool _savingPassword = false;
 
-  dynamic get _user => ref.read(authProvider).user;
+  User? get _user => ref.read(authProvider).user;
 
   @override
   void dispose() {

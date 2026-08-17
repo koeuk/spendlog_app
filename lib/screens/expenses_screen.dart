@@ -5,6 +5,7 @@ import '../api/api_client.dart';
 import '../models/expense.dart';
 import '../providers/data_providers.dart';
 import '../theme.dart';
+import '../utils/async.dart';
 import '../utils/category_style.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
@@ -117,7 +118,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
 
           return RefreshIndicator(
             color: AppTheme.green,
-            onRefresh: () => ref.refresh(expensesProvider.future),
+            onRefresh: () => refreshQuietly(ref.refresh(expensesProvider.future)),
             child: ListView.separated(
               controller: _scroll,
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),

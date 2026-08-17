@@ -25,12 +25,25 @@ class AuthState {
 class AuthNotifier extends Notifier<AuthState> {
   @override
   AuthState build() {
+    // A token revoked mid-session (from the web's token list, say) must land
+    // the user back on login rather than leaving every screen showing
+    // "Unauthenticated." with no way out.
+    final subscription =
+        ApiClient.instance.onUnauthorized.listen((_) => _dropSession());
+    ref.onDispose(subscription.cancel);
+
     _restore();
 
     return const AuthState(restoring: true);
   }
 
   AuthRepository get _repository => ref.read(authRepositoryProvider);
+
+  /// Signed out *by the server*, so unlike [signOut] there is nothing to
+  /// revoke — the interceptor has already dropped the dead token.
+  void _dropSession() {
+    if (state.signedIn || state.restoring) state = const AuthState();
+  }
 
   /// A stored token from a previous run is only trusted after /me confirms it
   /// still works — it may have been revoked from the web's token list.
