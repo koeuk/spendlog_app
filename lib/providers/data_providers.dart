@@ -4,6 +4,7 @@ import '../api/api_client.dart';
 import '../models/category.dart';
 import '../models/dashboard.dart';
 import '../models/expense.dart';
+import '../models/expense_filters.dart';
 import '../models/report.dart';
 import '../repositories/spendlog_repository.dart';
 import '../utils/format.dart';

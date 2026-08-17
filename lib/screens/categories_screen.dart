@@ -31,12 +31,15 @@ class CategoriesScreen extends ConsumerWidget {
         ),
       ),
       floatingActionButton: canWrite
-          ? FloatingActionButton.extended(
-              onPressed: () => showCategoryForm(context),
-              backgroundColor: AppTheme.green,
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.add),
-              label: const Text('New'),
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: AppTheme.fabNavBarOffset),
+              child: FloatingActionButton.extended(
+                onPressed: () => showCategoryForm(context),
+                backgroundColor: AppTheme.green,
+                foregroundColor: Colors.white,
+                icon: const Icon(Icons.add),
+                label: const Text('New'),
+              ),
             )
           : null,
       body: categories.when(

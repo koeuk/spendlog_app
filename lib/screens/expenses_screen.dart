@@ -121,6 +121,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
   @override
   Widget build(BuildContext context) {
     final expenses = ref.watch(expensesProvider);
+    final filters = ref.watch(expenseFiltersProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -130,14 +131,32 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
               Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showExpenseForm(context),
-        backgroundColor: AppTheme.green,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Add'),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: AppTheme.fabNavBarOffset),
+        child: FloatingActionButton.extended(
+          onPressed: () => showExpenseForm(context),
+          backgroundColor: AppTheme.green,
+          foregroundColor: Colors.white,
+          icon: const Icon(Icons.add),
+          label: const Text('Add'),
+        ),
       ),
-      body: expenses.when(
+      body: Column(
+        children: [
+          _FilterBar(
+            search: _search,
+            filters: filters,
+            onSearchChanged: _onSearchChanged,
+            onPickDates: _pickDateRange,
+          ),
+          Expanded(child: _buildList(expenses, filters)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildList(AsyncValue<ExpensesState> expenses, ExpenseFilters filters) {
+    return expenses.when(
         loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.green)),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
@@ -152,7 +171,9 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                   Icon(Icons.receipt_long_outlined,
                       size: 44, color: Colors.black.withValues(alpha: 0.25)),
                   const SizedBox(height: 12),
-                  const Text('No expenses yet — add your first one.'),
+                  Text(filters.active
+                      ? 'Nothing matches these filters.'
+                      : 'No expenses yet — add your first one.'),
                 ],
               ),
             );
@@ -193,6 +214,133 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
             ),
           );
         },
+      );
+  }
+}
+
+/// Search box plus one scrolling row of chips: every category, the date
+/// range, and — while anything is active — a clear-all.
+class _FilterBar extends ConsumerWidget {
+  const _FilterBar({
+    required this.search,
+    required this.filters,
+    required this.onSearchChanged,
+    required this.onPickDates,
+  });
+
+  final TextEditingController search;
+  final ExpenseFilters filters;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onPickDates;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final categories = ref.watch(categoriesProvider).valueOrNull ?? [];
+    final notifier = ref.read(expenseFiltersProvider.notifier);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            height: 46,
+            child: TextField(
+              controller: search,
+              onChanged: onSearchChanged,
+              decoration: InputDecoration(
+                hintText: 'Search expenses…',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                contentPadding: EdgeInsets.zero,
+                suffixIcon: search.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        onPressed: () {
+                          search.clear();
+                          notifier.update((f) => f.copyWith(search: () => null));
+                        },
+                      )
+                    : null,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 36,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                ActionChip(
+                  avatar: Icon(
+                    Icons.calendar_today_outlined,
+                    size: 15,
+                    color: filters.from != null ? Colors.white : AppTheme.ink,
+                  ),
+                  label: Text(
+                    filters.from != null
+                        ? '${dayLabel(filters.from!)} – ${dayLabel(filters.to!)}'
+                        : 'Dates',
+                  ),
+                  labelStyle: TextStyle(
+                    fontSize: 12.5,
+                    color: filters.from != null ? Colors.white : AppTheme.ink,
+                  ),
+                  backgroundColor:
+                      filters.from != null ? AppTheme.green : Colors.white,
+                  shape: const StadiumBorder(),
+                  side: BorderSide(color: Colors.black.withValues(alpha: 0.10)),
+                  onPressed: onPickDates,
+                ),
+                const SizedBox(width: 8),
+                for (final category in categories) ...[
+                  FilterChip(
+                    selected: filters.categoryUuid == category.uuid,
+                    showCheckmark: false,
+                    avatar: Icon(
+                      CategoryStyle.icon(category.icon),
+                      size: 15,
+                      color: filters.categoryUuid == category.uuid
+                          ? Colors.white
+                          : CategoryStyle.color(category.color),
+                    ),
+                    label: Text(category.name),
+                    labelStyle: TextStyle(
+                      fontSize: 12.5,
+                      color: filters.categoryUuid == category.uuid
+                          ? Colors.white
+                          : AppTheme.ink,
+                    ),
+                    selectedColor: CategoryStyle.color(category.color),
+                    backgroundColor: Colors.white,
+                    shape: const StadiumBorder(),
+                    side: BorderSide(color: Colors.black.withValues(alpha: 0.10)),
+                    onSelected: (selected) => notifier.update(
+                      (f) => f.copyWith(
+                        categoryUuid: () => selected ? category.uuid : null,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                if (filters.active)
+                  ActionChip(
+                    avatar: const Icon(Icons.filter_alt_off_outlined,
+                        size: 15, color: Color(0xFFDC2626)),
+                    label: const Text('Clear'),
+                    labelStyle:
+                        const TextStyle(fontSize: 12.5, color: Color(0xFFDC2626)),
+                    backgroundColor: Colors.white,
+                    shape: const StadiumBorder(),
+                    side: BorderSide(color: Colors.black.withValues(alpha: 0.10)),
+                    onPressed: () {
+                      search.clear();
+                      notifier.state = const ExpenseFilters();
+                    },
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

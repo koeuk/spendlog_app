@@ -16,6 +16,12 @@ abstract final class AppTheme {
   /// floating nav bar, which the tabs' content now runs underneath.
   static const navBarClearance = 104.0;
 
+  /// A tab's Scaffold is nested inside the shell's, whose body extends under
+  /// the nav bar — so its FAB would otherwise come to rest behind the glass.
+  /// Padding the button by the clearance it is missing lifts it clear; the
+  /// Scaffold's own 16 is already part of that clearance.
+  static const fabNavBarOffset = navBarClearance - kFloatingActionButtonMargin;
+
   static ThemeData light() {
     final scheme = ColorScheme.fromSeed(
       seedColor: green,

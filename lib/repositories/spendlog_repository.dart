@@ -4,6 +4,7 @@ import '../models/budget_summary.dart';
 import '../models/category.dart';
 import '../models/dashboard.dart';
 import '../models/expense.dart';
+import '../models/expense_filters.dart';
 import '../models/report.dart';
 import '../models/user.dart';
 
