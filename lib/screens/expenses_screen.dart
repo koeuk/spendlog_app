@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -20,6 +22,8 @@ class ExpensesScreen extends ConsumerStatefulWidget {
 
 class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
   final _scroll = ScrollController();
+  final _search = TextEditingController();
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -36,7 +40,44 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
   @override
   void dispose() {
     _scroll.dispose();
+    _search.dispose();
+    _debounce?.cancel();
     super.dispose();
+  }
+
+  /// Debounced: one request when the typing pauses, not one per keystroke.
+  void _onSearchChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      final trimmed = value.trim();
+      ref.read(expenseFiltersProvider.notifier).update(
+            (f) => f.copyWith(search: () => trimmed.isEmpty ? null : trimmed),
+          );
+    });
+  }
+
+  Future<void> _pickDateRange() async {
+    final filters = ref.read(expenseFiltersProvider);
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      initialDateRange: filters.from != null && filters.to != null
+          ? DateTimeRange(
+              start: DateTime.parse(filters.from!),
+              end: DateTime.parse(filters.to!),
+            )
+          : null,
+    );
+
+    if (picked == null) return;
+
+    String day(DateTime d) =>
+        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+    ref.read(expenseFiltersProvider.notifier).update(
+          (f) => f.copyWith(from: () => day(picked.start), to: () => day(picked.end)),
+        );
   }
 
   Future<void> _delete(Expense expense) async {

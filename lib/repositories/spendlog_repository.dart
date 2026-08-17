@@ -30,8 +30,17 @@ class SpendLogRepository {
 
   // ------------------------------------------------------------- expenses
 
-  Future<({List<Expense> items, bool hasMore})> expenses({int page = 1}) async {
-    final response = await _client.dio.get('/expenses', queryParameters: {'page': page});
+  Future<({List<Expense> items, bool hasMore})> expenses({
+    int page = 1,
+    ExpenseFilters? filters,
+  }) async {
+    final response = await _client.dio.get('/expenses', queryParameters: {
+      'page': page,
+      'filter[item]': ?filters?.search,
+      'filter[category]': ?filters?.categoryUuid,
+      'filter[from]': ?filters?.from,
+      'filter[to]': ?filters?.to,
+    });
 
     final data = response.data as Map<String, dynamic>;
     final items = (data['data'] as List<dynamic>)

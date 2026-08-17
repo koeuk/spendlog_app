@@ -245,27 +245,32 @@ class _FiguresRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          child: _Figure(
-            eyebrow: 'Daily average',
-            value: money(stats.dailyAverage),
-            caption: 'Over elapsed days only',
+    // IntrinsicHeight is what makes `stretch` legal here: inside a ListView the
+    // row's height is unbounded, and stretching into that expands both cards
+    // without limit, pushing everything below them off the screen.
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _Figure(
+              eyebrow: 'Daily average',
+              value: money(stats.dailyAverage),
+              caption: 'Over elapsed days only',
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _Figure(
-            eyebrow: 'Transactions',
-            value: '${stats.count}',
-            caption: breakdown.isEmpty
-                ? 'Nothing logged'
-                : 'Across ${breakdown.length} categor${breakdown.length == 1 ? 'y' : 'ies'}',
+          const SizedBox(width: 12),
+          Expanded(
+            child: _Figure(
+              eyebrow: 'Transactions',
+              value: '${stats.count}',
+              caption: breakdown.isEmpty
+                  ? 'Nothing logged'
+                  : 'Across ${breakdown.length} categor${breakdown.length == 1 ? 'y' : 'ies'}',
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

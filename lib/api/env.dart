@@ -12,13 +12,19 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 class Env {
   static const _selected = String.fromEnvironment('API', defaultValue: 'auto');
 
-  /// The port `php artisan serve` is on. Worth a knob rather than a constant:
-  /// this machine runs more than one Laravel app, and pointing at the wrong one
-  /// fails as a *login error* ("Please sign in through the admin panel") rather
-  /// than a connection error — which reads like a bad password.
+  /// The port `php artisan serve` is on.
   ///
-  ///   flutter run -d chrome --dart-define=PORT=8000
-  static const _port = String.fromEnvironment('PORT', defaultValue: '8002');
+  /// 8000 because the backend's `composer dev` runs `php artisan serve` with no
+  /// `--port`, so that is always where it lands. Override when it has been
+  /// started somewhere else:
+  ///
+  ///   flutter run -d chrome --dart-define=PORT=8002
+  ///
+  /// Worth a knob rather than a constant: this machine has run more than one
+  /// Laravel app, and pointing at the wrong one fails as a *login error*
+  /// ("Please sign in through the admin panel") rather than a connection
+  /// error — which reads like a bad password.
+  static const _port = String.fromEnvironment('PORT', defaultValue: '8000');
 
   static const _host = '127.0.0.1';
 

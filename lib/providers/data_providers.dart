@@ -75,6 +75,8 @@ final budgetRowsProvider = FutureProvider.autoDispose(
 
 // ----------------------------------------------------------------- expenses
 
+final expenseFiltersProvider = StateProvider<ExpenseFilters>((ref) => const ExpenseFilters());
+
 class ExpensesState {
   const ExpensesState({required this.items, required this.hasMore, required this.page});
 
@@ -92,7 +94,9 @@ class ExpensesNotifier extends AutoDisposeAsyncNotifier<ExpensesState> {
   @override
   Future<ExpensesState> build() async {
     _loadingMore = false;
-    final first = await ref.watch(repositoryProvider).expenses();
+    // Watched, so changing any filter rebuilds the list from page one.
+    final filters = ref.watch(expenseFiltersProvider);
+    final first = await ref.watch(repositoryProvider).expenses(filters: filters);
 
     return ExpensesState(items: first.items, hasMore: first.hasMore, page: 1);
   }
@@ -106,7 +110,10 @@ class ExpensesNotifier extends AutoDisposeAsyncNotifier<ExpensesState> {
     _loadingMore = true;
 
     try {
-      final next = await ref.read(repositoryProvider).expenses(page: current.page + 1);
+      final next = await ref.read(repositoryProvider).expenses(
+            page: current.page + 1,
+            filters: ref.read(expenseFiltersProvider),
+          );
 
       state = AsyncData(ExpensesState(
         items: [...current.items, ...next.items],
