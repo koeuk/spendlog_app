@@ -241,10 +241,7 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
   }
 
   void _refreshMoneyOnScreen() {
-    ref
-      ..invalidate(budgetSummaryProvider)
-      ..invalidate(budgetRowsProvider)
-      ..invalidate(dashboardProvider);
+    invalidateMoney(ref);
   }
 
   void _report(Object error) {

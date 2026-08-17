@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
 import '../models/dashboard.dart';
+import '../models/report.dart';
 import '../providers/auth_provider.dart';
 import '../providers/data_providers.dart';
 import '../theme.dart';
@@ -10,6 +11,7 @@ import '../utils/async.dart';
 import '../utils/category_style.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
+import '../widgets/spending_chart.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -48,7 +50,14 @@ class DashboardScreen extends ConsumerWidget {
         ),
         data: (data) => RefreshIndicator(
           color: AppTheme.green,
-          onRefresh: () => refreshQuietly(ref.refresh(dashboardProvider.future)),
+          onRefresh: () {
+            // The chart loads on its own provider, so a pull that only
+            // refreshed the dashboard call would leave it showing stale money
+            // beside freshly updated cards.
+            ref.invalidate(dashboardTrendReportProvider);
+
+            return refreshQuietly(ref.refresh(dashboardProvider.future));
+          },
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, AppTheme.navBarClearance),
             children: [
@@ -140,6 +149,102 @@ class _TodayCard extends StatelessWidget {
                   .textTheme
                   .headlineMedium
                   ?.copyWith(fontWeight: FontWeight.w800),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Spend over time, the same chart the Reports tab heads with — here it answers
+/// "is this month unusual?" without leaving the home screen.
+///
+/// Loads on its own provider rather than riding [dashboardProvider]: the series
+/// is a second round trip, and hanging it off the main call would hold every
+/// card on screen hostage to it. A failure here costs the chart, not the
+/// dashboard.
+class _SpendingCard extends ConsumerWidget {
+  const _SpendingCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final granularity = ref.watch(dashboardTrendProvider);
+    final report = ref.watch(dashboardTrendReportProvider);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Eyebrow('Spending'),
+            const SizedBox(height: 6),
+            // Total and label come from the loaded series, so they are read off
+            // the async value rather than held here.
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  money(report.valueOrNull?.seriesTotal ?? '0.00'),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    report.valueOrNull?.seriesLabel ?? '',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.black.withValues(alpha: 0.45),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                for (final option in trendGranularities)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: PillSegment(
+                        label: option.label,
+                        selected: granularity == option.value,
+                        height: 32,
+                        onTap: () => ref.read(dashboardTrendProvider.notifier).state =
+                            option.value,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Fixed height across all three states so switching period does not
+            // make the cards below it jump.
+            SizedBox(
+              height: 170,
+              child: report.when(
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: AppTheme.green),
+                ),
+                error: (e, _) => Center(
+                  child: Text(
+                    apiErrorMessage(e, fallback: 'Could not load spending.'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.black.withValues(alpha: 0.45),
+                    ),
+                  ),
+                ),
+                data: (data) => SpendingChart(buckets: data.buckets),
+              ),
             ),
           ],
         ),

@@ -185,12 +185,7 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
 
   void _refresh() {
     // A renamed or recoloured category shows up on every screen that draws one.
-    ref
-      ..invalidate(categoriesProvider)
-      ..invalidate(dashboardProvider)
-      ..invalidate(budgetSummaryProvider)
-      ..invalidate(expensesProvider)
-      ..invalidate(reportProvider);
+    invalidateMoney(ref);
   }
 
   Future<void> _submit() async {

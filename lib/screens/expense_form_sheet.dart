@@ -109,11 +109,7 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
       }
 
       if (mounted) {
-        ref
-          ..invalidate(expensesProvider)
-          ..invalidate(dashboardProvider)
-          ..invalidate(budgetSummaryProvider)
-          ..invalidate(categoriesProvider);
+        invalidateMoney(ref);
         Navigator.of(context).pop();
       }
     } catch (e) {
@@ -158,11 +154,7 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
     try {
       await ref.read(repositoryProvider).deleteExpense(widget.expense!.uuid);
 
-      ref
-        ..invalidate(expensesProvider)
-        ..invalidate(dashboardProvider)
-        ..invalidate(budgetSummaryProvider)
-        ..invalidate(reportProvider);
+      invalidateMoney(ref);
 
       if (mounted) Navigator.of(context).pop();
     } catch (e) {

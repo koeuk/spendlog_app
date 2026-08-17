@@ -115,10 +115,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
 
     try {
       await ref.read(repositoryProvider).deleteExpense(expense.uuid);
-      ref
-        ..invalidate(expensesProvider)
-        ..invalidate(dashboardProvider)
-        ..invalidate(budgetSummaryProvider);
+      invalidateMoney(ref);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)

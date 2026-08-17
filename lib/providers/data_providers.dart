@@ -155,6 +155,32 @@ class ExpensesNotifier extends AutoDisposeAsyncNotifier<ExpensesState> {
 final expensesProvider =
     AsyncNotifierProvider.autoDispose<ExpensesNotifier, ExpensesState>(ExpensesNotifier.new);
 
+// ------------------------------------------------------------------- writes
+
+/// Drops every cached figure that a write can move.
+///
+/// Each form used to name its own subset, and the five sets had already drifted
+/// apart: saving an expense left the Reports tab showing totals from before it,
+/// and nothing at all refreshed the dashboard's chart. One list means the next
+/// money-derived provider is wired in exactly once, here, rather than in
+/// however many forms happen to be remembered.
+///
+/// Deliberately blunt. These are all `autoDispose`, so invalidating a provider
+/// no screen is watching costs nothing — and guessing which ones a given write
+/// could not possibly have touched is how the sets drifted in the first place.
+void invalidateMoney(WidgetRef ref) {
+  ref
+    ..invalidate(expensesProvider)
+    ..invalidate(dashboardProvider)
+    ..invalidate(dashboardTrendReportProvider)
+    ..invalidate(budgetSummaryProvider)
+    ..invalidate(budgetRowsProvider)
+    ..invalidate(reportProvider)
+    // An expense can create a category inline (`new_category`), so even an
+    // expense write can change this list.
+    ..invalidate(categoriesProvider);
+}
+
 // ----------------------------------------------------------------- workouts
 
 final workoutMonthProvider = StateProvider<String>((ref) => currentYm());
