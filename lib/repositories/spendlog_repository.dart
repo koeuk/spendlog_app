@@ -5,6 +5,7 @@ import '../models/category.dart';
 import '../models/dashboard.dart';
 import '../models/expense.dart';
 import '../models/expense_filters.dart';
+import '../models/admin.dart';
 import '../models/report.dart';
 import '../models/workout.dart';
 import '../models/user.dart';
@@ -241,6 +242,100 @@ class SpendLogRepository {
   }
 
   Future<void> deleteWorkout(String uuid) => _client.dio.delete('/workouts/$uuid');
+
+  // ---------------------------------------------------------------- admin
+
+  /// The admin desk. Every call is double-gated server-side: the token needs
+  /// the users:*/settings:write abilities (which only admin permissions can
+  /// grant), and the policies rule again per row.
+  Future<List<AdminUser>> adminUsers() async {
+    final response = await _client.dio.get('/admin/users', queryParameters: {'per_page': 100});
+
+    return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>)
+        .map((e) => AdminUser.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> saveAdminUser({
+    String? uuid,
+    required String name,
+    required String email,
+    String? username,
+    String? password,
+    required String role,
+    required String status,
+  }) async {
+    final payload = {
+      'name': name,
+      'email': email,
+      'username': username ?? '',
+      // Blank on edit means "keep it" — the request drops the empty field.
+      if (password != null && password.isNotEmpty) ...{
+        'password': password,
+        'password_confirmation': password,
+      },
+      'role': role,
+      'status': status,
+    };
+
+    uuid == null
+        ? await _client.dio.post('/admin/users', data: payload)
+        : await _client.dio.patch('/admin/users/$uuid', data: payload);
+  }
+
+  Future<void> deleteAdminUser(String uuid) => _client.dio.delete('/admin/users/$uuid');
+
+  /// Published entries for everyone; drafts included for admins.
+  Future<List<FaqEntry>> faqs() async {
+    final response = await _client.dio.get('/faqs');
+
+    return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>)
+        .map((e) => FaqEntry.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> saveFaq({
+    String? uuid,
+    required String question,
+    required String answer,
+    required String status,
+  }) async {
+    final payload = {'question': question, 'answer': answer, 'status': status};
+
+    uuid == null
+        ? await _client.dio.post('/admin/faqs', data: payload)
+        : await _client.dio.patch('/admin/faqs/$uuid', data: payload);
+  }
+
+  Future<void> deleteFaq(String uuid) => _client.dio.delete('/admin/faqs/$uuid');
+
+  Future<SpendingSettings> spendingSettings() async {
+    final response = await _client.dio.get('/admin/settings/spending');
+
+    return SpendingSettings.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<SpendingSettings> updateSpendingSettings({
+    required bool enabled,
+    required String warning,
+    required String advice,
+    double? khrPerUsd,
+    String? defaultCurrency,
+  }) async {
+    final response = await _client.dio.put('/admin/settings/spending', data: {
+      'enabled': enabled,
+      'warning': warning,
+      'advice': advice,
+      'khr_per_usd': ?khrPerUsd,
+      'default_currency': ?defaultCurrency,
+    });
+
+    return SpendingSettings.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
 
   // -------------------------------------------------------------- profile
 

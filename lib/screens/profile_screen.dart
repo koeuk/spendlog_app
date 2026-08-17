@@ -168,6 +168,54 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ),
           ),
+          if (user?.isAdmin ?? false) ...[
+            const SizedBox(height: 16),
+            Card(
+              child: InkWell(
+                onTap: () => context.go('/profile/admin-users'),
+                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  child: Row(
+                    children: [
+                      Icon(Icons.group_outlined,
+                          size: 20, color: Colors.black.withValues(alpha: 0.55)),
+                      const SizedBox(width: 14),
+                      const Expanded(
+                        child: Text('Users',
+                            style: TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                      Icon(Icons.chevron_right,
+                          color: Colors.black.withValues(alpha: 0.25)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Card(
+              child: InkWell(
+                onTap: () => context.go('/profile/admin-settings'),
+                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  child: Row(
+                    children: [
+                      Icon(Icons.tune,
+                          size: 20, color: Colors.black.withValues(alpha: 0.55)),
+                      const SizedBox(width: 14),
+                      const Expanded(
+                        child: Text('App settings',
+                            style: TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                      Icon(Icons.chevron_right,
+                          color: Colors.black.withValues(alpha: 0.25)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           Card(
             child: InkWell(

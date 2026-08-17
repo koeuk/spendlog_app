@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
+import '../models/admin.dart';
 import '../models/category.dart';
 import '../models/dashboard.dart';
 import '../models/expense.dart';
@@ -239,3 +240,17 @@ class WorkoutsNotifier extends AutoDisposeAsyncNotifier<WorkoutsState> {
 
 final workoutsProvider =
     AsyncNotifierProvider.autoDispose<WorkoutsNotifier, WorkoutsState>(WorkoutsNotifier.new);
+
+// -------------------------------------------------------------------- admin
+
+final adminUsersProvider = FutureProvider.autoDispose<List<AdminUser>>(
+  (ref) => ref.watch(repositoryProvider).adminUsers(),
+);
+
+final faqsProvider = FutureProvider.autoDispose<List<FaqEntry>>(
+  (ref) => ref.watch(repositoryProvider).faqs(),
+);
+
+final spendingSettingsProvider = FutureProvider.autoDispose<SpendingSettings>(
+  (ref) => ref.watch(repositoryProvider).spendingSettings(),
+);

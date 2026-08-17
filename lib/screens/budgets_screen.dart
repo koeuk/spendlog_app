@@ -148,6 +148,11 @@ class _CategoryRow extends StatelessWidget {
   final String month;
 
   @override
+
+
+
+
+  
   Widget build(BuildContext context) {
     final color = CategoryStyle.color(line.color);
 
