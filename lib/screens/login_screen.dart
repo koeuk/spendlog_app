@@ -50,9 +50,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return AuthShell(
-      icon: Icons.lock_outline,
-      heading: 'Welcome back',
-      description: 'Sign in with your email or username to keep your spending on track.',
+      heading: 'Sign in',
+      description: 'Use your email or username to keep your spending on track.',
       footer: TextButton(
         onPressed: () => context.go('/forgot-password'),
         child: const Text('Forgot your password?'),

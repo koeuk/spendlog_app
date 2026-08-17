@@ -67,7 +67,6 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return AuthShell(
-      icon: Icons.pin_outlined,
       heading: 'Enter your code',
       description: 'Type the 6-digit code we emailed you, then choose a new password.',
       footer: TextButton(

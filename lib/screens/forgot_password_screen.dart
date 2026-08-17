@@ -50,7 +50,6 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return AuthShell(
-      icon: Icons.key_outlined,
       heading: 'Forgot your password?',
       description: "No problem. Tell us your email address and we'll send you a 6-digit code to choose a new one.",
       footer: TextButton(

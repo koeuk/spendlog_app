@@ -149,6 +149,12 @@ class _Segment extends StatelessWidget {
   }
 }
 
+/// The period field, opening a bottom sheet rather than a dropdown.
+///
+/// A dropdown's overlay is anchored to the field and grows with the list — a
+/// year view offers 24 months, which covered the whole report behind it. A
+/// sheet is bounded, dismissible by dragging, and matches every other picker
+/// in the app.
 class _PeriodPicker extends ConsumerWidget {
   const _PeriodPicker({required this.data});
 
@@ -156,28 +162,132 @@ class _PeriodPicker extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final period = ref.watch(reportPeriodProvider);
-
     // The server bounds the list by the account's own history, so a new user is
     // not offered ten empty years to browse.
-    final values = data.options.map((o) => o.value).toList();
-    final current = values.contains(data.anchor) ? data.anchor : values.first;
+    final selected = data.options.firstWhere(
+      (option) => option.value == data.anchor,
+      orElse: () => data.options.first,
+    );
 
-    return DropdownButtonFormField<String>(
-      initialValue: current,
-      isExpanded: true,
-      decoration: const InputDecoration(
-        contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+      child: InkWell(
+        onTap: () => _choose(context, ref, selected.value),
+        borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+        child: Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+            border: Border.all(color: Colors.black.withValues(alpha: 0.12)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  selected.label,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+              ),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: Colors.black.withValues(alpha: 0.45),
+              ),
+            ],
+          ),
+        ),
       ),
-      items: [
-        for (final option in data.options)
-          DropdownMenuItem(value: option.value, child: Text(option.label)),
-      ],
-      onChanged: (value) {
-        if (value != null) {
-          ref.read(reportPeriodProvider.notifier).state = period.withAnchor(value);
-        }
-      },
+    );
+  }
+
+  Future<void> _choose(BuildContext context, WidgetRef ref, String current) async {
+    final chosen = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) => _PeriodSheet(options: data.options, current: current),
+    );
+
+    if (chosen == null) return;
+
+    ref.read(reportPeriodProvider.notifier).state =
+        ref.read(reportPeriodProvider).withAnchor(chosen);
+  }
+}
+
+class _PeriodSheet extends StatelessWidget {
+  const _PeriodSheet({required this.options, required this.current});
+
+  final List<PeriodOption> options;
+  final String current;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ConstrainedBox(
+        // Bounded, so a 24-month list stays a picker rather than becoming a
+        // full page you have to dismiss to see what you were reading.
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.6,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'Choose a period',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                itemCount: options.length,
+                itemBuilder: (context, index) {
+                  final option = options[index];
+                  final isCurrent = option.value == current;
+
+                  return ListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    selected: isCurrent,
+                    selectedTileColor: AppTheme.green.withValues(alpha: 0.10),
+                    title: Text(
+                      option.label,
+                      style: TextStyle(
+                        fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                    ),
+                    trailing: isCurrent
+                        ? const Icon(Icons.check, size: 20, color: AppTheme.green)
+                        : null,
+                    onTap: () => Navigator.of(context).pop(option.value),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

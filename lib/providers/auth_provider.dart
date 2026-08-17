@@ -45,22 +45,40 @@ class AuthNotifier extends Notifier<AuthState> {
     if (state.signedIn || state.restoring) state = const AuthState();
   }
 
+  /// How long the splash is held at launch.
+  ///
+  /// The token check usually finishes in milliseconds — instantly when there is
+  /// nothing stored — so without this the brand screen flashes past in a single
+  /// frame, which reads as a glitch rather than a launch.
+  static const _splashHold = Duration(seconds: 3);
+
   /// A stored token from a previous run is only trusted after /me confirms it
   /// still works — it may have been revoked from the web's token list.
+  ///
+  /// The hold runs *alongside* the check rather than before it, so the splash
+  /// lasts however long the slower of the two takes — never their sum. A slow
+  /// network already has the user waiting; it should not also owe them three
+  /// seconds.
   Future<void> _restore() async {
+    final held = Future<void>.delayed(_splashHold);
+    final restored = await _resolveSession();
+
+    await held;
+
+    state = restored;
+  }
+
+  Future<AuthState> _resolveSession() async {
     final token = await ApiClient.instance.readToken();
 
-    if (token == null) {
-      state = const AuthState();
-
-      return;
-    }
+    if (token == null) return const AuthState();
 
     try {
-      state = AuthState(user: await _repository.me());
+      return AuthState(user: await _repository.me());
     } catch (_) {
       await ApiClient.instance.clearToken();
-      state = const AuthState();
+
+      return const AuthState();
     }
   }
 
