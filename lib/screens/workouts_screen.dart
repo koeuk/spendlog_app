@@ -150,7 +150,7 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> {
                       child: Column(
                         children: [
                           Icon(Icons.fitness_center_outlined,
-                              size: 44, color: Colors.black.withValues(alpha: 0.25)),
+                              size: 44, color: AppTheme.faint(context, 0.25)),
                           const SizedBox(height: 12),
                           const Text('No workouts yet — log your first session.'),
                         ],
@@ -385,7 +385,7 @@ class _WorkoutTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.black.withValues(alpha: 0.45),
+                        color: AppTheme.faint(context, 0.45),
                       ),
                     ),
                   ],

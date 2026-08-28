@@ -20,7 +20,7 @@ class Eyebrow extends StatelessWidget {
             fontWeight: FontWeight.w700,
             color: onBrand
                 ? Colors.white.withValues(alpha: 0.7)
-                : Colors.black.withValues(alpha: 0.45),
+                : AppTheme.faint(context, 0.45),
           ),
     );
   }
@@ -50,7 +50,7 @@ class ProgressTrack extends StatelessWidget {
             Container(
               color: onBrand
                   ? Colors.white.withValues(alpha: 0.25)
-                  : Colors.black.withValues(alpha: 0.06),
+                  : AppTheme.faint(context, 0.06),
             ),
             FractionallySizedBox(
               widthFactor: (percent.clamp(0, 100)) / 100,
@@ -79,7 +79,7 @@ class LoadFailed extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.cloud_off_outlined, size: 40, color: Colors.black.withValues(alpha: 0.3)),
+            Icon(Icons.cloud_off_outlined, size: 40, color: AppTheme.faint(context, 0.3)),
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
@@ -133,7 +133,7 @@ class PillSegment extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(99),
             border: Border.all(
-              color: selected ? AppTheme.green : Colors.black.withValues(alpha: 0.10),
+              color: selected ? AppTheme.green : AppTheme.faint(context, 0.10),
             ),
           ),
           child: Text(
@@ -141,7 +141,7 @@ class PillSegment extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : AppTheme.ink,
+              color: selected ? Colors.white : Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ),

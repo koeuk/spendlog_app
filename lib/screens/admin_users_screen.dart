@@ -86,7 +86,7 @@ class AdminUsersScreen extends ConsumerWidget {
                                 user.email,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.black.withValues(alpha: 0.45),
+                                  color: AppTheme.faint(context, 0.45),
                                 ),
                               ),
                             ],

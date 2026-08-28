@@ -135,7 +135,7 @@ class _PeriodPicker extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppTheme.pillRadius),
-            border: Border.all(color: Colors.black.withValues(alpha: 0.12)),
+            border: Border.all(color: AppTheme.faint(context, 0.12)),
           ),
           child: Row(
             children: [
@@ -148,7 +148,7 @@ class _PeriodPicker extends ConsumerWidget {
               ),
               Icon(
                 Icons.keyboard_arrow_down_rounded,
-                color: Colors.black.withValues(alpha: 0.45),
+                color: AppTheme.faint(context, 0.45),
               ),
             ],
           ),
@@ -161,7 +161,7 @@ class _PeriodPicker extends ConsumerWidget {
     final chosen = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -198,7 +198,7 @@ class _PeriodSheet extends StatelessWidget {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.15),
+                color: AppTheme.faint(context, 0.15),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -378,7 +378,7 @@ class _Figure extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               caption,
-              style: TextStyle(fontSize: 11, color: Colors.black.withValues(alpha: 0.45)),
+              style: TextStyle(fontSize: 11, color: AppTheme.faint(context, 0.45)),
             ),
           ],
         ),
@@ -420,7 +420,7 @@ class _ChartCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.black.withValues(alpha: 0.45),
+                      color: AppTheme.faint(context, 0.45),
                     ),
                   ),
                 ),
@@ -453,12 +453,12 @@ class _BreakdownCard extends StatelessWidget {
             if (breakdown.isEmpty)
               Text(
                 'Nothing logged in this period.',
-                style: TextStyle(color: Colors.black.withValues(alpha: 0.5)),
+                style: TextStyle(color: AppTheme.faint(context, 0.5)),
               ),
             for (final slice in breakdown) ...[
               _SliceRow(slice: slice),
               if (slice != breakdown.last)
-                Divider(height: 24, color: Colors.black.withValues(alpha: 0.05)),
+                Divider(height: 24, color: AppTheme.faint(context, 0.05)),
             ],
           ],
         ),
@@ -505,7 +505,7 @@ class _SliceRow extends StatelessWidget {
                     '${slice.count} × ${money(slice.average)} avg',
                     style: TextStyle(
                       fontSize: 11,
-                      color: Colors.black.withValues(alpha: 0.45),
+                      color: AppTheme.faint(context, 0.45),
                     ),
                   ),
                 ],
@@ -521,7 +521,7 @@ class _SliceRow extends StatelessWidget {
                   '${slice.share}%',
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.black.withValues(alpha: 0.45),
+                    color: AppTheme.faint(context, 0.45),
                   ),
                 ),
               ],
@@ -541,7 +541,7 @@ Future<void> _pickExportFormat(BuildContext context, WidgetRef ref) async {
 
   final format = await showModalBottomSheet<String>(
     context: context,
-    backgroundColor: Colors.white,
+    backgroundColor: AppTheme.surface(context),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),

@@ -181,7 +181,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                 Icon(
                   Icons.receipt_long_outlined,
                   size: 44,
-                  color: Colors.black.withValues(alpha: 0.25),
+                  color: AppTheme.faint(context, 0.25),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -303,7 +303,7 @@ class _FilterBar extends ConsumerWidget {
                           size: 15,
                           color: filters.from != null
                               ? Colors.white
-                              : AppTheme.ink,
+                              : Theme.of(context).colorScheme.onSurface,
                         ),
                         label: Text(
                           filters.from != null
@@ -314,14 +314,14 @@ class _FilterBar extends ConsumerWidget {
                           fontSize: 12.5,
                           color: filters.from != null
                               ? Colors.white
-                              : AppTheme.ink,
+                              : Theme.of(context).colorScheme.onSurface,
                         ),
                         backgroundColor: filters.from != null
                             ? AppTheme.green
                             : Colors.white,
                         shape: const StadiumBorder(),
                         side: BorderSide(
-                          color: Colors.black.withValues(alpha: 0.10),
+                          color: AppTheme.faint(context, 0.10),
                         ),
                         onPressed: onPickDates,
                       ),
@@ -342,13 +342,13 @@ class _FilterBar extends ConsumerWidget {
                             fontSize: 12.5,
                             color: filters.categoryUuid == category.uuid
                                 ? Colors.white
-                                : AppTheme.ink,
+                                : Theme.of(context).colorScheme.onSurface,
                           ),
                           selectedColor: CategoryStyle.color(category.color),
-                          backgroundColor: Colors.white,
+                          backgroundColor: AppTheme.surface(context),
                           shape: const StadiumBorder(),
                           side: BorderSide(
-                            color: Colors.black.withValues(alpha: 0.10),
+                            color: AppTheme.faint(context, 0.10),
                           ),
                           onSelected: (selected) => notifier.update(
                             (f) => f.copyWith(
@@ -379,10 +379,10 @@ class _FilterBar extends ConsumerWidget {
                       fontSize: 12.5,
                       color: Color(0xFFDC2626),
                     ),
-                    backgroundColor: Colors.white,
+                    backgroundColor: AppTheme.surface(context),
                     shape: const StadiumBorder(),
                     side: BorderSide(
-                      color: Colors.black.withValues(alpha: 0.10),
+                      color: AppTheme.faint(context, 0.10),
                     ),
                     onPressed: () {
                       search.clear();
@@ -454,7 +454,7 @@ class _ExpenseTile extends StatelessWidget {
                       ].join(' · '),
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.black.withValues(alpha: 0.45),
+                        color: AppTheme.faint(context, 0.45),
                       ),
                     ),
                   ],

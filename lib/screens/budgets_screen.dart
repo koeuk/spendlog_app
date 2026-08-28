@@ -61,14 +61,14 @@ class BudgetsScreen extends ConsumerWidget {
                       if (data.categories.isEmpty)
                         Text(
                           'Nothing spent this month yet.',
-                          style: TextStyle(color: Colors.black.withValues(alpha: 0.5)),
+                          style: TextStyle(color: AppTheme.faint(context, 0.5)),
                         ),
                       for (final line in data.categories) ...[
                         _CategoryRow(line: line, month: month),
                         if (line != data.categories.last)
                           Divider(
                             height: 24,
-                            color: Colors.black.withValues(alpha: 0.05),
+                            color: AppTheme.faint(context, 0.05),
                           ),
                       ],
                     ],
@@ -200,7 +200,7 @@ Future<void> showBudgetSheet(
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Colors.white,
+    backgroundColor: AppTheme.surface(context),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),
@@ -388,7 +388,7 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
                       foregroundColor: WidgetStateProperty.resolveWith(
                         (states) => states.contains(WidgetState.selected)
                             ? Colors.white
-                            : AppTheme.ink,
+                            : Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -400,7 +400,7 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
                   'Entered in riel, stored in US dollars.',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.black.withValues(alpha: 0.5),
+                    color: AppTheme.faint(context, 0.5),
                   ),
                 ),
               ],

@@ -48,7 +48,7 @@ class _SpendingChartState extends State<SpendingChart> {
         child: Center(
           child: Text(
             'Nothing to chart yet.',
-            style: TextStyle(color: Colors.black.withValues(alpha: 0.4), fontSize: 13),
+            style: TextStyle(color: AppTheme.faint(context, 0.4), fontSize: 13),
           ),
         ),
       );
@@ -71,7 +71,7 @@ class _SpendingChartState extends State<SpendingChart> {
                       selected.caption,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.black.withValues(alpha: 0.5),
+                        color: AppTheme.faint(context, 0.5),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -94,9 +94,10 @@ class _SpendingChartState extends State<SpendingChart> {
               painter: _ChartPainter(
                 buckets: widget.buckets,
                 selected: _selected,
+                onSurface: Theme.of(context).colorScheme.onSurface,
                 labelStyle: TextStyle(
                   fontSize: 10,
-                  color: Colors.black.withValues(alpha: 0.4),
+                  color: AppTheme.faint(context, 0.4),
                 ),
               ),
             ),
@@ -112,11 +113,16 @@ class _ChartPainter extends CustomPainter {
     required this.buckets,
     required this.selected,
     required this.labelStyle,
+    required this.onSurface,
   });
 
   final List<ReportBucket> buckets;
   final int? selected;
   final TextStyle labelStyle;
+
+  /// The active palette's text colour — a painter has no BuildContext, so the
+  /// widget resolves it and hands it down.
+  final Color onSurface;
 
   static const _axisHeight = 18.0;
 
@@ -132,7 +138,7 @@ class _ChartPainter extends CustomPainter {
 
     final peak = buckets.fold<double>(0, (max, b) => b.amount > max ? b.amount : max);
 
-    final baseline = Paint()..color = Colors.black.withValues(alpha: 0.07);
+    final baseline = Paint()..color = onSurface.withValues(alpha: 0.07);
     canvas.drawRect(Rect.fromLTWH(0, plot - 1, size.width, 1), baseline);
 
     for (var i = 0; i < buckets.length; i++) {
@@ -163,10 +169,10 @@ class _ChartPainter extends CustomPainter {
         ),
         Paint()
           ..color = switch ((isSelected, bucket.isCurrent, bucket.amount > 0)) {
-            (true, _, _) => AppTheme.ink,
+            (true, _, _) => onSurface,
             (_, true, _) => AppTheme.greenBright,
             (_, _, true) => AppTheme.green,
-            _ => Colors.black.withValues(alpha: 0.10),
+            _ => onSurface.withValues(alpha: 0.10),
           },
       );
     }

@@ -200,7 +200,7 @@ class _SpendingCard extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.black.withValues(alpha: 0.45),
+                      color: AppTheme.faint(context, 0.45),
                     ),
                   ),
                 ),
@@ -239,7 +239,7 @@ class _SpendingCard extends ConsumerWidget {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.black.withValues(alpha: 0.45),
+                      color: AppTheme.faint(context, 0.45),
                     ),
                   ),
                 ),
@@ -296,7 +296,7 @@ class _BreakdownCard extends StatelessWidget {
                       textAlign: TextAlign.end,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.black.withValues(alpha: 0.45),
+                        color: AppTheme.faint(context, 0.45),
                       ),
                     ),
                   ),

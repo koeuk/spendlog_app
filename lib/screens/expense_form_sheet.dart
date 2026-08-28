@@ -15,7 +15,7 @@ Future<void> showExpenseForm(BuildContext context, {Expense? expense}) {
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Colors.white,
+    backgroundColor: AppTheme.surface(context),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),
@@ -254,7 +254,7 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                       foregroundColor: WidgetStateProperty.resolveWith(
                         (states) => states.contains(WidgetState.selected)
                             ? Colors.white
-                            : AppTheme.ink,
+                            : Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -332,8 +332,8 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size.fromHeight(52),
                   shape: const StadiumBorder(),
-                  foregroundColor: AppTheme.ink,
-                  side: BorderSide(color: Colors.black.withValues(alpha: 0.12)),
+                  foregroundColor: Theme.of(context).colorScheme.onSurface,
+                  side: BorderSide(color: AppTheme.faint(context, 0.12)),
                 ),
               ),
               const SizedBox(height: 18),

@@ -154,8 +154,8 @@ class _WorkoutFormPageState extends ConsumerState<WorkoutFormPage> {
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size.fromHeight(48),
                     shape: const StadiumBorder(),
-                    foregroundColor: AppTheme.ink,
-                    side: BorderSide(color: Colors.black.withValues(alpha: 0.12)),
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
+                    side: BorderSide(color: AppTheme.faint(context, 0.12)),
                   ),
                 ),
               ),
@@ -198,7 +198,7 @@ class _WorkoutFormPageState extends ConsumerState<WorkoutFormPage> {
                   foregroundColor: WidgetStateProperty.resolveWith(
                     (states) => states.contains(WidgetState.selected)
                         ? Colors.white
-                        : AppTheme.ink,
+                        : Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -324,7 +324,7 @@ class _SetRow extends StatelessWidget {
                   IconButton(
                     onPressed: onRemove,
                     icon: Icon(Icons.close,
-                        size: 18, color: Colors.black.withValues(alpha: 0.4)),
+                        size: 18, color: AppTheme.faint(context, 0.4)),
                   ),
               ],
             ),

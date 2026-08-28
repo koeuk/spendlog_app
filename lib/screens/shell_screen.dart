@@ -70,7 +70,7 @@ class _FloatingNavBar extends StatelessWidget {
             borderRadius: BorderRadius.circular(_radius),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.10),
+                color: AppTheme.faint(context, 0.10),
                 blurRadius: 28,
                 offset: const Offset(0, 10),
               ),
@@ -82,9 +82,9 @@ class _FloatingNavBar extends StatelessWidget {
               filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.80),
+                  color: AppTheme.surface(context).withValues(alpha: 0.85),
                   borderRadius: BorderRadius.circular(_radius),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
+                  border: Border.all(color: AppTheme.surface(context).withValues(alpha: 0.7)),
                 ),
                 child: Padding(
                   // Uniform, so the active pill sits the same distance from the
@@ -155,7 +155,7 @@ class _NavItem extends StatelessWidget {
                   selected ? destination.active : destination.icon,
                   key: ValueKey(selected),
                   size: 21,
-                  color: selected ? Colors.white : Colors.black.withValues(alpha: 0.45),
+                  color: selected ? Colors.white : AppTheme.faint(context, 0.45),
                 ),
               ),
               // Slides the label out from behind the icon. Clipped so it

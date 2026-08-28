@@ -60,7 +60,7 @@ class CategoriesScreen extends ConsumerWidget {
                   child: Center(
                     child: Text(
                       'No categories yet.',
-                      style: TextStyle(color: Colors.black.withValues(alpha: 0.5)),
+                      style: TextStyle(color: AppTheme.faint(context, 0.5)),
                     ),
                   ),
                 ),
@@ -123,7 +123,7 @@ class _CategoryTile extends StatelessWidget {
                         count == 1 ? '1 expense' : '$count expenses',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.black.withValues(alpha: 0.45),
+                          color: AppTheme.faint(context, 0.45),
                         ),
                       ),
                     ],
@@ -131,7 +131,7 @@ class _CategoryTile extends StatelessWidget {
                 ),
               ),
               if (onTap != null)
-                Icon(Icons.chevron_right, color: Colors.black.withValues(alpha: 0.25)),
+                Icon(Icons.chevron_right, color: AppTheme.faint(context, 0.25)),
             ],
           ),
         ),
@@ -145,7 +145,7 @@ Future<void> showCategoryForm(BuildContext context, {Category? category}) {
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Colors.white,
+    backgroundColor: AppTheme.surface(context),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),
@@ -370,7 +370,7 @@ class _ColorPicker extends StatelessWidget {
                 color: CategoryStyle.color(name),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: name == selected ? AppTheme.ink : Colors.transparent,
+                  color: name == selected ? Theme.of(context).colorScheme.onSurface : Colors.transparent,
                   width: 2.5,
                 ),
               ),
@@ -414,7 +414,7 @@ class _IconPicker extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: name == selected
                       ? color.withValues(alpha: 0.16)
-                      : Colors.black.withValues(alpha: 0.03),
+                      : AppTheme.faint(context, 0.03),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: name == selected ? color : Colors.transparent,
@@ -424,7 +424,7 @@ class _IconPicker extends StatelessWidget {
                 child: Icon(
                   CategoryStyle.icon(name),
                   size: 19,
-                  color: name == selected ? color : Colors.black.withValues(alpha: 0.55),
+                  color: name == selected ? color : AppTheme.faint(context, 0.55),
                 ),
               ),
             ),

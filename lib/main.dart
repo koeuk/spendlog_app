@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'providers/theme_provider.dart';
 import 'router.dart';
 import 'theme.dart';
 
@@ -17,6 +18,8 @@ class SpendLogApp extends ConsumerWidget {
       title: 'SpendLog',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: ref.watch(themeModeProvider),
       routerConfig: ref.watch(routerProvider),
     );
   }

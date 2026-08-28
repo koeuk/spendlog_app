@@ -6,6 +6,7 @@ import '../api/api_client.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../providers/data_providers.dart';
+import '../providers/theme_provider.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 
@@ -141,7 +142,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           user?.email ?? '',
                           style: TextStyle(
                             fontSize: 13,
-                            color: Colors.black.withValues(alpha: 0.5),
+                            color: AppTheme.faint(context, 0.5),
                           ),
                         ),
                       ],
@@ -151,7 +152,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppTheme.ink,
+                        color: Theme.of(context).colorScheme.onSurface,
                         borderRadius: BorderRadius.circular(99),
                       ),
                       child: const Text(
@@ -179,14 +180,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   child: Row(
                     children: [
                       Icon(Icons.group_outlined,
-                          size: 20, color: Colors.black.withValues(alpha: 0.55)),
+                          size: 20, color: AppTheme.faint(context, 0.55)),
                       const SizedBox(width: 14),
                       const Expanded(
                         child: Text('Users',
                             style: TextStyle(fontWeight: FontWeight.w600)),
                       ),
                       Icon(Icons.chevron_right,
-                          color: Colors.black.withValues(alpha: 0.25)),
+                          color: AppTheme.faint(context, 0.25)),
                     ],
                   ),
                 ),
@@ -202,14 +203,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   child: Row(
                     children: [
                       Icon(Icons.tune,
-                          size: 20, color: Colors.black.withValues(alpha: 0.55)),
+                          size: 20, color: AppTheme.faint(context, 0.55)),
                       const SizedBox(width: 14),
                       const Expanded(
                         child: Text('App settings',
                             style: TextStyle(fontWeight: FontWeight.w600)),
                       ),
                       Icon(Icons.chevron_right,
-                          color: Colors.black.withValues(alpha: 0.25)),
+                          color: AppTheme.faint(context, 0.25)),
                     ],
                   ),
                 ),
@@ -226,13 +227,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: Row(
                   children: [
                     Icon(Icons.fitness_center_outlined,
-                        size: 20, color: Colors.black.withValues(alpha: 0.55)),
+                        size: 20, color: AppTheme.faint(context, 0.55)),
                     const SizedBox(width: 14),
                     const Expanded(
                       child: Text('Workouts',
                           style: TextStyle(fontWeight: FontWeight.w600)),
                     ),
-                    Icon(Icons.chevron_right, color: Colors.black.withValues(alpha: 0.25)),
+                    Icon(Icons.chevron_right, color: AppTheme.faint(context, 0.25)),
                   ],
                 ),
               ),
@@ -248,13 +249,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: Row(
                   children: [
                     Icon(Icons.category_outlined,
-                        size: 20, color: Colors.black.withValues(alpha: 0.55)),
+                        size: 20, color: AppTheme.faint(context, 0.55)),
                     const SizedBox(width: 14),
                     const Expanded(
                       child: Text('Manage categories',
                           style: TextStyle(fontWeight: FontWeight.w600)),
                     ),
-                    Icon(Icons.chevron_right, color: Colors.black.withValues(alpha: 0.25)),
+                    Icon(Icons.chevron_right, color: AppTheme.faint(context, 0.25)),
                   ],
                 ),
               ),
@@ -364,6 +365,39 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ],
                 ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Eyebrow('Appearance'),
+                  const SizedBox(height: 12),
+                  SegmentedButton<ThemeMode>(
+                    segments: const [
+                      ButtonSegment(
+                          value: ThemeMode.system,
+                          icon: Icon(Icons.brightness_auto_outlined, size: 18),
+                          label: Text('Auto')),
+                      ButtonSegment(
+                          value: ThemeMode.light,
+                          icon: Icon(Icons.light_mode_outlined, size: 18),
+                          label: Text('Light')),
+                      ButtonSegment(
+                          value: ThemeMode.dark,
+                          icon: Icon(Icons.dark_mode_outlined, size: 18),
+                          label: Text('Dark')),
+                    ],
+                    selected: {ref.watch(themeModeProvider)},
+                    onSelectionChanged: (selection) =>
+                        ref.read(themeModeProvider.notifier).set(selection.first),
+                    showSelectedIcon: false,
+                  ),
+                ],
               ),
             ),
           ),

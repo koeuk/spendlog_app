@@ -62,7 +62,7 @@ class AuthShell extends StatelessWidget {
                     description,
                     textAlign: TextAlign.center,
                     style: textTheme.bodyMedium?.copyWith(
-                      color: Colors.black.withValues(alpha: 0.55),
+                      color: AppTheme.faint(context, 0.55),
                       height: 1.5,
                     ),
                   ),

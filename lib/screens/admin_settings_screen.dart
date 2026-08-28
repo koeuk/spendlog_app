@@ -219,7 +219,7 @@ class _FaqCard extends ConsumerWidget {
             if (faqs.isEmpty)
               Text(
                 'No entries yet.',
-                style: TextStyle(color: Colors.black.withValues(alpha: 0.5)),
+                style: TextStyle(color: AppTheme.faint(context, 0.5)),
               ),
             for (final faq in faqs) ...[
               InkWell(
@@ -255,7 +255,7 @@ class _FaqCard extends ConsumerWidget {
                 ),
               ),
               if (faq != faqs.last)
-                Divider(height: 8, color: Colors.black.withValues(alpha: 0.05)),
+                Divider(height: 8, color: AppTheme.faint(context, 0.05)),
             ],
           ],
         ),
@@ -272,7 +272,7 @@ Future<void> _showFaqSheet(BuildContext context, WidgetRef ref, {FaqEntry? faq})
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Colors.white,
+    backgroundColor: AppTheme.surface(context),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),
