@@ -7,6 +7,7 @@ class AdminUser {
     required this.role,
     required this.status,
     this.username,
+    this.avatarUrl,
   });
 
   final String uuid;
@@ -16,6 +17,9 @@ class AdminUser {
   final String role;
   final String status;
 
+  /// Absolute, cache-busted by the server; null when there is no photo.
+  final String? avatarUrl;
+
   factory AdminUser.fromJson(Map<String, dynamic> json) => AdminUser(
         uuid: json['uuid'] as String,
         name: json['name'] as String? ?? '',
@@ -23,6 +27,7 @@ class AdminUser {
         email: json['email'] as String? ?? '',
         role: json['role'] as String? ?? 'user',
         status: json['status'] as String? ?? 'active',
+        avatarUrl: json['avatar_url'] as String?,
       );
 }
 

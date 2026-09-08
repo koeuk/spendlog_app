@@ -435,6 +435,32 @@ class SpendLogRepository {
   Future<void> deleteAdminUser(String uuid) =>
       _client.dio.delete('/admin/users/$uuid');
 
+  /// An admin setting someone's photo; the same store the profile uses.
+  Future<AdminUser> uploadAdminUserAvatar(
+    String uuid, {
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    final response = await _client.dio.post(
+      '/admin/users/$uuid/avatar',
+      data: FormData.fromMap({
+        'avatar': MultipartFile.fromBytes(bytes, filename: filename),
+      }),
+    );
+
+    return AdminUser.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<AdminUser> removeAdminUserAvatar(String uuid) async {
+    final response = await _client.dio.delete('/admin/users/$uuid/avatar');
+
+    return AdminUser.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
   /// Published entries for everyone; drafts included for admins.
   Future<List<FaqEntry>> faqs() async {
     final response = await _client.dio.get('/faqs');

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../api/api_client.dart';
 import '../models/admin.dart';
@@ -67,25 +68,7 @@ class AdminUsersScreen extends ConsumerWidget {
                     ),
                     child: Row(
                       children: [
-                        Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: AppTheme.green.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Center(
-                            child: Text(
-                              user.name.isNotEmpty
-                                  ? user.name[0].toUpperCase()
-                                  : '?',
-                              style: const TextStyle(
-                                color: AppTheme.green,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ),
+                        _UserAvatar(user: user, size: 42),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
@@ -193,6 +176,59 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
   String? _error;
 
   bool get _editing => widget.user != null;
+
+  /// The row as last returned by the server, so the photo box repaints the
+  /// moment an upload lands without waiting for the list to refresh.
+  late AdminUser? _current = widget.user;
+  bool _photoBusy = false;
+
+  /// Photos save on their own, the moment one is picked — they do not wait
+  /// for "Save changes", which validates the text fields.
+  Future<void> _changePhoto() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+
+    await _updatePhoto(
+      () async => ref
+          .read(repositoryProvider)
+          .uploadAdminUserAvatar(
+            widget.user!.uuid,
+            bytes: await picked.readAsBytes(),
+            filename: picked.name,
+          ),
+    );
+  }
+
+  Future<void> _removePhoto() => _updatePhoto(
+    () => ref.read(repositoryProvider).removeAdminUserAvatar(widget.user!.uuid),
+  );
+
+  Future<void> _updatePhoto(Future<AdminUser> Function() call) async {
+    setState(() => _photoBusy = true);
+
+    try {
+      final updated = await call();
+      if (!mounted) return;
+      setState(() => _current = updated);
+      ref.invalidate(adminUsersProvider);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            apiErrorMessage(e, fallback: 'Could not update the photo.'),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _photoBusy = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -326,6 +362,15 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
               ),
               const SizedBox(height: 14),
             ],
+            if (_editing) ...[
+              _PhotoBlock(
+                user: _current,
+                busy: _photoBusy,
+                onChange: _changePhoto,
+                onRemove: _removePhoto,
+              ),
+              const SizedBox(height: 16),
+            ],
             TextFormField(
               controller: _name,
               decoration: const InputDecoration(hintText: 'Name'),
@@ -410,6 +455,110 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
                       ),
                     )
                   : Text(_editing ? 'Save changes' : 'Create user'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The user's photo, or their initial on a soft green tile while there is
+/// none (or while the photo fails to load).
+class _UserAvatar extends StatelessWidget {
+  const _UserAvatar({required this.user, required this.size});
+
+  final AdminUser? user;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = user?.name ?? '';
+    final url = user?.avatarUrl;
+
+    final fallback = Center(
+      child: Text(
+        name.isNotEmpty ? name[0].toUpperCase() : '?',
+        style: TextStyle(
+          color: AppTheme.green,
+          fontSize: size * 0.4,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+
+    return Container(
+      width: size,
+      height: size,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: AppTheme.green.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(size * 0.33),
+      ),
+      child: url == null
+          ? fallback
+          : Image.network(
+              url,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => fallback,
+            ),
+    );
+  }
+}
+
+/// Photo controls at the top of the edit page: the picture, then change and
+/// remove. Saves independently of the form below.
+class _PhotoBlock extends StatelessWidget {
+  const _PhotoBlock({
+    required this.user,
+    required this.busy,
+    required this.onChange,
+    required this.onRemove,
+  });
+
+  final AdminUser? user;
+  final bool busy;
+  final VoidCallback onChange;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      shape: AppTheme.rowShape(context),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        child: Row(
+          children: [
+            _UserAvatar(user: user, size: 64),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Wrap(
+                spacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  TextButton.icon(
+                    onPressed: busy ? null : onChange,
+                    icon: busy
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.photo_outlined, size: 18),
+                    label: Text(
+                      user?.avatarUrl == null ? 'Add photo' : 'Change photo',
+                    ),
+                  ),
+                  if (user?.avatarUrl != null)
+                    TextButton(
+                      onPressed: busy ? null : onRemove,
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFFDC2626),
+                      ),
+                      child: const Text('Remove'),
+                    ),
+                ],
+              ),
             ),
           ],
         ),
