@@ -201,29 +201,29 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
     };
     if (fields == null) return const SizedBox.shrink();
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ...fields,
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: _busy ? null : _save,
-              child: _busy
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text('Save settings'),
-            ),
-          ],
-        ),
+    // The fields sit straight on the page, like the FAQ list beside them:
+    // a panel around a two-field form was a box for the sake of a box.
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ...fields,
+          const SizedBox(height: 20),
+          FilledButton(
+            onPressed: _busy ? null : _save,
+            child: _busy
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text('Save settings'),
+          ),
+        ],
       ),
     );
   }
