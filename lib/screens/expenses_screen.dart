@@ -137,15 +137,9 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
               ?.copyWith(fontWeight: FontWeight.w700),
         ),
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: AppTheme.fabNavBarOffset),
-        child: FloatingActionButton.extended(
-          onPressed: () => showExpenseForm(context),
-          backgroundColor: AppTheme.green,
-          foregroundColor: Colors.white,
-          icon: const Icon(Icons.add),
-          label: const Text('Add'),
-        ),
+      floatingActionButton: AddPill(
+        label: 'Add',
+        onPressed: () => showExpenseForm(context),
       ),
       body: Column(
         children: [

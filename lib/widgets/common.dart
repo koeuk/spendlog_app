@@ -26,6 +26,58 @@ class Eyebrow extends StatelessWidget {
   }
 }
 
+/// The "create" button every list tab floats above its content: a pill the
+/// same height as the nav bar's active tab, so the two read as one family.
+/// Already lifted clear of the floating nav bar, so use it directly as a
+/// Scaffold's `floatingActionButton`.
+class AddPill extends StatelessWidget {
+  const AddPill({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon = Icons.add,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppTheme.fabNavBarOffset),
+      child: Material(
+        color: AppTheme.green,
+        shape: const StadiumBorder(),
+        elevation: 6,
+        shadowColor: AppTheme.green.withValues(alpha: 0.35),
+        child: InkWell(
+          onTap: onPressed,
+          customBorder: const StadiumBorder(),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 21, color: Colors.white),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class ProgressTrack extends StatelessWidget {
   const ProgressTrack({
     super.key,

@@ -98,12 +98,9 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: AddPill(
+        label: 'Log',
         onPressed: () => WorkoutFormPage.open(context),
-        backgroundColor: AppTheme.green,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Log'),
       ),
       body: RefreshIndicator(
         color: AppTheme.green,

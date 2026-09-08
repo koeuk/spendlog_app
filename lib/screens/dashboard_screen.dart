@@ -31,16 +31,6 @@ class DashboardScreen extends ConsumerWidget {
               .titleLarge
               ?.copyWith(fontWeight: FontWeight.w700),
         ),
-        actions: [
-          MonthStepper(
-            label: monthLabel(month),
-            onPrevious: () =>
-                ref.read(dashboardMonthProvider.notifier).state = shiftMonth(month, -1),
-            onNext: () =>
-                ref.read(dashboardMonthProvider.notifier).state = shiftMonth(month, 1),
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       body: dashboard.when(
         loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.green)),
@@ -59,8 +49,21 @@ class DashboardScreen extends ConsumerWidget {
             return refreshQuietly(ref.refresh(dashboardProvider.future));
           },
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 8, AppTheme.pageInset, AppTheme.navBarClearance),
+            padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 0, AppTheme.pageInset, AppTheme.navBarClearance),
             children: [
+              // The month being viewed sits with the card it governs rather
+              // than in the app bar, where it squeezed the greeting.
+              Align(
+                alignment: Alignment.centerRight,
+                child: MonthStepper(
+                  label: monthLabel(month),
+                  onPrevious: () => ref.read(dashboardMonthProvider.notifier).state =
+                      shiftMonth(month, -1),
+                  onNext: () => ref.read(dashboardMonthProvider.notifier).state =
+                      shiftMonth(month, 1),
+                ),
+              ),
+              const SizedBox(height: 4),
               _MonthCard(data: data),
               const SizedBox(height: 16),
               _TodayCard(total: data.todayTotal),

@@ -31,15 +31,9 @@ class CategoriesScreen extends ConsumerWidget {
         ),
       ),
       floatingActionButton: canWrite
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: AppTheme.fabNavBarOffset),
-              child: FloatingActionButton.extended(
-                onPressed: () => showCategoryForm(context),
-                backgroundColor: AppTheme.green,
-                foregroundColor: Colors.white,
-                icon: const Icon(Icons.add),
-                label: const Text('New'),
-              ),
+          ? AddPill(
+              label: 'New',
+              onPressed: () => showCategoryForm(context),
             )
           : null,
       body: categories.when(
