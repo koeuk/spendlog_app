@@ -16,17 +16,18 @@ class AdminSettingsScreen extends ConsumerStatefulWidget {
   const AdminSettingsScreen({super.key});
 
   @override
-  ConsumerState<AdminSettingsScreen> createState() => _AdminSettingsScreenState();
+  ConsumerState<AdminSettingsScreen> createState() =>
+      _AdminSettingsScreenState();
 }
 
 enum _Tab { spending, guidance, faqs }
 
 extension on _Tab {
   String get label => switch (this) {
-        _Tab.spending => 'Spending',
-        _Tab.guidance => 'Guidance',
-        _Tab.faqs => 'FAQs',
-      };
+    _Tab.spending => 'Spending',
+    _Tab.guidance => 'Guidance',
+    _Tab.faqs => 'FAQs',
+  };
 }
 
 class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
@@ -38,13 +39,16 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
     final faqs = ref.watch(faqsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('App settings'),
-      ),
+      appBar: AppBar(title: const Text('App settings')),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 4, AppTheme.pageInset - 6, 12),
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.pageInset,
+              4,
+              AppTheme.pageInset - 6,
+              12,
+            ),
             child: Row(
               children: [
                 for (final tab in _Tab.values)
@@ -65,12 +69,18 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
             child: RefreshIndicator(
               color: AppTheme.green,
               onRefresh: () async {
-                await refreshQuietly(ref.refresh(spendingSettingsProvider.future));
+                await refreshQuietly(
+                  ref.refresh(spendingSettingsProvider.future),
+                );
                 await refreshQuietly(ref.refresh(faqsProvider.future));
               },
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(
-                    AppTheme.pageInset, 0, AppTheme.pageInset, AppTheme.navBarClearance),
+                  AppTheme.pageInset,
+                  0,
+                  AppTheme.pageInset,
+                  AppTheme.navBarClearance,
+                ),
                 children: [
                   // The form stays in the tree on every tab (rendering nothing
                   // on FAQs) so half-typed edits survive a switch between the
@@ -81,14 +91,18 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                         : const SizedBox(
                             height: 100,
                             child: Center(
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2.4, color: AppTheme.green)),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                                color: AppTheme.green,
+                              ),
+                            ),
                           ),
                     error: (e, _) => _tab == _Tab.faqs
                         ? const SizedBox.shrink()
                         : LoadFailed(
                             message: apiErrorMessage(e),
-                            onRetry: () => ref.invalidate(spendingSettingsProvider),
+                            onRetry: () =>
+                                ref.invalidate(spendingSettingsProvider),
                           ),
                     data: (data) => _SettingsForm(settings: data, tab: _tab),
                   ),
@@ -97,8 +111,11 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                       loading: () => const SizedBox(
                         height: 100,
                         child: Center(
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2.4, color: AppTheme.green)),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.4,
+                            color: AppTheme.green,
+                          ),
+                        ),
                       ),
                       error: (e, _) => LoadFailed(
                         message: apiErrorMessage(e),
@@ -129,7 +146,9 @@ class _SettingsForm extends ConsumerStatefulWidget {
 }
 
 class _SettingsFormState extends ConsumerState<_SettingsForm> {
-  late final _rate = TextEditingController(text: '${widget.settings.khrPerUsd}');
+  late final _rate = TextEditingController(
+    text: '${widget.settings.khrPerUsd}',
+  );
   late final _warning = TextEditingController(text: widget.settings.warning);
   late final _advice = TextEditingController(text: widget.settings.advice);
   late bool _enabled = widget.settings.guidanceEnabled;
@@ -148,7 +167,9 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
     setState(() => _busy = true);
 
     try {
-      await ref.read(repositoryProvider).updateSpendingSettings(
+      await ref
+          .read(repositoryProvider)
+          .updateSpendingSettings(
             enabled: _enabled,
             warning: _warning.text.trim(),
             advice: _advice.text.trim(),
@@ -194,7 +215,10 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Text('Save settings'),
             ),
@@ -205,65 +229,71 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
   }
 
   List<Widget> _spendingFields() => [
-        const Eyebrow('Spending'),
-        const SizedBox(height: 14),
-        TextField(
-          controller: _rate,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            hintText: 'Riel per dollar',
-            prefixText: '៛ ',
-            helperText: 'Every ៛ entry converts to USD at this rate.',
+    const Eyebrow('Spending'),
+    const SizedBox(height: 14),
+    TextField(
+      controller: _rate,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      decoration: const InputDecoration(
+        hintText: 'Riel per dollar',
+        prefixText: '៛ ',
+        helperText: 'Every ៛ entry converts to USD at this rate.',
+      ),
+    ),
+    const SizedBox(height: 12),
+    Row(
+      children: [
+        const Expanded(
+          child: Text(
+            'Default currency',
+            style: TextStyle(fontWeight: FontWeight.w500),
           ),
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            const Expanded(
-              child: Text('Default currency',
-                  style: TextStyle(fontWeight: FontWeight.w500)),
-            ),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'USD', label: Text('\$')),
-                ButtonSegment(value: 'KHR', label: Text('៛')),
-              ],
-              selected: {_currency},
-              onSelectionChanged: (selection) =>
-                  setState(() => _currency = selection.first),
-              showSelectedIcon: false,
-              style: const ButtonStyle(visualDensity: VisualDensity.compact),
-            ),
+        SegmentedButton<String>(
+          segments: const [
+            ButtonSegment(value: 'USD', label: Text('\$')),
+            ButtonSegment(value: 'KHR', label: Text('៛')),
           ],
+          selected: {_currency},
+          onSelectionChanged: (selection) =>
+              setState(() => _currency = selection.first),
+          showSelectedIcon: false,
+          style: const ButtonStyle(visualDensity: VisualDensity.compact),
         ),
-      ];
+      ],
+    ),
+  ];
 
   List<Widget> _guidanceFields() => [
-        const Eyebrow('Dashboard guidance'),
-        const SizedBox(height: 6),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          activeThumbColor: AppTheme.green,
-          title: const Text('Show the advice card',
-              style: TextStyle(fontWeight: FontWeight.w500)),
-          subtitle: const Text('On everyone\'s dashboard.'),
-          value: _enabled,
-          onChanged: (value) => setState(() => _enabled = value),
+    const Eyebrow('Dashboard guidance'),
+    const SizedBox(height: 6),
+    SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      activeThumbColor: AppTheme.green,
+      title: const Text(
+        'Show the advice card',
+        style: TextStyle(fontWeight: FontWeight.w500),
+      ),
+      subtitle: const Text('On everyone\'s dashboard.'),
+      value: _enabled,
+      onChanged: (value) => setState(() => _enabled = value),
+    ),
+    if (_enabled) ...[
+      TextField(
+        controller: _warning,
+        decoration: const InputDecoration(
+          hintText: 'Warning (when over budget)',
         ),
-        if (_enabled) ...[
-          TextField(
-            controller: _warning,
-            decoration: const InputDecoration(hintText: 'Warning (when over budget)'),
-            maxLines: 2,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _advice,
-            decoration: const InputDecoration(hintText: 'Advice (otherwise)'),
-            maxLines: 2,
-          ),
-        ],
-      ];
+        maxLines: 2,
+      ),
+      const SizedBox(height: 12),
+      TextField(
+        controller: _advice,
+        decoration: const InputDecoration(hintText: 'Advice (otherwise)'),
+        maxLines: 2,
+      ),
+    ],
+  ];
 }
 
 class _FaqCard extends ConsumerWidget {
@@ -299,68 +329,99 @@ class _FaqCard extends ConsumerWidget {
               style: TextStyle(color: AppTheme.faint(context, 0.5)),
             ),
           ),
-        for (final faq in faqs) ...[
+        if (faqs.isNotEmpty)
           Card(
-            shape: AppTheme.rowShape(context),
+            // One solid panel, a hairline between rows — the same grouping
+            // the Settings page uses.
+            color: AppTheme.surface(context),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(22),
+              side: BorderSide(color: AppTheme.faint(context, 0.06)),
+            ),
             clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: () => _showFaqSheet(context, ref, faq: faq),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.help_outline,
-                      size: 20,
-                      color: AppTheme.faint(context, 0.55),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Text(
-                        faq.question,
-                        style: const TextStyle(fontWeight: FontWeight.w500),
+            child: Column(
+              children: [
+                for (var i = 0; i < faqs.length; i++) ...[
+                  if (i > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 52),
+                      child: Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: AppTheme.faint(context, 0.06),
                       ),
                     ),
-                    if (faq.status != 'published') ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                        child: const Text(
-                          'DRAFT',
-                          style: TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFFB45309),
-                          ),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(width: 6),
-                    Icon(
-                      Icons.chevron_right,
-                      size: 20,
-                      color: AppTheme.faint(context, 0.3),
-                    ),
-                  ],
-                ),
-              ),
+                  _FaqRow(faq: faqs[i]),
+                ],
+              ],
             ),
           ),
-          if (faq != faqs.last) const SizedBox(height: 10),
-        ],
       ],
     );
   }
 }
 
-Future<void> _showFaqSheet(BuildContext context, WidgetRef ref, {FaqEntry? faq}) {
+class _FaqRow extends ConsumerWidget {
+  const _FaqRow({required this.faq});
+
+  final FaqEntry faq;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return InkWell(
+      onTap: () => _showFaqSheet(context, ref, faq: faq),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        child: Row(
+          children: [
+            Icon(
+              Icons.help_outline,
+              size: 20,
+              color: AppTheme.faint(context, 0.55),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                faq.question,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+            ),
+            if (faq.status != 'published') ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: const Text(
+                  'DRAFT',
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFFB45309),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(width: 6),
+            Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: AppTheme.faint(context, 0.3),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> _showFaqSheet(
+  BuildContext context,
+  WidgetRef ref, {
+  FaqEntry? faq,
+}) {
   final question = TextEditingController(text: faq?.question ?? '');
   final answer = TextEditingController(text: faq?.answer ?? '');
   var published = faq == null || faq.status == 'published';
@@ -369,7 +430,9 @@ Future<void> _showFaqSheet(BuildContext context, WidgetRef ref, {FaqEntry? faq})
     context: context,
     isScrollControlled: true,
     builder: (sheetContext) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(sheetContext).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+      ),
       child: StatefulBuilder(
         builder: (sheetContext, setSheetState) => SafeArea(
           child: Padding(
@@ -381,9 +444,7 @@ Future<void> _showFaqSheet(BuildContext context, WidgetRef ref, {FaqEntry? faq})
                 Text(
                   faq == null ? 'Add an FAQ' : 'Edit FAQ',
                   textAlign: TextAlign.center,
-                  style: Theme.of(sheetContext)
-                      .textTheme
-                      .titleMedium
+                  style: Theme.of(sheetContext).textTheme.titleMedium
                       ?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 16),
@@ -409,7 +470,9 @@ Future<void> _showFaqSheet(BuildContext context, WidgetRef ref, {FaqEntry? faq})
                 FilledButton(
                   onPressed: () async {
                     try {
-                      await ref.read(repositoryProvider).saveFaq(
+                      await ref
+                          .read(repositoryProvider)
+                          .saveFaq(
                             uuid: faq?.uuid,
                             question: question.text.trim(),
                             answer: answer.text.trim(),
@@ -417,11 +480,14 @@ Future<void> _showFaqSheet(BuildContext context, WidgetRef ref, {FaqEntry? faq})
                           );
 
                       ref.invalidate(faqsProvider);
-                      if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+                      if (sheetContext.mounted) {
+                        Navigator.of(sheetContext).pop();
+                      }
                     } catch (e) {
                       if (sheetContext.mounted) {
                         ScaffoldMessenger.of(sheetContext).showSnackBar(
-                            SnackBar(content: Text(apiErrorMessage(e))));
+                          SnackBar(content: Text(apiErrorMessage(e))),
+                        );
                       }
                     }
                   },
@@ -433,15 +499,20 @@ Future<void> _showFaqSheet(BuildContext context, WidgetRef ref, {FaqEntry? faq})
                       try {
                         await ref.read(repositoryProvider).deleteFaq(faq.uuid);
                         ref.invalidate(faqsProvider);
-                        if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+                        if (sheetContext.mounted) {
+                          Navigator.of(sheetContext).pop();
+                        }
                       } catch (e) {
                         if (sheetContext.mounted) {
                           ScaffoldMessenger.of(sheetContext).showSnackBar(
-                              SnackBar(content: Text(apiErrorMessage(e))));
+                            SnackBar(content: Text(apiErrorMessage(e))),
+                          );
                         }
                       }
                     },
-                    style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFFDC2626),
+                    ),
                     child: const Text('Delete'),
                   ),
               ],
