@@ -45,26 +45,23 @@ class SavingsGoalScreen extends ConsumerWidget {
           const SizedBox(width: 4),
         ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: loaded == null
           ? null
-          : FloatingShelf(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AddPill(
-                    label: 'Withdraw',
-                    icon: Icons.remove,
-                    onPressed: () =>
-                        showSavingsEntrySheet(context, goal: loaded, type: 'withdraw'),
-                  ),
-                  const SizedBox(width: 10),
-                  AddPill(
-                    label: 'Deposit',
-                    onPressed: () => showSavingsEntrySheet(context, goal: loaded),
-                  ),
-                ],
-              ),
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AddPill(
+                  label: 'Withdraw',
+                  icon: Icons.remove,
+                  onPressed: () =>
+                      showSavingsEntrySheet(context, goal: loaded, type: 'withdraw'),
+                ),
+                const SizedBox(width: 10),
+                AddPill(
+                  label: 'Deposit',
+                  onPressed: () => showSavingsEntrySheet(context, goal: loaded),
+                ),
+              ],
             ),
       body: goal.when(
         loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.green)),

@@ -30,12 +30,9 @@ class SavingsScreen extends ConsumerWidget {
               ?.copyWith(fontWeight: FontWeight.w700),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: FloatingShelf(
-        child: AddPill(
-          label: 'New goal',
-          onPressed: () => showSavingsGoalSheet(context),
-        ),
+      floatingActionButton: AddPill(
+        label: 'New goal',
+        onPressed: () => showSavingsGoalSheet(context),
       ),
       body: summary.when(
         loading: () => const Center(

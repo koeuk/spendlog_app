@@ -28,9 +28,9 @@ class IncomeScreen extends ConsumerWidget {
               ?.copyWith(fontWeight: FontWeight.w700),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: FloatingShelf(
-        child: AddPill(label: 'Add', onPressed: () => showIncomeForm(context)),
+      floatingActionButton: AddPill(
+        label: 'Add',
+        onPressed: () => showIncomeForm(context),
       ),
       body: summary.when(
         loading: () => const Center(
