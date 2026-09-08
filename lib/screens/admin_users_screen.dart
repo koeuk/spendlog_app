@@ -21,11 +21,7 @@ class AdminUsersScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Users',
-          style: Theme.of(context).textTheme.titleLarge
-              ?.copyWith(fontWeight: FontWeight.w700),
-        ),
+        title: const Text('Users'),
       ),
       floatingActionButton: AddPill(
         label: 'Add',
@@ -319,8 +315,6 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
       appBar: AppBar(
         title: Text(
           _editing ? 'Edit user' : 'Add a user',
-          style: Theme.of(context).textTheme.titleLarge
-              ?.copyWith(fontWeight: FontWeight.w700),
         ),
         actions: [
           if (_editing)

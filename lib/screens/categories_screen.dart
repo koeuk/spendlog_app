@@ -26,11 +26,7 @@ class CategoriesScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Categories',
-          style: Theme.of(context).textTheme.titleLarge
-              ?.copyWith(fontWeight: FontWeight.w700),
-        ),
+        title: const Text('Categories'),
       ),
       floatingActionButton: canWrite
           ? AddPill(label: 'New', onPressed: () => showCategoryForm(context))

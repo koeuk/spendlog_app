@@ -28,11 +28,7 @@ class ProfileScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Settings',
-          style: Theme.of(context).textTheme.titleLarge
-              ?.copyWith(fontWeight: FontWeight.w700),
-        ),
+        title: const Text('Settings'),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(

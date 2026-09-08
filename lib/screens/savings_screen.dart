@@ -24,11 +24,7 @@ class SavingsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Savings',
-          style: Theme.of(context).textTheme.titleLarge
-              ?.copyWith(fontWeight: FontWeight.w700),
-        ),
+        title: const Text('Savings'),
       ),
       floatingActionButton: AddPill(
         label: 'New goal',

@@ -20,11 +20,7 @@ class AdminSettingsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'App settings',
-          style:
-              Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-        ),
+        title: const Text('App settings'),
       ),
       body: RefreshIndicator(
         color: AppTheme.green,

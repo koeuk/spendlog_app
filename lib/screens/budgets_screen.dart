@@ -21,11 +21,7 @@ class BudgetsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Budgets',
-          style:
-              Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-        ),
+        title: const Text('Budgets'),
         actions: [
           MonthStepper(
             label: monthLabel(month),

@@ -32,8 +32,6 @@ class SavingsGoalScreen extends ConsumerWidget {
         title: Text(
           loaded?.name ?? 'Goal',
           overflow: TextOverflow.ellipsis,
-          style:
-              Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
         ),
         actions: [
           if (loaded != null)

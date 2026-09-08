@@ -27,10 +27,6 @@ class DashboardScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           'Hi, ${user?.name.split(' ').first ?? ''} 👋',
-          style: Theme.of(context)
-              .textTheme
-              .titleLarge
-              ?.copyWith(fontWeight: FontWeight.w700),
         ),
       ),
       body: dashboard.when(

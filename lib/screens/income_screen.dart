@@ -22,11 +22,7 @@ class IncomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Income',
-          style: Theme.of(context).textTheme.titleLarge
-              ?.copyWith(fontWeight: FontWeight.w700),
-        ),
+        title: const Text('Income'),
       ),
       floatingActionButton: AddPill(
         label: 'Add',

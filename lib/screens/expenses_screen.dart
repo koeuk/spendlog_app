@@ -131,11 +131,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Expenses',
-          style: Theme.of(context).textTheme.titleLarge
-              ?.copyWith(fontWeight: FontWeight.w700),
-        ),
+        title: const Text('Expenses'),
       ),
       floatingActionButton: AddPill(
         label: 'Add',
