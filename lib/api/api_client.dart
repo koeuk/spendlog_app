@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../l10n/l10n.dart';
+
 import 'env.dart';
 
 /// One Dio for the whole app: bearer token attached when present, JSON in and
@@ -49,6 +51,10 @@ class ApiClient {
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
+          // Translatable columns come back in this language — see the API
+          // doc's Language note. Read per request, so a switch takes effect
+          // on the very next call.
+          options.headers['Accept-Language'] = L10n.locale;
           handler.next(options);
         },
         onError: (error, handler) async {

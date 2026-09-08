@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../models/report.dart';
 import '../theme.dart';
 import '../utils/format.dart';
@@ -47,7 +48,7 @@ class _SpendingChartState extends State<SpendingChart> {
         height: widget.height,
         child: Center(
           child: Text(
-            'Nothing to chart yet.',
+            tr('Nothing to chart yet.'),
             style: TextStyle(color: AppTheme.faint(context, 0.4), fontSize: 13),
           ),
         ),

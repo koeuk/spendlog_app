@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -54,7 +55,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Password reset — sign in with your new password.')),
+          SnackBar(content: Text(tr('Password reset — sign in with your new password.'))),
         );
         context.go('/login');
       }
@@ -68,8 +69,8 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return AuthShell(
-      heading: 'Enter your code',
-      description: 'Type the 6-digit code we emailed you, then choose a new password.',
+      heading: tr('Enter your code'),
+      description: tr('Type the 6-digit code we emailed you, then choose a new password.'),
       footer: TextButton(
         onPressed: () => context.go('/forgot-password'),
         child: const Text("Didn't get it? Send a new code"),
@@ -96,7 +97,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
             ],
             TextFormField(
               controller: _email,
-              decoration: const InputDecoration(hintText: 'Email'),
+              decoration: InputDecoration(hintText: tr('Email')),
               keyboardType: TextInputType.emailAddress,
               autocorrect: false,
               textInputAction: TextInputAction.next,
@@ -105,7 +106,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
             const SizedBox(height: 14),
             TextFormField(
               controller: _code,
-              decoration: const InputDecoration(hintText: '6-digit code'),
+              decoration: InputDecoration(hintText: tr('6-digit code')),
               keyboardType: TextInputType.number,
               maxLength: 6,
               autofocus: true,
@@ -125,7 +126,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
               controller: _password,
               obscureText: !_showPassword,
               decoration: InputDecoration(
-                hintText: 'New password',
+                hintText: tr('New password'),
                 suffixIcon: IconButton(
                   onPressed: () => setState(() => _showPassword = !_showPassword),
                   icon: Icon(
@@ -141,7 +142,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
             TextFormField(
               controller: _confirm,
               obscureText: !_showPassword,
-              decoration: const InputDecoration(hintText: 'Confirm new password'),
+              decoration: InputDecoration(hintText: tr('Confirm new password')),
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _submit(),
               validator: (v) => v != _password.text ? 'Passwords do not match.' : null,
@@ -155,7 +156,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
-                  : const Text('Reset password'),
+                  : Text(tr('Reset password')),
             ),
           ],
         ),

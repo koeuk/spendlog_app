@@ -105,13 +105,13 @@ abstract final class AppTheme {
   /// Text and icons laid on [accent]: white on a deep colour, ink on a pale one.
   static Color onAccent(BuildContext context) => Theme.of(context).colorScheme.onPrimary;
 
-  static ThemeData light([Branding branding = Branding.stock]) =>
-      _build(Brightness.light, branding);
+  static ThemeData light([Branding branding = Branding.stock, String locale = 'en']) =>
+      _build(Brightness.light, branding, locale);
 
-  static ThemeData dark([Branding branding = Branding.stock]) =>
-      _build(Brightness.dark, branding);
+  static ThemeData dark([Branding branding = Branding.stock, String locale = 'en']) =>
+      _build(Brightness.dark, branding, locale);
 
-  static ThemeData _build(Brightness brightness, Branding branding) {
+  static ThemeData _build(Brightness brightness, Branding branding, String locale) {
     final isDark = brightness == Brightness.dark;
 
     final chosen = branding.branded ? Branding.parseHex(branding.buttonColor) : null;
@@ -147,7 +147,10 @@ abstract final class AppTheme {
       // Transparent on purpose: the gradient ground is painted once, beneath
       // the navigator, by GlassBackdrop.
       scaffoldBackgroundColor: Colors.transparent,
-      textTheme: GoogleFonts.interTextTheme(base.textTheme)
+      // Inter has no Khmer glyphs; Noto Sans Khmer is the face built for them.
+      textTheme: (locale == 'km'
+              ? GoogleFonts.notoSansKhmerTextTheme(base.textTheme)
+              : GoogleFonts.interTextTheme(base.textTheme))
           .apply(bodyColor: text, displayColor: text),
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,

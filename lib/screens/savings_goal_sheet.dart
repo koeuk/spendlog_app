@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
@@ -121,19 +122,19 @@ class _GoalFormState extends ConsumerState<_GoalForm> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('Delete this goal?'),
+        title: Text(tr('Delete this goal?')),
         content: Text(
           '"${goal.name}" and every deposit and withdrawal on it will be removed.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(tr('Cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
-            child: const Text('Delete'),
+            child: Text(tr('Delete')),
           ),
         ],
       ),
@@ -199,7 +200,7 @@ class _GoalFormState extends ConsumerState<_GoalForm> {
               ],
               TextFormField(
                 controller: _name,
-                decoration: const InputDecoration(hintText: 'What are you saving for?'),
+                decoration: InputDecoration(hintText: tr('What are you saving for?')),
                 textCapitalization: TextCapitalization.sentences,
                 autofocus: !_editing,
                 validator: (v) =>
@@ -212,7 +213,7 @@ class _GoalFormState extends ConsumerState<_GoalForm> {
                     child: TextFormField(
                       controller: _target,
                       decoration: InputDecoration(
-                        hintText: 'Target',
+                        hintText: tr('Target'),
                         prefixText: _currency == 'USD' ? '\$ ' : '៛ ',
                       ),
                       keyboardType:
@@ -249,7 +250,7 @@ class _GoalFormState extends ConsumerState<_GoalForm> {
               if (_currency == 'KHR') ...[
                 const SizedBox(height: 8),
                 Text(
-                  'Entered in riel, stored in US dollars.',
+                  tr('Entered in riel, stored in US dollars.'),
                   style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.5)),
                 ),
               ],
@@ -279,7 +280,7 @@ class _GoalFormState extends ConsumerState<_GoalForm> {
                     IconButton(
                       onPressed: () => setState(() => _deadline = null),
                       icon: const Icon(Icons.close, size: 20),
-                      tooltip: 'Clear deadline',
+                      tooltip: tr('Clear deadline'),
                       style: IconButton.styleFrom(
                         minimumSize: const Size(52, 52),
                         shape: const CircleBorder(),
@@ -290,7 +291,7 @@ class _GoalFormState extends ConsumerState<_GoalForm> {
                 ],
               ),
               const SizedBox(height: 18),
-              const Eyebrow('Colour'),
+              Eyebrow(tr('Colour')),
               const SizedBox(height: 10),
               SwatchPicker(
                 selected: _color,
@@ -312,7 +313,7 @@ class _GoalFormState extends ConsumerState<_GoalForm> {
                 TextButton(
                   onPressed: _busy ? null : _delete,
                   style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
-                  child: const Text('Delete goal'),
+                  child: Text(tr('Delete goal')),
                 ),
               ],
             ],

@@ -11,6 +11,7 @@ import '../models/activity.dart';
 import '../models/admin.dart';
 import '../models/branding.dart';
 import '../models/income.dart';
+import '../models/recurring.dart';
 import '../models/report.dart';
 import '../models/savings.dart';
 import '../models/user.dart';
@@ -189,6 +190,109 @@ class SpendLogRepository {
 
   Future<void> deleteIncome(String uuid) =>
       _client.dio.delete('/incomes/$uuid');
+
+  // ------------------------------------------------------------ recurring
+
+  /// Every rule, active first then by next run; [kind] narrows to
+  /// expense | income.
+  Future<List<RecurringRule>> recurringRules({String? kind}) async {
+    final response = await _client.dio.get(
+      '/recurring',
+      queryParameters: {'kind': ?kind},
+    );
+
+    return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>)
+        .map((e) => RecurringRule.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<RecurringRule> recurringRule(String uuid) async {
+    final response = await _client.dio.get('/recurring/$uuid');
+
+    return RecurringRule.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
+  /// [kind] is expense | income and cannot change afterwards. The category
+  /// only travels with expense rules — the server forbids it on income. The
+  /// server runs the rule at once, so a start date of today (or earlier, up
+  /// to a year back) yields its rows before this returns.
+  Future<RecurringRule> createRecurringRule({
+    required String kind,
+    required String title,
+    required String amount,
+    required String frequency,
+    required String startsOn,
+    String? categoryUuid,
+    String? endsOn,
+    String? note,
+    bool active = true,
+    String currency = 'USD',
+  }) async {
+    final response = await _client.dio.post(
+      '/recurring',
+      data: {
+        'kind': kind,
+        'title': title,
+        'amount': amount,
+        if (kind == 'expense') 'category_uuid': categoryUuid,
+        'frequency': frequency,
+        'starts_on': startsOn,
+        'ends_on': _blankToNull(endsOn),
+        'active': active,
+        'note': _blankToNull(note),
+        if (currency != 'USD') 'currency': currency,
+      },
+    );
+
+    return RecurringRule.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<RecurringRule> updateRecurringRule(
+    String uuid, {
+    required String kind,
+    required String title,
+    required String amount,
+    required String frequency,
+    required String startsOn,
+    String? categoryUuid,
+    String? endsOn,
+    String? note,
+    bool active = true,
+    String currency = 'USD',
+  }) async {
+    final response = await _client.dio.patch(
+      '/recurring/$uuid',
+      data: {
+        'title': title,
+        'amount': amount,
+        if (kind == 'expense') 'category_uuid': categoryUuid,
+        'frequency': frequency,
+        'starts_on': startsOn,
+        // Sent even when null: that is how an end date gets cleared on edit.
+        'ends_on': _blankToNull(endsOn),
+        'active': active,
+        'note': _blankToNull(note),
+        if (currency != 'USD') 'currency': currency,
+      },
+    );
+
+    return RecurringRule.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
+  /// The rows a rule already created stay put; only the template goes.
+  Future<void> deleteRecurringRule(String uuid) =>
+      _client.dio.delete('/recurring/$uuid');
+
+  static String? _blankToNull(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
 
   // -------------------------------------------------------------- savings
 

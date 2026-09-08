@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -158,7 +159,7 @@ class _MonthCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Eyebrow('This month', onBrand: true),
+            Eyebrow(tr('This month'), onBrand: true),
             const SizedBox(height: 8),
             Text(
               money(overall.spent),
@@ -218,7 +219,7 @@ class _MoneyRow extends StatelessWidget {
         children: [
           Expanded(
             child: _MoneyCard(
-              label: 'Income',
+              label: tr('Income'),
               value: money(data.incomeTotal ?? '0.00'),
               detail: monthLabel(data.budgetMonth),
               onTap: () => context.go('/income'),
@@ -227,7 +228,7 @@ class _MoneyRow extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: _MoneyCard(
-              label: 'Savings',
+              label: tr('Savings'),
               value: money(savings?.totalSaved ?? '0.00'),
               detail: savings == null
                   ? ''
@@ -314,7 +315,7 @@ class _TodayCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Eyebrow('Today'),
+            Eyebrow(tr('Today')),
             const SizedBox(height: 8),
             Text(
               money(total),
@@ -351,7 +352,7 @@ class _SpendingCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Eyebrow('Spending'),
+            Eyebrow(tr('Spending')),
             const SizedBox(height: 6),
             // Total and label come from the loaded series, so they are read off
             // the async value rather than held here.
@@ -437,7 +438,7 @@ class _BreakdownCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Eyebrow('Spending by category'),
+            Eyebrow(tr('Spending by category')),
             const SizedBox(height: 16),
             for (final slice in data.breakdown) ...[
               Row(
@@ -495,7 +496,7 @@ class _RecentCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Eyebrow('Recent expenses'),
+            Eyebrow(tr('Recent expenses')),
             const SizedBox(height: 12),
             for (final expense in data.recent) ...[
               Row(

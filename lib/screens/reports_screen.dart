@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
@@ -26,11 +27,11 @@ class ReportsScreen extends ConsumerWidget {
         // a list heading does. Pushed pages centre theirs between the arrow
         // and the actions.
         centerTitle: false,
-        title: const Text('Reports'),
+        title: Text(tr('Reports')),
         actions: [
           if (canExportReports)
             IconButton(
-              tooltip: 'Export',
+              tooltip: tr('Export'),
               icon: const Icon(Icons.ios_share, size: 21),
               onPressed: () => _pickExportFormat(context, ref),
             ),
@@ -88,7 +89,7 @@ class _PeriodBar extends ConsumerWidget {
                 child: Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: PillSegment(
-                    label: option.label,
+                    label: tr(option.label),
                     selected: data.granularity == option.value,
                     onTap: () => notifier.state = period.withGranularity(option.value),
                   ),
@@ -202,7 +203,7 @@ class _PeriodSheet extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             Text(
-              'Choose a period',
+              tr('Choose a period'),
               style: Theme.of(context)
                   .textTheme
                   .titleMedium
@@ -263,7 +264,7 @@ class _TotalCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Eyebrow('Total spent', onBrand: true),
+            Eyebrow(tr('Total spent'), onBrand: true),
             const SizedBox(height: 8),
             Text(
               money(stats.total),
@@ -398,7 +399,7 @@ class _ChartCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Eyebrow('Spending'),
+            Eyebrow(tr('Spending')),
             const SizedBox(height: 6),
             Row(
               crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -446,11 +447,11 @@ class _BreakdownCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Eyebrow('By category'),
+            Eyebrow(tr('By category')),
             const SizedBox(height: 16),
             if (breakdown.isEmpty)
               Text(
-                'Nothing logged in this period.',
+                tr('Nothing logged in this period.'),
                 style: TextStyle(color: AppTheme.faint(context, 0.5)),
               ),
             for (final slice in breakdown) ...[

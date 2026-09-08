@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
 import '../models/expense.dart';
+import '../models/recurring.dart';
 import '../providers/data_providers.dart';
 import '../theme.dart';
+import '../widgets/common.dart';
 import '../widgets/glass.dart';
 import '../utils/format.dart';
 import '../utils/category_style.dart';
@@ -45,6 +48,11 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
       ? DateTime.parse(widget.expense!.spentOn!)
       : DateTime.now();
   String _currency = 'USD';
+
+  /// A frequency from [recurringFrequencies], or null for a one-off. Only
+  /// offered on create: an existing row is a row, not a rule.
+  String? _repeat;
+
   bool _busy = false;
   String? _error;
 
@@ -93,6 +101,18 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
           categoryUuid: _categoryUuid == _newCategoryMarker ? null : _categoryUuid,
           currency: _currency,
         );
+      } else if (_repeat != null) {
+        // A rule instead of a row: the server runs it at once, so today's
+        // expense appears straight away and the rest follow on schedule.
+        await repo.createRecurringRule(
+          kind: 'expense',
+          title: _item.text.trim(),
+          amount: _price.text.trim(),
+          frequency: _repeat!,
+          startsOn: _spentOnParam,
+          categoryUuid: _categoryUuid,
+          currency: _currency,
+        );
       } else {
         await repo.createExpense(
           item: _item.text.trim(),
@@ -107,6 +127,7 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
 
       if (mounted) {
         invalidateMoney(ref);
+        if (_repeat != null) invalidateRecurring(ref);
         Navigator.of(context).pop();
       }
     } catch (e) {
@@ -125,17 +146,17 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('Delete this expense?'),
+        title: Text(tr('Delete this expense?')),
         content: Text('${widget.expense!.item} — ${money(widget.expense!.price)}'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(tr('Cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
-            child: const Text('Delete'),
+            child: Text(tr('Delete')),
           ),
         ],
       ),
@@ -203,7 +224,7 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
               ],
               TextFormField(
                 controller: _item,
-                decoration: const InputDecoration(hintText: 'What was it?'),
+                decoration: InputDecoration(hintText: tr('What was it?')),
                 textCapitalization: TextCapitalization.sentences,
                 autofocus: !_editing,
                 validator: (v) =>
@@ -216,7 +237,7 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                     child: TextFormField(
                       controller: _price,
                       decoration: InputDecoration(
-                        hintText: 'Price',
+                        hintText: tr('Price'),
                         prefixText: _currency == 'USD' ? '\$ ' : '៛ ',
                       ),
                       keyboardType:
@@ -261,7 +282,7 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                 error: (e, _) => Text(apiErrorMessage(e)),
                 data: (list) => DropdownButtonFormField<String>(
                   initialValue: _categoryUuid,
-                  decoration: const InputDecoration(hintText: 'Category'),
+                  decoration: InputDecoration(hintText: tr('Category')),
                   items: [
                     for (final category in list)
                       DropdownMenuItem(
@@ -278,14 +299,16 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                           ],
                         ),
                       ),
-                    if (!_editing)
+                    // A rule needs an existing category; the inline path is
+                    // for one-off rows only.
+                    if (!_editing && _repeat == null)
                       DropdownMenuItem(
                         value: _newCategoryMarker,
                         child: Row(
                           children: [
                             Icon(Icons.add, size: 18, color: AppTheme.accent(context)),
                             SizedBox(width: 10),
-                            Text('New category…'),
+                            Text(tr('New category…')),
                           ],
                         ),
                       ),
@@ -298,7 +321,7 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: _newCategory,
-                  decoration: const InputDecoration(hintText: 'New category name'),
+                  decoration: InputDecoration(hintText: tr('New category name')),
                   textCapitalization: TextCapitalization.words,
                   validator: (v) => _categoryUuid == _newCategoryMarker &&
                           (v == null || v.trim().isEmpty)
@@ -321,6 +344,19 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                   side: BorderSide(color: AppTheme.faint(context, 0.12)),
                 ),
               ),
+              if (!_editing) ...[
+                const SizedBox(height: 14),
+                RepeatRow(
+                  value: _repeat,
+                  onChanged: (value) => setState(() {
+                    _repeat = value;
+                    // The inline "new category" path is gone while repeating.
+                    if (value != null && _categoryUuid == _newCategoryMarker) {
+                      _categoryUuid = null;
+                    }
+                  }),
+                ),
+              ],
               const SizedBox(height: 18),
               FilledButton(
                 onPressed: _busy ? null : _submit,
@@ -331,7 +367,13 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: Colors.white),
                       )
-                    : Text(_editing ? 'Save changes' : 'Add expense'),
+                    : Text(
+                        _editing
+                            ? 'Save changes'
+                            : _repeat != null
+                                ? tr('Add repeating expense')
+                                : 'Add expense',
+                      ),
               ),
               if (_editing) ...[
                 const SizedBox(height: 8),
@@ -340,7 +382,7 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0xFFDC2626),
                   ),
-                  child: const Text('Delete expense'),
+                  child: Text(tr('Delete expense')),
                 ),
               ],
             ],

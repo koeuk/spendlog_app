@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -21,10 +22,10 @@ class AdminUsersScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Users'),
+        title: Text(tr('Users')),
       ),
       floatingActionButton: AddPill(
-        label: 'Add',
+        label: tr('Add'),
         icon: Icons.person_add_alt,
         onPressed: () => _UserFormPage.open(context),
       ),
@@ -272,19 +273,19 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('Delete this user?'),
+        title: Text(tr('Delete this user?')),
         content: Text('${widget.user!.name} — their expenses go with them.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(tr('Cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(
               foregroundColor: const Color(0xFFDC2626),
             ),
-            child: const Text('Delete'),
+            child: Text(tr('Delete')),
           ),
         ],
       ),
@@ -317,7 +318,7 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
         actions: [
           if (_editing)
             IconButton(
-              tooltip: 'Delete',
+              tooltip: tr('Delete'),
               onPressed: _delete,
               icon: const Icon(Icons.delete_outline, color: Color(0xFFDC2626)),
             ),
@@ -365,7 +366,7 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
             ],
             TextFormField(
               controller: _name,
-              decoration: const InputDecoration(hintText: 'Name'),
+              decoration: InputDecoration(hintText: tr('Name')),
               textCapitalization: TextCapitalization.words,
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? 'Enter a name.' : null,
@@ -373,15 +374,15 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _username,
-              decoration: const InputDecoration(
-                hintText: 'Username (optional)',
+              decoration: InputDecoration(
+                hintText: tr('Username (optional)'),
               ),
               autocorrect: false,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _email,
-              decoration: const InputDecoration(hintText: 'Email'),
+              decoration: InputDecoration(hintText: tr('Email')),
               keyboardType: TextInputType.emailAddress,
               autocorrect: false,
               validator: (v) =>
@@ -408,26 +409,26 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
               },
             ),
             const SizedBox(height: 16),
-            const Eyebrow('Role'),
-            const SizedBox(height: 8),
+            Eyebrow(tr('Role')),
+            SizedBox(height: 8),
             SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'user', label: Text('User')),
-                ButtonSegment(value: 'admin', label: Text('Admin')),
+              segments: [
+                ButtonSegment(value: 'user', label: Text(tr('User'))),
+                ButtonSegment(value: 'admin', label: Text(tr('Admin'))),
               ],
               selected: {_role},
               onSelectionChanged: (selection) =>
                   setState(() => _role = selection.first),
               showSelectedIcon: false,
             ),
-            const SizedBox(height: 16),
-            const Eyebrow('Status'),
-            const SizedBox(height: 8),
+            SizedBox(height: 16),
+            Eyebrow(tr('Status')),
+            SizedBox(height: 8),
             SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'active', label: Text('Active')),
-                ButtonSegment(value: 'suspended', label: Text('Suspended')),
-                ButtonSegment(value: 'archived', label: Text('Archived')),
+              segments: [
+                ButtonSegment(value: 'active', label: Text(tr('Active'))),
+                ButtonSegment(value: 'suspended', label: Text(tr('Suspended'))),
+                ButtonSegment(value: 'archived', label: Text(tr('Archived'))),
               ],
               selected: {_status},
               onSelectionChanged: (selection) =>
@@ -547,7 +548,7 @@ class _PhotoBlock extends StatelessWidget {
                       style: TextButton.styleFrom(
                         foregroundColor: const Color(0xFFDC2626),
                       ),
-                      child: const Text('Remove'),
+                      child: Text(tr('Remove')),
                     ),
                 ],
               ),

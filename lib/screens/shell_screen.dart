@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:go_router/go_router.dart';
 
 import '../theme.dart';
@@ -167,7 +168,7 @@ class _NavItem extends StatelessWidget {
                   fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                 ),
                 child: Text(
-                  destination.label,
+                  tr(destination.label),
                   maxLines: 1,
                   softWrap: false,
                   overflow: TextOverflow.clip,

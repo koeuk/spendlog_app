@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
+import '../models/recurring.dart';
 import '../models/user.dart';
 import '../theme.dart';
 import '../utils/category_style.dart';
@@ -155,7 +157,7 @@ class LoadFailed extends StatelessWidget {
                 minimumSize: const Size(140, 44),
                 backgroundColor: AppTheme.accent(context),
               ),
-              child: const Text('Try again'),
+              child: Text(tr('Try again')),
             ),
           ],
         ),
@@ -214,6 +216,38 @@ class PillSegment extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The "Repeat" line the expense and income forms share on create: Never
+/// plus the four frequencies as one row of short pills. Picking any of them
+/// turns the save into a recurring rule rather than a single row.
+class RepeatRow extends StatelessWidget {
+  const RepeatRow({super.key, required this.value, required this.onChanged});
+
+  /// A frequency from [recurringFrequencies], or null for "never".
+  final String? value;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(Icons.repeat, size: 18, color: AppTheme.faint(context, 0.45)),
+        const SizedBox(width: 10),
+        for (final f in [null, ...recurringFrequencies]) ...[
+          Expanded(
+            child: PillSegment(
+              label: f == null ? tr('Never') : tr(frequencyLabel(f)),
+              selected: value == f,
+              onTap: () => onChanged(f),
+              height: 34,
+            ),
+          ),
+          if (f != recurringFrequencies.last) const SizedBox(width: 6),
+        ],
+      ],
     );
   }
 }
@@ -294,7 +328,7 @@ class MonthStepper extends StatelessWidget {
           onPressed: () => onChanged(shiftMonth(month, -1)),
           icon: const Icon(Icons.chevron_left),
           visualDensity: VisualDensity.compact,
-          tooltip: 'Previous month',
+          tooltip: tr('Previous month'),
         ),
         InkWell(
           onTap: () => _pick(context),
@@ -315,7 +349,7 @@ class MonthStepper extends StatelessWidget {
           onPressed: () => onChanged(shiftMonth(month, 1)),
           icon: const Icon(Icons.chevron_right),
           visualDensity: VisualDensity.compact,
-          tooltip: 'Next month',
+          tooltip: tr('Next month'),
         ),
       ],
     );
@@ -378,7 +412,7 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
                 IconButton(
                   onPressed: () => setState(() => _year--),
                   icon: const Icon(Icons.chevron_left),
-                  tooltip: 'Previous year',
+                  tooltip: tr('Previous year'),
                 ),
                 Expanded(
                   child: Text(
@@ -390,7 +424,7 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
                 IconButton(
                   onPressed: () => setState(() => _year++),
                   icon: const Icon(Icons.chevron_right),
-                  tooltip: 'Next year',
+                  tooltip: tr('Next year'),
                 ),
               ],
             ),
@@ -415,7 +449,7 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
             // The way back after wandering years away.
             TextButton(
               onPressed: today == widget.current ? null : () => Navigator.of(context).pop(today),
-              child: const Text('This month'),
+              child: Text(tr('This month')),
             ),
           ],
         ),

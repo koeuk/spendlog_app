@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -24,10 +25,10 @@ class SavingsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Savings'),
+        title: Text(tr('Savings')),
       ),
       floatingActionButton: AddPill(
-        label: 'New goal',
+        label: tr('New goal'),
         onPressed: () => showSavingsGoalSheet(context),
       ),
       body: summary.when(
@@ -117,7 +118,7 @@ class SavingsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'No goals yet — start one.',
+                    tr('No goals yet — start one.'),
                     style: TextStyle(color: AppTheme.faint(context, 0.5)),
                   ),
                 ],
@@ -160,7 +161,7 @@ class _SummaryCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Eyebrow('Total saved', onBrand: true),
+            Eyebrow(tr('Total saved'), onBrand: true),
             const SizedBox(height: 8),
             Row(
               crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -321,7 +322,7 @@ class ReachedBadge extends StatelessWidget {
           Icon(Icons.check_rounded, size: 13, color: AppTheme.accent(context)),
           SizedBox(width: 3),
           Text(
-            'Reached',
+            tr('Reached'),
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w700,

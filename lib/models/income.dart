@@ -5,6 +5,7 @@ class Income {
     required this.amount,
     required this.receivedOn,
     this.note,
+    this.recurring = false,
   });
 
   final String uuid;
@@ -16,12 +17,16 @@ class Income {
   final String receivedOn;
   final String? note;
 
+  /// Created by a recurring rule rather than typed in by hand.
+  final bool recurring;
+
   factory Income.fromJson(Map<String, dynamic> json) => Income(
         uuid: json['uuid'] as String,
         source: json['source'] as String? ?? '',
         amount: json['amount'] as String? ?? '0.00',
         receivedOn: json['received_on'] as String? ?? '',
         note: json['note'] as String?,
+        recurring: json['recurring'] as bool? ?? false,
       );
 }
 

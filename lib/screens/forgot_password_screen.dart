@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -51,11 +52,11 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return AuthShell(
-      heading: 'Forgot your password?',
+      heading: tr('Forgot your password?'),
       description: "No problem. Tell us your email address and we'll send you a 6-digit code to choose a new one.",
       footer: TextButton(
         onPressed: () => context.go('/login'),
-        child: const Text('Back to sign in'),
+        child: Text(tr('Back to sign in')),
       ),
       child: Form(
         key: _formKey,
@@ -79,7 +80,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             ],
             TextFormField(
               controller: _email,
-              decoration: const InputDecoration(hintText: 'Email'),
+              decoration: InputDecoration(hintText: tr('Email')),
               keyboardType: TextInputType.emailAddress,
               autocorrect: false,
               autofocus: true,
@@ -96,7 +97,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
-                  : const Text('Email me a code'),
+                  : Text(tr('Email me a code')),
             ),
           ],
         ),

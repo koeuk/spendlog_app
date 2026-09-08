@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -16,7 +17,7 @@ Future<void> showMenuSheet(BuildContext context) {
     // Scroll-controlled so the sheet may grow past the default 9/16 of the
     // screen; the list below scrolls once it hits the cap it sets itself.
     isScrollControlled: true,
-    builder: (context) => const _MenuSheet(),
+    builder: (context) => _MenuSheet(),
   );
 }
 
@@ -33,6 +34,12 @@ const _entries = <_Entry>[
     icon: Icons.payments_outlined,
     label: 'Income',
     path: '/income',
+    admin: false,
+  ),
+  (
+    icon: Icons.repeat,
+    label: 'Recurring',
+    path: '/recurring',
     admin: false,
   ),
   (
@@ -107,7 +114,7 @@ class _MenuSheet extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.only(left: 4, bottom: 10),
                 child: Text(
-                  'Menu',
+                  tr('Menu'),
                   style: Theme.of(context).textTheme.titleLarge
                       ?.copyWith(fontWeight: FontWeight.w700),
                 ),
@@ -167,7 +174,7 @@ class _MenuRow extends StatelessWidget {
             const SizedBox(width: 16),
             Expanded(
               child: Text(
-                entry.label,
+                tr(entry.label),
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,

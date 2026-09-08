@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -93,19 +94,19 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('Delete this expense?'),
+        title: Text(tr('Delete this expense?')),
         content: Text('${expense.item} — ${money(expense.price)}'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(tr('Cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(
               foregroundColor: const Color(0xFFDC2626),
             ),
-            child: const Text('Delete'),
+            child: Text(tr('Delete')),
           ),
         ],
       ),
@@ -135,10 +136,10 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
         // a list heading does. Pushed pages centre theirs between the arrow
         // and the actions.
         centerTitle: false,
-        title: const Text('Expenses'),
+        title: Text(tr('Expenses')),
       ),
       floatingActionButton: AddPill(
-        label: 'Add',
+        label: tr('Add'),
         onPressed: () => showExpenseForm(context),
       ),
       body: Column(
@@ -270,7 +271,7 @@ class _FilterBar extends ConsumerWidget {
               controller: search,
               onChanged: onSearchChanged,
               decoration: InputDecoration(
-                hintText: 'Search expenses…',
+                hintText: tr('Search expenses…'),
                 prefixIcon: const Icon(Icons.search, size: 20),
                 contentPadding: EdgeInsets.zero,
                 suffixIcon: search.text.isNotEmpty
@@ -371,7 +372,7 @@ class _FilterBar extends ConsumerWidget {
                       size: 15,
                       color: Color(0xFFDC2626),
                     ),
-                    label: const Text('Clear'),
+                    label: Text(tr('Clear')),
                     labelStyle: const TextStyle(
                       fontSize: 12.5,
                       color: Color(0xFFDC2626),
@@ -443,15 +444,27 @@ class _ExpenseTile extends StatelessWidget {
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      [
-                        if (expense.category != null) expense.category!.name,
-                        if (expense.spentOn != null) dayLabel(expense.spentOn!),
-                      ].join(' · '),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.faint(context, 0.45),
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            [
+                              if (expense.category != null) expense.category!.name,
+                              if (expense.spentOn != null) dayLabel(expense.spentOn!),
+                            ].join(' · '),
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.faint(context, 0.45),
+                            ),
+                          ),
+                        ),
+                        // Made by a recurring rule, not typed in.
+                        if (expense.recurring) ...[
+                          const SizedBox(width: 5),
+                          Icon(Icons.repeat, size: 14, color: AppTheme.faint(context, 0.4)),
+                        ],
+                      ],
                     ),
                   ],
                 ),

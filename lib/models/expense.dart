@@ -7,6 +7,7 @@ class Expense {
     required this.price,
     this.spentOn,
     this.category,
+    this.recurring = false,
   });
 
   final String uuid;
@@ -18,6 +19,9 @@ class Expense {
   final String? spentOn;
   final Category? category;
 
+  /// Created by a recurring rule rather than typed in by hand.
+  final bool recurring;
+
   factory Expense.fromJson(Map<String, dynamic> json) => Expense(
         uuid: json['uuid'] as String,
         item: json['item'] as String? ?? '',
@@ -26,5 +30,6 @@ class Expense {
         category: json['category'] is Map<String, dynamic>
             ? Category.fromJson(json['category'] as Map<String, dynamic>)
             : null,
+        recurring: json['recurring'] as bool? ?? false,
       );
 }

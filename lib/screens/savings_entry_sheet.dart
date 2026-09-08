@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
@@ -149,7 +150,7 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
                 children: [
                   Expanded(
                     child: PillSegment(
-                      label: 'Deposit',
+                      label: tr('Deposit'),
                       selected: !withdrawing,
                       onTap: () => setState(() => _type = 'deposit'),
                     ),
@@ -157,7 +158,7 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: PillSegment(
-                      label: 'Withdraw',
+                      label: tr('Withdraw'),
                       selected: withdrawing,
                       onTap: () => setState(() => _type = 'withdraw'),
                     ),
@@ -171,7 +172,7 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
                     child: TextFormField(
                       controller: _amount,
                       decoration: InputDecoration(
-                        hintText: 'Amount',
+                        hintText: tr('Amount'),
                         prefixText: _currency == 'USD' ? '\$ ' : '៛ ',
                       ),
                       keyboardType:
@@ -203,7 +204,7 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
               if (_currency == 'KHR') ...[
                 const SizedBox(height: 8),
                 Text(
-                  'Entered in riel, stored in US dollars.',
+                  tr('Entered in riel, stored in US dollars.'),
                   style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.5)),
                 ),
               ],
@@ -225,7 +226,7 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
               const SizedBox(height: 14),
               TextFormField(
                 controller: _note,
-                decoration: const InputDecoration(hintText: 'Note (optional)'),
+                decoration: InputDecoration(hintText: tr('Note (optional)')),
                 textCapitalization: TextCapitalization.sentences,
                 maxLength: 500,
                 buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>

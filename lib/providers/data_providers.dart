@@ -8,14 +8,20 @@ import '../models/dashboard.dart';
 import '../models/expense.dart';
 import '../models/expense_filters.dart';
 import '../models/income.dart';
+import '../models/recurring.dart';
 import '../models/report.dart';
 import '../models/savings.dart';
 import '../repositories/spendlog_repository.dart';
+import 'locale_provider.dart';
 import '../utils/format.dart';
 
-final repositoryProvider = Provider<SpendLogRepository>(
-  (ref) => SpendLogRepository(ApiClient.instance),
-);
+final repositoryProvider = Provider<SpendLogRepository>((ref) {
+  // Watched so every list and card re-reads the server, in the new language,
+  // the moment the setting changes — category names, FAQs, guidance copy.
+  ref.watch(localeProvider);
+
+  return SpendLogRepository(ApiClient.instance);
+});
 
 // ------------------------------------------------------------------ reports
 
@@ -237,6 +243,30 @@ void invalidateIncome(WidgetRef ref) {
     ..invalidate(incomesProvider)
     ..invalidate(incomeSummaryProvider)
     ..invalidate(dashboardProvider);
+}
+
+// ---------------------------------------------------------------- recurring
+
+/// Every rule of both kinds; the screen filters by kind itself, so flipping
+/// the segment costs no request.
+final recurringRulesProvider = FutureProvider.autoDispose<List<RecurringRule>>(
+  (ref) => ref.watch(repositoryProvider).recurringRules(),
+);
+
+/// Drops the rules and every figure a rule write can move. Saving a rule
+/// runs it at once server-side, so a rule starting today has already put an
+/// expense or income row on the books by the time the sheet closes.
+void invalidateRecurring(WidgetRef ref) {
+  ref
+    ..invalidate(recurringRulesProvider)
+    ..invalidate(dashboardProvider)
+    ..invalidate(dashboardTrendReportProvider)
+    ..invalidate(expensesProvider)
+    ..invalidate(incomesProvider)
+    ..invalidate(incomeSummaryProvider)
+    ..invalidate(budgetSummaryProvider)
+    ..invalidate(budgetRowsProvider)
+    ..invalidate(reportProvider);
 }
 
 // ------------------------------------------------------------------- writes

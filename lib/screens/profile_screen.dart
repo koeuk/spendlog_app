@@ -6,7 +6,9 @@ import 'package:image_picker/image_picker.dart';
 import '../api/api_client.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
+import '../l10n/l10n.dart';
 import '../providers/data_providers.dart';
+import '../providers/locale_provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -34,10 +36,10 @@ class ProfileScreen extends ConsumerWidget {
         // home, which is where the sheet was most likely opened from.
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          tooltip: 'Back',
+          tooltip: tr('Back'),
           onPressed: () => context.go('/'),
         ),
-        title: const Text('Settings'),
+        title: Text(tr('Settings')),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
@@ -49,30 +51,36 @@ class ProfileScreen extends ConsumerWidget {
         children: [
           _Header(user: user),
           _Section(
-            title: 'General',
+            title: tr('General'),
             rows: [
               _SettingsRow(
                 icon: Icons.brightness_6_outlined,
-                label: 'Appearance',
-                value: _themeLabel(themeMode),
+                label: tr('Appearance'),
+                value: tr(_themeLabel(themeMode)),
                 onTap: () => _chooseTheme(context, ref, themeMode),
+              ),
+              _SettingsRow(
+                icon: Icons.translate,
+                label: tr('Language'),
+                value: L10n.label(ref.watch(localeProvider)),
+                onTap: () => _chooseLanguage(context, ref),
               ),
               // App-wide settings (exchange rate, FAQ) are admin-only; the
               // server gates the page too, this just keeps the row honest.
               if (isAdmin)
                 _SettingsRow(
                   icon: Icons.tune,
-                  label: 'App settings',
+                  label: tr('App settings'),
                   onTap: () => context.go('/profile/admin-settings'),
                 ),
             ],
           ),
           _Section(
-            title: 'Account',
+            title: tr('Account'),
             rows: [
               _SettingsRow(
                 icon: Icons.key_outlined,
-                label: 'Change password',
+                label: tr('Change password'),
                 onTap: () => _showSheet(context, const _PasswordSheet()),
               ),
             ],
@@ -81,7 +89,7 @@ class ProfileScreen extends ConsumerWidget {
             rows: [
               _SettingsRow(
                 icon: Icons.logout,
-                label: 'Sign out',
+                label: tr('Sign out'),
                 color: _danger,
                 chevron: false,
                 onTap: () => ref.read(authProvider.notifier).signOut(),
@@ -98,6 +106,15 @@ class ProfileScreen extends ConsumerWidget {
     ThemeMode.light => 'Light',
     ThemeMode.dark => 'Dark',
   };
+
+  Future<void> _chooseLanguage(BuildContext context, WidgetRef ref) async {
+    final chosen = await _showSheet<String>(
+      context,
+      _LanguageSheet(current: ref.read(localeProvider)),
+    );
+
+    if (chosen != null) ref.read(localeProvider.notifier).set(chosen);
+  }
 
   Future<void> _chooseTheme(
     BuildContext context,
@@ -150,7 +167,7 @@ class _HeaderState extends ConsumerState<_Header> {
     final action = await _showSheet<String>(
       context,
       _SheetFrame(
-        title: 'Profile photo',
+        title: tr('Profile photo'),
         child: Column(
           children: [
             ListTile(
@@ -178,8 +195,8 @@ class _HeaderState extends ConsumerState<_Header> {
                   Icons.delete_outline,
                   color: ProfileScreen._danger,
                 ),
-                title: const Text(
-                  'Remove photo',
+                title: Text(
+                  tr('Remove photo'),
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     color: ProfileScreen._danger,
@@ -309,7 +326,7 @@ class _HeaderState extends ConsumerState<_Header> {
                 borderRadius: BorderRadius.circular(99),
               ),
               child: Text(
-                'ADMIN',
+                tr('ADMIN'),
                 style: TextStyle(
                   color: surface,
                   fontSize: 9,
@@ -345,7 +362,7 @@ Future<void> _pickAndUploadPhoto(BuildContext context, WidgetRef ref) async {
     // plugin, say): a message beats an uncaught exception.
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open the photo picker.')),
+        SnackBar(content: Text(tr('Could not open the photo picker.'))),
       );
     }
     return;
@@ -561,6 +578,39 @@ class _SheetFrame extends StatelessWidget {
   }
 }
 
+/// English or Khmer. The app's own strings switch at once; anything the
+/// server wrote (category names, FAQs) is fetched again in the new language.
+class _LanguageSheet extends StatelessWidget {
+  const _LanguageSheet({required this.current});
+
+  final String current;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SheetFrame(
+      title: tr('Language'),
+      child: Column(
+        children: [
+          for (final code in L10n.supported)
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              leading: Icon(Icons.translate, size: 22, color: AppTheme.faint(context, 0.6)),
+              title: Text(
+                L10n.label(code),
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              trailing: code == current
+                  ? Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary)
+                  : null,
+              onTap: () => Navigator.of(context).pop(code),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _AppearanceSheet extends StatelessWidget {
   const _AppearanceSheet({required this.current});
 
@@ -580,7 +630,7 @@ class _AppearanceSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _SheetFrame(
-      title: 'Appearance',
+      title: tr('Appearance'),
       child: Column(
         children: [
           for (final (mode, icon, label, hint) in _options)
@@ -595,11 +645,11 @@ class _AppearanceSheet extends StatelessWidget {
                 color: AppTheme.faint(context, 0.6),
               ),
               title: Text(
-                label,
+                tr(label),
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               subtitle: Text(
-                hint,
+                tr(hint),
                 style: TextStyle(
                   fontSize: 12,
                   color: AppTheme.faint(context, 0.45),
@@ -684,7 +734,7 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
       if (!mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Profile saved.')));
+          .showSnackBar(SnackBar(content: Text(tr('Profile saved.'))));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -705,7 +755,7 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
     final user = ref.watch(authProvider).user;
 
     return _SheetFrame(
-      title: 'Edit profile',
+      title: tr('Edit profile'),
       child: Form(
         key: _formKey,
         child: Column(
@@ -743,7 +793,7 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
                           style: TextButton.styleFrom(
                             foregroundColor: ProfileScreen._danger,
                           ),
-                          child: const Text('Remove'),
+                          child: Text(tr('Remove')),
                         ),
                     ],
                   ),
@@ -753,7 +803,7 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _name,
-              decoration: const InputDecoration(hintText: 'Name'),
+              decoration: InputDecoration(hintText: tr('Name')),
               textCapitalization: TextCapitalization.words,
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? 'Enter your name.' : null,
@@ -761,15 +811,15 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _username,
-              decoration: const InputDecoration(
-                hintText: 'Username (optional)',
+              decoration: InputDecoration(
+                hintText: tr('Username (optional)'),
               ),
               autocorrect: false,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _email,
-              decoration: const InputDecoration(hintText: 'Email'),
+              decoration: InputDecoration(hintText: tr('Email')),
               keyboardType: TextInputType.emailAddress,
               autocorrect: false,
               validator: (v) =>
@@ -778,14 +828,14 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _phone,
-              decoration: const InputDecoration(hintText: 'Phone (optional)'),
+              decoration: InputDecoration(hintText: tr('Phone (optional)')),
               keyboardType: TextInputType.phone,
               autocorrect: false,
             ),
             const SizedBox(height: 20),
             FilledButton(
               onPressed: _saving ? null : _save,
-              child: _saving ? const _Spinner() : const Text('Save changes'),
+              child: _saving ? const _Spinner() : Text(tr('Save changes')),
             ),
           ],
         ),
@@ -832,7 +882,7 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
       if (!mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Password changed.')));
+          .showSnackBar(SnackBar(content: Text(tr('Password changed.'))));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -850,7 +900,7 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
   @override
   Widget build(BuildContext context) {
     return _SheetFrame(
-      title: 'Change password',
+      title: tr('Change password'),
       child: Form(
         key: _formKey,
         child: Column(
@@ -860,7 +910,7 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
               controller: _password,
               obscureText: !_show,
               decoration: InputDecoration(
-                hintText: 'New password',
+                hintText: tr('New password'),
                 suffixIcon: IconButton(
                   onPressed: () => setState(() => _show = !_show),
                   icon: Icon(
@@ -878,8 +928,8 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
             TextFormField(
               controller: _confirm,
               obscureText: !_show,
-              decoration: const InputDecoration(
-                hintText: 'Confirm new password',
+              decoration: InputDecoration(
+                hintText: tr('Confirm new password'),
               ),
               validator: (v) =>
                   v != _password.text ? 'Passwords do not match.' : null,
@@ -887,7 +937,7 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
             const SizedBox(height: 20),
             FilledButton(
               onPressed: _saving ? null : _save,
-              child: _saving ? const _Spinner() : const Text('Change password'),
+              child: _saving ? const _Spinner() : Text(tr('Change password')),
             ),
           ],
         ),

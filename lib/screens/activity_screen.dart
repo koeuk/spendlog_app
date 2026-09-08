@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
@@ -46,7 +47,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
     final activity = ref.watch(activityProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Activity log')),
+      appBar: AppBar(title: Text(tr('Activity log'))),
       body: Column(
         children: [
           if (isAdmin)
@@ -85,7 +86,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                           Icon(Icons.history, size: 44, color: AppTheme.faint(context, 0.25)),
                           const SizedBox(height: 12),
                           Text(
-                            'Nothing logged yet.',
+                            tr('Nothing logged yet.'),
                             textAlign: TextAlign.center,
                             style: TextStyle(color: AppTheme.faint(context, 0.5)),
                           ),
@@ -165,8 +166,8 @@ class _ActivityTile extends StatelessWidget {
     final time =
         '${at.hour.toString().padLeft(2, '0')}:${at.minute.toString().padLeft(2, '0')}';
 
-    if (day == today) return 'Today · $time';
-    if (day == today.subtract(const Duration(days: 1))) return 'Yesterday · $time';
+    if (day == today) return '${tr('Today')} · $time';
+    if (day == today.subtract(const Duration(days: 1))) return '${tr('Yesterday')} · $time';
 
     return '${months[at.month - 1]} ${at.day} · $time';
   }

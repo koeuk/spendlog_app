@@ -1,3 +1,4 @@
+
 /// The periods `GET /reports` will chart, in the order the toggle shows them.
 /// Values match App\Enums\TrendGranularity on the server; anything else falls
 /// back to `month` there rather than erroring.

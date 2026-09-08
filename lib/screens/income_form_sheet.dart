@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
 import '../models/income.dart';
+import '../models/recurring.dart';
 import '../providers/data_providers.dart';
 import '../theme.dart';
 import '../utils/format.dart';
+import '../widgets/common.dart';
 import '../widgets/glass.dart';
 
 /// Add / edit one income entry in a bottom sheet. On save the month's rows,
@@ -43,6 +46,10 @@ class _IncomeFormState extends ConsumerState<_IncomeForm> {
   /// What the *entered* amount is denominated in; storage is always USD,
   /// converted server-side.
   String _currency = 'USD';
+
+  /// A frequency from [recurringFrequencies], or null for a one-off. Only
+  /// offered on create: an existing row is a row, not a rule.
+  String? _repeat;
 
   bool _busy = false;
   String? _error;
@@ -90,6 +97,18 @@ class _IncomeFormState extends ConsumerState<_IncomeForm> {
           note: note.isEmpty ? null : note,
           currency: _currency,
         );
+      } else if (_repeat != null) {
+        // A rule instead of a row: the server runs it at once, so today's
+        // income appears straight away and the rest follow on schedule.
+        await repo.createRecurringRule(
+          kind: 'income',
+          title: _source.text.trim(),
+          amount: _amount.text.trim(),
+          frequency: _repeat!,
+          startsOn: dateParam(_receivedOn),
+          note: note.isEmpty ? null : note,
+          currency: _currency,
+        );
       } else {
         await repo.createIncome(
           source: _source.text.trim(),
@@ -102,6 +121,7 @@ class _IncomeFormState extends ConsumerState<_IncomeForm> {
 
       if (mounted) {
         invalidateIncome(ref);
+        if (_repeat != null) invalidateRecurring(ref);
         Navigator.of(context).pop();
       }
     } catch (e) {
@@ -175,7 +195,7 @@ class _IncomeFormState extends ConsumerState<_IncomeForm> {
               ],
               TextFormField(
                 controller: _source,
-                decoration: const InputDecoration(hintText: 'Source — salary, freelance…'),
+                decoration: InputDecoration(hintText: tr('Source — salary, freelance…')),
                 textCapitalization: TextCapitalization.sentences,
                 autofocus: !_editing,
                 validator: (v) =>
@@ -188,7 +208,7 @@ class _IncomeFormState extends ConsumerState<_IncomeForm> {
                     child: TextFormField(
                       controller: _amount,
                       decoration: InputDecoration(
-                        hintText: 'Amount',
+                        hintText: tr('Amount'),
                         prefixText: _currency == 'USD' ? '\$ ' : '៛ ',
                       ),
                       keyboardType:
@@ -232,7 +252,7 @@ class _IncomeFormState extends ConsumerState<_IncomeForm> {
               if (_currency == 'KHR') ...[
                 const SizedBox(height: 8),
                 Text(
-                  'Entered in riel, stored in US dollars.',
+                  tr('Entered in riel, stored in US dollars.'),
                   style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.5)),
                 ),
               ],
@@ -254,7 +274,7 @@ class _IncomeFormState extends ConsumerState<_IncomeForm> {
               const SizedBox(height: 14),
               TextFormField(
                 controller: _note,
-                decoration: const InputDecoration(hintText: 'Note (optional)'),
+                decoration: InputDecoration(hintText: tr('Note (optional)')),
                 textCapitalization: TextCapitalization.sentences,
                 maxLength: 500,
                 // The counter would sit oddly under a pill field; the limit
@@ -262,6 +282,13 @@ class _IncomeFormState extends ConsumerState<_IncomeForm> {
                 buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
                     null,
               ),
+              if (!_editing) ...[
+                const SizedBox(height: 14),
+                RepeatRow(
+                  value: _repeat,
+                  onChanged: (value) => setState(() => _repeat = value),
+                ),
+              ],
               const SizedBox(height: 18),
               FilledButton(
                 onPressed: _busy ? null : _submit,
@@ -271,14 +298,20 @@ class _IncomeFormState extends ConsumerState<_IncomeForm> {
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
-                    : Text(_editing ? 'Save changes' : 'Add income'),
+                    : Text(
+                        _editing
+                            ? 'Save changes'
+                            : _repeat != null
+                                ? tr('Add repeating income')
+                                : 'Add income',
+                      ),
               ),
               if (_editing) ...[
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: _busy ? null : _delete,
                   style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
-                  child: const Text('Delete income'),
+                  child: Text(tr('Delete income')),
                 ),
               ],
             ],
@@ -296,17 +329,17 @@ Future<bool?> confirmDeleteIncome(BuildContext context, Income income) {
     context: context,
     builder: (context) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      title: const Text('Delete this income?'),
+      title: Text(tr('Delete this income?')),
       content: Text('${income.source} — ${money(income.amount)}'),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
+          child: Text(tr('Cancel')),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(true),
           style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
-          child: const Text('Delete'),
+          child: Text(tr('Delete')),
         ),
       ],
     ),

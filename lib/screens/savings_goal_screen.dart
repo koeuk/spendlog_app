@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -37,7 +38,7 @@ class SavingsGoalScreen extends ConsumerWidget {
           if (loaded != null)
             IconButton(
               icon: const Icon(Icons.edit_outlined),
-              tooltip: 'Edit goal',
+              tooltip: tr('Edit goal'),
               onPressed: () => _edit(context, loaded),
             ),
           const SizedBox(width: 4),
@@ -49,14 +50,14 @@ class SavingsGoalScreen extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 AddPill(
-                  label: 'Withdraw',
+                  label: tr('Withdraw'),
                   icon: Icons.remove,
                   onPressed: () =>
                       showSavingsEntrySheet(context, goal: loaded, type: 'withdraw'),
                 ),
                 const SizedBox(width: 10),
                 AddPill(
-                  label: 'Deposit',
+                  label: tr('Deposit'),
                   onPressed: () => showSavingsEntrySheet(context, goal: loaded),
                 ),
               ],
@@ -83,9 +84,9 @@ class SavingsGoalScreen extends ConsumerWidget {
               children: [
                 _ProgressCard(goal: data),
                 const SizedBox(height: 20),
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(left: 4),
-                  child: Eyebrow('History'),
+                  child: Eyebrow(tr('History')),
                 ),
                 const SizedBox(height: 10),
                 if (entries.isEmpty)
@@ -93,7 +94,7 @@ class SavingsGoalScreen extends ConsumerWidget {
                     padding: const EdgeInsets.only(top: 24),
                     child: Center(
                       child: Text(
-                        'Nothing saved towards this yet.',
+                        tr('Nothing saved towards this yet.'),
                         style: TextStyle(color: AppTheme.faint(context, 0.5)),
                       ),
                     ),
@@ -135,12 +136,12 @@ class SavingsGoalScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(tr('Cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: _danger),
-            child: const Text('Delete'),
+            child: Text(tr('Delete')),
           ),
         ],
       ),
@@ -182,7 +183,7 @@ class _ProgressCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Expanded(child: Eyebrow('Saved so far', onBrand: true)),
+                Expanded(child: Eyebrow(tr('Saved so far'), onBrand: true)),
                 if (goal.reached) const ReachedBadge(),
               ],
             ),

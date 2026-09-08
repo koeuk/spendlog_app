@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
@@ -26,10 +27,10 @@ class CategoriesScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Categories'),
+        title: Text(tr('Categories')),
       ),
       floatingActionButton: canWrite
-          ? AddPill(label: 'New', onPressed: () => showCategoryForm(context))
+          ? AddPill(label: tr('New'), onPressed: () => showCategoryForm(context))
           : null,
       body: categories.when(
         loading: () => Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
@@ -54,7 +55,7 @@ class CategoriesScreen extends ConsumerWidget {
                   padding: const EdgeInsets.only(top: 48),
                   child: Center(
                     child: Text(
-                      'No categories yet.',
+                      tr('No categories yet.'),
                       style: TextStyle(color: AppTheme.faint(context, 0.5)),
                     ),
                   ),
@@ -231,19 +232,19 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('Delete this category?'),
+        title: Text(tr('Delete this category?')),
         content: Text('"${widget.category!.name}" will be removed.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(tr('Cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(
               foregroundColor: const Color(0xFFDC2626),
             ),
-            child: const Text('Delete'),
+            child: Text(tr('Delete')),
           ),
         ],
       ),
@@ -313,7 +314,7 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
               ],
               TextFormField(
                 controller: _name,
-                decoration: const InputDecoration(hintText: 'Name'),
+                decoration: InputDecoration(hintText: tr('Name')),
                 textCapitalization: TextCapitalization.words,
                 autofocus: !_editing,
                 validator: (v) => (v == null || v.trim().isEmpty)
@@ -321,14 +322,14 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
                     : null,
               ),
               const SizedBox(height: 18),
-              const Eyebrow('Colour'),
+              Eyebrow(tr('Colour')),
               const SizedBox(height: 10),
               SwatchPicker(
                 selected: _color,
                 onSelected: (value) => setState(() => _color = value),
               ),
               const SizedBox(height: 18),
-              const Eyebrow('Icon'),
+              Eyebrow(tr('Icon')),
               const SizedBox(height: 10),
               _IconPicker(
                 selected: _icon,
@@ -356,7 +357,7 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0xFFDC2626),
                   ),
-                  child: const Text('Delete category'),
+                  child: Text(tr('Delete category')),
                 ),
               ],
             ],

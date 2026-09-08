@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import '../l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -51,7 +52,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
     final colours = ref.watch(colorSettingsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('App settings')),
+      appBar: AppBar(title: Text(tr('App settings'))),
       body: Column(
         children: [
           // Five tabs do not fit a phone as equal shares, so the row scrolls
@@ -67,7 +68,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                     child: SizedBox(
                       width: 104,
                       child: PillSegment(
-                        label: tab.label,
+                        label: tr(tab.label),
                         selected: tab == _tab,
                         onTap: () => setState(() => _tab = tab),
                       ),
@@ -210,7 +211,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
 
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Settings saved.')));
+            .showSnackBar(SnackBar(content: Text(tr('Settings saved.'))));
         ref.invalidate(spendingSettingsProvider);
       }
     } catch (e) {
@@ -252,7 +253,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
                       color: Colors.white,
                     ),
                   )
-                : const Text('Save settings'),
+                : Text(tr('Save settings')),
           ),
         ],
       ),
@@ -260,23 +261,23 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
   }
 
   List<Widget> _spendingFields() => [
-    const Eyebrow('Spending'),
+    Eyebrow(tr('Spending')),
     const SizedBox(height: 14),
     TextField(
       controller: _rate,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      decoration: const InputDecoration(
-        hintText: 'Riel per dollar',
+      decoration: InputDecoration(
+        hintText: tr('Riel per dollar'),
         prefixText: '៛ ',
-        helperText: 'Every ៛ entry converts to USD at this rate.',
+        helperText: tr('Every ៛ entry converts to USD at this rate.'),
       ),
     ),
     const SizedBox(height: 12),
     Row(
       children: [
-        const Expanded(
+        Expanded(
           child: Text(
-            'Default currency',
+            tr('Default currency'),
             style: TextStyle(fontWeight: FontWeight.w500),
           ),
         ),
@@ -296,31 +297,31 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
   ];
 
   List<Widget> _guidanceFields() => [
-    const Eyebrow('Dashboard guidance'),
+    Eyebrow(tr('Dashboard guidance')),
     const SizedBox(height: 6),
     SwitchListTile(
       contentPadding: EdgeInsets.zero,
       activeThumbColor: AppTheme.accent(context),
-      title: const Text(
-        'Show the advice card',
+      title: Text(
+        tr('Show the advice card'),
         style: TextStyle(fontWeight: FontWeight.w500),
       ),
-      subtitle: const Text('On everyone\'s dashboard.'),
+      subtitle: Text(tr('On everyone\'s dashboard.')),
       value: _enabled,
       onChanged: (value) => setState(() => _enabled = value),
     ),
     if (_enabled) ...[
       TextField(
         controller: _warning,
-        decoration: const InputDecoration(
-          hintText: 'Warning (when over budget)',
+        decoration: InputDecoration(
+          hintText: tr('Warning (when over budget)'),
         ),
         maxLines: 2,
       ),
       const SizedBox(height: 12),
       TextField(
         controller: _advice,
-        decoration: const InputDecoration(hintText: 'Advice (otherwise)'),
+        decoration: InputDecoration(hintText: tr('Advice (otherwise)')),
         maxLines: 2,
       ),
     ],
@@ -381,7 +382,7 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
       // plugin, say): a message beats an uncaught exception.
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open the file picker.')),
+          SnackBar(content: Text(tr('Could not open the file picker.'))),
         );
       }
       return null;
@@ -408,7 +409,7 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
 
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Appearance saved.')));
+            .showSnackBar(SnackBar(content: Text(tr('Appearance saved.'))));
         ref.invalidate(brandingSettingsProvider);
         // The app wears the new marks at once, like the web after a save.
         ref.read(brandingProvider.notifier).refresh();
@@ -431,28 +432,28 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Eyebrow('Appearance'),
+            Eyebrow(tr('Appearance')),
             const SizedBox(height: 14),
             TextField(
               controller: _name,
               textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                hintText: 'App name',
-                helperText: 'Shown in the nav bar and the browser tab.',
+              decoration: InputDecoration(
+                hintText: tr('App name'),
+                helperText: tr('Shown in the nav bar and the browser tab.'),
               ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _holder,
               textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                hintText: 'Copyright holder',
-                helperText: 'Shown in the footer. Leave blank to use the app name.',
+              decoration: InputDecoration(
+                hintText: tr('Copyright holder'),
+                helperText: tr('Shown in the footer. Leave blank to use the app name.'),
               ),
             ),
             const SizedBox(height: 18),
             _ImageField(
-              label: 'Logo',
+              label: tr('Logo'),
               hint: 'PNG, JPG or WebP, up to 2 MB. Any size — it is scaled to fit.',
               currentUrl: widget.settings.logoUrl,
               picked: _logo,
@@ -465,7 +466,7 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
             ),
             const SizedBox(height: 16),
             _ImageField(
-              label: 'Favicon',
+              label: tr('Favicon'),
               hint: 'Shown in the browser tab. PNG, ICO, JPG or WebP, up to 1 MB. Square works best.',
               currentUrl: widget.settings.faviconUrl,
               picked: _favicon,
@@ -479,7 +480,7 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
             const SizedBox(height: 20),
             FilledButton(
               onPressed: _busy ? null : _save,
-              child: _busy ? const _ButtonSpinner() : const Text('Save appearance'),
+              child: _busy ? const _ButtonSpinner() : Text(tr('Save appearance')),
             ),
           ],
         ),
@@ -549,13 +550,13 @@ class _ImageField extends StatelessWidget {
             TextButton.icon(
               onPressed: onChoose,
               icon: const Icon(Icons.photo_outlined, size: 18),
-              label: const Text('Choose'),
+              label: Text(tr('Choose')),
             ),
             if (hasImage)
               TextButton(
                 onPressed: onRemove,
                 style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
-                child: const Text('Remove'),
+                child: Text(tr('Remove')),
               ),
           ],
         ),
@@ -597,7 +598,7 @@ class _ColoursFormState extends ConsumerState<_ColoursForm> {
   Future<void> _save() async {
     if (!_hex.hasMatch(_button)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a colour as #rrggbb.')),
+        SnackBar(content: Text(tr('Enter a colour as #rrggbb.'))),
       );
       return;
     }
@@ -612,7 +613,7 @@ class _ColoursFormState extends ConsumerState<_ColoursForm> {
 
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Colours saved.')));
+            .showSnackBar(SnackBar(content: Text(tr('Colours saved.'))));
         ref.invalidate(colorSettingsProvider);
         ref.read(brandingProvider.notifier).refresh();
       }
@@ -636,9 +637,9 @@ class _ColoursFormState extends ConsumerState<_ColoursForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Eyebrow('Colours'),
+            Eyebrow(tr('Colours')),
             const SizedBox(height: 14),
-            const Text('Button colour', style: TextStyle(fontWeight: FontWeight.w500)),
+            Text(tr('Button colour'), style: TextStyle(fontWeight: FontWeight.w500)),
             const SizedBox(height: 10),
             Wrap(
               spacing: 10,
@@ -680,7 +681,7 @@ class _ColoursFormState extends ConsumerState<_ColoursForm> {
               onChanged: (v) => setState(() => _button = v.trim()),
               decoration: InputDecoration(
                 hintText: '#rrggbb',
-                helperText: 'Or any hex that can carry a readable label.',
+                helperText: tr('Or any hex that can carry a readable label.'),
                 prefixIcon: Padding(
                   padding: const EdgeInsets.all(14),
                   child: Container(
@@ -696,7 +697,7 @@ class _ColoursFormState extends ConsumerState<_ColoursForm> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text('Background', style: TextStyle(fontWeight: FontWeight.w500)),
+            Text(tr('Background'), style: TextStyle(fontWeight: FontWeight.w500)),
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,
@@ -723,7 +724,7 @@ class _ColoursFormState extends ConsumerState<_ColoursForm> {
             const SizedBox(height: 20),
             FilledButton(
               onPressed: _busy ? null : _save,
-              child: _busy ? const _ButtonSpinner() : const Text('Save colours'),
+              child: _busy ? const _ButtonSpinner() : Text(tr('Save colours')),
             ),
           ],
         ),
@@ -759,11 +760,11 @@ class _FaqCard extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(4, 4, 0, 4),
           child: Row(
             children: [
-              const Expanded(child: Eyebrow('Help page FAQs')),
+              Expanded(child: Eyebrow(tr('Help page FAQs'))),
               TextButton.icon(
                 onPressed: () => _showFaqSheet(context, ref),
                 icon: const Icon(Icons.add, size: 16),
-                label: const Text('Add'),
+                label: Text(tr('Add')),
               ),
             ],
           ),
@@ -772,7 +773,7 @@ class _FaqCard extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
             child: Text(
-              'No entries yet.',
+              tr('No entries yet.'),
               style: TextStyle(color: AppTheme.faint(context, 0.5)),
             ),
           ),
@@ -840,8 +841,8 @@ class _FaqRow extends ConsumerWidget {
                   color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(99),
                 ),
-                child: const Text(
-                  'DRAFT',
+                child: Text(
+                  tr('DRAFT'),
                   style: TextStyle(
                     fontSize: 9.5,
                     fontWeight: FontWeight.w800,
@@ -896,20 +897,20 @@ Future<void> _showFaqSheet(
                 const SizedBox(height: 16),
                 TextField(
                   controller: question,
-                  decoration: const InputDecoration(hintText: 'Question'),
+                  decoration: InputDecoration(hintText: tr('Question')),
                   textCapitalization: TextCapitalization.sentences,
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: answer,
-                  decoration: const InputDecoration(hintText: 'Answer'),
+                  decoration: InputDecoration(hintText: tr('Answer')),
                   textCapitalization: TextCapitalization.sentences,
                   maxLines: 3,
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   activeThumbColor: AppTheme.accent(context),
-                  title: const Text('Published'),
+                  title: Text(tr('Published')),
                   value: published,
                   onChanged: (value) => setSheetState(() => published = value),
                 ),
@@ -937,7 +938,7 @@ Future<void> _showFaqSheet(
                       }
                     }
                   },
-                  child: const Text('Save'),
+                  child: Text(tr('Save')),
                 ),
                 if (faq != null)
                   TextButton(
@@ -959,7 +960,7 @@ Future<void> _showFaqSheet(
                     style: TextButton.styleFrom(
                       foregroundColor: const Color(0xFFDC2626),
                     ),
-                    child: const Text('Delete'),
+                    child: Text(tr('Delete')),
                   ),
               ],
             ),

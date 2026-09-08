@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
@@ -22,10 +23,10 @@ class IncomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Income'),
+        title: Text(tr('Income')),
       ),
       floatingActionButton: AddPill(
-        label: 'Add',
+        label: tr('Add'),
         onPressed: () => showIncomeForm(context),
       ),
       body: summary.when(
@@ -115,7 +116,7 @@ class IncomeScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'No income recorded this month.',
+                    tr('No income recorded this month.'),
                     style: TextStyle(color: AppTheme.faint(context, 0.5)),
                   ),
                 ],
@@ -283,15 +284,26 @@ class _IncomeTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                    if (subtitle.isNotEmpty) ...[
+                    if (subtitle.isNotEmpty || income.recurring) ...[
                       const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.faint(context, 0.45),
-                        ),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              subtitle,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.faint(context, 0.45),
+                              ),
+                            ),
+                          ),
+                          // Made by a recurring rule, not typed in.
+                          if (income.recurring) ...[
+                            const SizedBox(width: 5),
+                            Icon(Icons.repeat, size: 14, color: AppTheme.faint(context, 0.4)),
+                          ],
+                        ],
                       ),
                     ],
                   ],

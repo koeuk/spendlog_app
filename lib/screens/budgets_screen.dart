@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
@@ -25,7 +26,7 @@ class BudgetsScreen extends ConsumerWidget {
         // a list heading does. Pushed pages centre theirs between the arrow
         // and the actions.
         centerTitle: false,
-        title: const Text('Budgets'),
+        title: Text(tr('Budgets')),
         actions: [
           MonthStepper(
             month: month,
@@ -54,11 +55,11 @@ class BudgetsScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Eyebrow('By category'),
+                      Eyebrow(tr('By category')),
                       const SizedBox(height: 16),
                       if (data.categories.isEmpty)
                         Text(
-                          'Nothing spent this month yet.',
+                          tr('Nothing spent this month yet.'),
                           style: TextStyle(color: AppTheme.faint(context, 0.5)),
                         ),
                       for (final line in data.categories) ...[
@@ -103,7 +104,7 @@ class _OverallCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Expanded(child: Eyebrow('Overall budget', onBrand: true)),
+                  Expanded(child: Eyebrow(tr('Overall budget'), onBrand: true)),
                   Icon(Icons.edit_outlined,
                       size: 18, color: Colors.white.withValues(alpha: 0.8)),
                 ],
@@ -328,7 +329,7 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
                     child: TextFormField(
                       controller: _amount,
                       decoration: InputDecoration(
-                        hintText: 'Amount',
+                        hintText: tr('Amount'),
                         prefixText: _currency == 'USD' ? '\$ ' : '៛ ',
                       ),
                       keyboardType:
@@ -379,7 +380,7 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
               if (_currency == 'KHR') ...[
                 const SizedBox(height: 8),
                 Text(
-                  'Entered in riel, stored in US dollars.',
+                  tr('Entered in riel, stored in US dollars.'),
                   style: TextStyle(
                     fontSize: 12,
                     color: AppTheme.faint(context, 0.5),
@@ -396,14 +397,14 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: Colors.white),
                       )
-                    : const Text('Save budget'),
+                    : Text(tr('Save budget')),
               ),
               if (widget.line.budget != null) ...[
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: _busy ? null : _remove,
                   style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
-                  child: const Text('Remove budget'),
+                  child: Text(tr('Remove budget')),
                 ),
               ],
             ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -51,11 +52,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return AuthShell(
-      heading: 'Sign in',
-      description: 'Use your email or username to keep your spending on track.',
+      heading: tr('Sign in'),
+      description: tr('Use your email or username to keep your spending on track.'),
       footer: TextButton(
         onPressed: () => context.go('/forgot-password'),
-        child: const Text('Forgot your password?'),
+        child: Text(tr('Forgot your password?')),
       ),
       child: Form(
         key: _formKey,
@@ -79,7 +80,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ],
             TextFormField(
               controller: _email,
-              decoration: const InputDecoration(hintText: 'Email or username'),
+              decoration: InputDecoration(hintText: tr('Email or username')),
               keyboardType: TextInputType.emailAddress,
               autocorrect: false,
               textInputAction: TextInputAction.next,
@@ -90,7 +91,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               controller: _password,
               obscureText: !_showPassword,
               decoration: InputDecoration(
-                hintText: 'Password',
+                hintText: tr('Password'),
                 suffixIcon: IconButton(
                   onPressed: () => setState(() => _showPassword = !_showPassword),
                   icon: Icon(
@@ -112,7 +113,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
-                  : const Text('Sign in'),
+                  : Text(tr('Sign in')),
             ),
           ],
         ),

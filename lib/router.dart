@@ -14,6 +14,7 @@ import 'screens/forgot_password_screen.dart';
 import 'screens/income_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/recurring_screen.dart';
 import 'screens/reports_screen.dart';
 import 'screens/reset_password_screen.dart';
 import 'screens/savings_goal_screen.dart';
@@ -95,6 +96,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'income',
                     builder: (context, state) => const IncomeScreen(),
+                  ),
+                  GoRoute(
+                    path: 'recurring',
+                    builder: (context, state) => const RecurringScreen(),
                   ),
                   GoRoute(
                     path: 'savings',
