@@ -336,7 +336,6 @@ class _FaqCard extends ConsumerWidget {
             color: AppTheme.surface(context),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(22),
-              side: BorderSide(color: AppTheme.faint(context, 0.06)),
             ),
             clipBehavior: Clip.antiAlias,
             child: Column(

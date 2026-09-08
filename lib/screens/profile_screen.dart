@@ -410,7 +410,6 @@ class _Section extends StatelessWidget {
             color: AppTheme.surface(context),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(22),
-              side: BorderSide(color: hairline),
             ),
             clipBehavior: Clip.antiAlias,
             child: Column(

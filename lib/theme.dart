@@ -105,7 +105,6 @@ abstract final class AppTheme {
       alpha: isDark ? 0.14 : 0.10,
     );
     final fill = _fill(isDark);
-    final edge = _edge(isDark);
     final opaque = isDark ? darkSurface : Colors.white;
 
     return base.copyWith(
@@ -126,9 +125,9 @@ abstract final class AppTheme {
       cardTheme: CardThemeData(
         elevation: 0,
         color: fill,
+        // No outline: a white card on the grey ground is its own edge.
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(cardRadius),
-          side: BorderSide(color: edge),
         ),
         margin: EdgeInsets.zero,
       ),
