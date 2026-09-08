@@ -9,12 +9,31 @@ import '../widgets/glass.dart';
 import '../utils/async.dart';
 import '../widgets/common.dart';
 
-/// The web's Settings → Spending page plus FAQ management, for admins.
-class AdminSettingsScreen extends ConsumerWidget {
+/// The web's Settings → Spending page plus FAQ management, for admins, split
+/// across three tabs: the currency settings, the dashboard guidance, and the
+/// help-page FAQs.
+class AdminSettingsScreen extends ConsumerStatefulWidget {
   const AdminSettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminSettingsScreen> createState() => _AdminSettingsScreenState();
+}
+
+enum _Tab { spending, guidance, faqs }
+
+extension on _Tab {
+  String get label => switch (this) {
+        _Tab.spending => 'Spending',
+        _Tab.guidance => 'Guidance',
+        _Tab.faqs => 'FAQs',
+      };
+}
+
+class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
+  _Tab _tab = _Tab.spending;
+
+  @override
+  Widget build(BuildContext context) {
     final settings = ref.watch(spendingSettingsProvider);
     final faqs = ref.watch(faqsProvider);
 
@@ -22,54 +41,94 @@ class AdminSettingsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('App settings'),
       ),
-      body: RefreshIndicator(
-        color: AppTheme.green,
-        onRefresh: () async {
-          await refreshQuietly(ref.refresh(spendingSettingsProvider.future));
-          await refreshQuietly(ref.refresh(faqsProvider.future));
-        },
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 8, AppTheme.pageInset, AppTheme.navBarClearance),
-          children: [
-            settings.when(
-              loading: () => const SizedBox(
-                height: 100,
-                child: Center(
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2.4, color: AppTheme.green)),
-              ),
-              error: (e, _) => LoadFailed(
-                message: apiErrorMessage(e),
-                onRetry: () => ref.invalidate(spendingSettingsProvider),
-              ),
-              data: (data) => _SpendingCard(settings: data),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 4, AppTheme.pageInset - 6, 12),
+            child: Row(
+              children: [
+                for (final tab in _Tab.values)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: PillSegment(
+                        label: tab.label,
+                        selected: tab == _tab,
+                        onTap: () => setState(() => _tab = tab),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-            const SizedBox(height: 16),
-            faqs.when(
-              loading: () => const SizedBox.shrink(),
-              error: (e, _) => Card(
-                child: Padding(
-                    padding: const EdgeInsets.all(20), child: Text(apiErrorMessage(e))),
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              color: AppTheme.green,
+              onRefresh: () async {
+                await refreshQuietly(ref.refresh(spendingSettingsProvider.future));
+                await refreshQuietly(ref.refresh(faqsProvider.future));
+              },
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(
+                    AppTheme.pageInset, 0, AppTheme.pageInset, AppTheme.navBarClearance),
+                children: [
+                  // The form stays in the tree on every tab (rendering nothing
+                  // on FAQs) so half-typed edits survive a switch between the
+                  // two tabs that share it — both save through one endpoint.
+                  settings.when(
+                    loading: () => _tab == _Tab.faqs
+                        ? const SizedBox.shrink()
+                        : const SizedBox(
+                            height: 100,
+                            child: Center(
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2.4, color: AppTheme.green)),
+                          ),
+                    error: (e, _) => _tab == _Tab.faqs
+                        ? const SizedBox.shrink()
+                        : LoadFailed(
+                            message: apiErrorMessage(e),
+                            onRetry: () => ref.invalidate(spendingSettingsProvider),
+                          ),
+                    data: (data) => _SettingsForm(settings: data, tab: _tab),
+                  ),
+                  if (_tab == _Tab.faqs)
+                    faqs.when(
+                      loading: () => const SizedBox(
+                        height: 100,
+                        child: Center(
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2.4, color: AppTheme.green)),
+                      ),
+                      error: (e, _) => LoadFailed(
+                        message: apiErrorMessage(e),
+                        onRetry: () => ref.invalidate(faqsProvider),
+                      ),
+                      data: (list) => _FaqCard(faqs: list),
+                    ),
+                ],
               ),
-              data: (list) => _FaqCard(faqs: list),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _SpendingCard extends ConsumerStatefulWidget {
-  const _SpendingCard({required this.settings});
+/// The spending and guidance tabs. One widget, because the server takes the
+/// whole settings row in a single PUT: saving from either tab sends both.
+class _SettingsForm extends ConsumerStatefulWidget {
+  const _SettingsForm({required this.settings, required this.tab});
 
   final SpendingSettings settings;
+  final _Tab tab;
 
   @override
-  ConsumerState<_SpendingCard> createState() => _SpendingCardState();
+  ConsumerState<_SettingsForm> createState() => _SettingsFormState();
 }
 
-class _SpendingCardState extends ConsumerState<_SpendingCard> {
+class _SettingsFormState extends ConsumerState<_SettingsForm> {
   late final _rate = TextEditingController(text: '${widget.settings.khrPerUsd}');
   late final _warning = TextEditingController(text: widget.settings.warning);
   late final _advice = TextEditingController(text: widget.settings.advice);
@@ -114,64 +173,20 @@ class _SpendingCardState extends ConsumerState<_SpendingCard> {
 
   @override
   Widget build(BuildContext context) {
+    final fields = switch (widget.tab) {
+      _Tab.spending => _spendingFields(),
+      _Tab.guidance => _guidanceFields(),
+      _Tab.faqs => null,
+    };
+    if (fields == null) return const SizedBox.shrink();
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Eyebrow('Spending'),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _rate,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                hintText: 'Riel per dollar',
-                prefixText: '៛ ',
-                helperText: 'Every ៛ entry converts to USD at this rate.',
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Expanded(
-                  child: Text('Default currency',
-                      style: TextStyle(fontWeight: FontWeight.w500)),
-                ),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'USD', label: Text('\$')),
-                    ButtonSegment(value: 'KHR', label: Text('៛')),
-                  ],
-                  selected: {_currency},
-                  onSelectionChanged: (selection) =>
-                      setState(() => _currency = selection.first),
-                  showSelectedIcon: false,
-                  style: const ButtonStyle(visualDensity: VisualDensity.compact),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              activeThumbColor: AppTheme.green,
-              title: const Text('Dashboard guidance',
-                  style: TextStyle(fontWeight: FontWeight.w500)),
-              subtitle: const Text('Show the advice card on everyone\'s dashboard.'),
-              value: _enabled,
-              onChanged: (value) => setState(() => _enabled = value),
-            ),
-            if (_enabled) ...[
-              TextField(
-                controller: _warning,
-                decoration: const InputDecoration(hintText: 'Warning (when over budget)'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _advice,
-                decoration: const InputDecoration(hintText: 'Advice (otherwise)'),
-              ),
-            ],
+            ...fields,
             const SizedBox(height: 16),
             FilledButton(
               onPressed: _busy ? null : _save,
@@ -188,6 +203,67 @@ class _SpendingCardState extends ConsumerState<_SpendingCard> {
       ),
     );
   }
+
+  List<Widget> _spendingFields() => [
+        const Eyebrow('Spending'),
+        const SizedBox(height: 14),
+        TextField(
+          controller: _rate,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            hintText: 'Riel per dollar',
+            prefixText: '៛ ',
+            helperText: 'Every ៛ entry converts to USD at this rate.',
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            const Expanded(
+              child: Text('Default currency',
+                  style: TextStyle(fontWeight: FontWeight.w500)),
+            ),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'USD', label: Text('\$')),
+                ButtonSegment(value: 'KHR', label: Text('៛')),
+              ],
+              selected: {_currency},
+              onSelectionChanged: (selection) =>
+                  setState(() => _currency = selection.first),
+              showSelectedIcon: false,
+              style: const ButtonStyle(visualDensity: VisualDensity.compact),
+            ),
+          ],
+        ),
+      ];
+
+  List<Widget> _guidanceFields() => [
+        const Eyebrow('Dashboard guidance'),
+        const SizedBox(height: 6),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          activeThumbColor: AppTheme.green,
+          title: const Text('Show the advice card',
+              style: TextStyle(fontWeight: FontWeight.w500)),
+          subtitle: const Text('On everyone\'s dashboard.'),
+          value: _enabled,
+          onChanged: (value) => setState(() => _enabled = value),
+        ),
+        if (_enabled) ...[
+          TextField(
+            controller: _warning,
+            decoration: const InputDecoration(hintText: 'Warning (when over budget)'),
+            maxLines: 2,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _advice,
+            decoration: const InputDecoration(hintText: 'Advice (otherwise)'),
+            maxLines: 2,
+          ),
+        ],
+      ];
 }
 
 class _FaqCard extends ConsumerWidget {
@@ -197,66 +273,89 @@ class _FaqCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                const Expanded(child: Eyebrow('Help page FAQs')),
-                TextButton.icon(
-                  onPressed: () => _showFaqSheet(context, ref),
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('Add'),
-                ),
-              ],
-            ),
-            if (faqs.isEmpty)
-              Text(
-                'No entries yet.',
-                style: TextStyle(color: AppTheme.faint(context, 0.5)),
+    // No panel around the list: a heading on the page, then one row per
+    // entry, the way every other list in the app reads.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 4, 0, 4),
+          child: Row(
+            children: [
+              const Expanded(child: Eyebrow('Help page FAQs')),
+              TextButton.icon(
+                onPressed: () => _showFaqSheet(context, ref),
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Add'),
               ),
-            for (final faq in faqs) ...[
-              InkWell(
-                onTap: () => _showFaqSheet(context, ref, faq: faq),
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(faq.question,
-                            style: const TextStyle(fontWeight: FontWeight.w500)),
+            ],
+          ),
+        ),
+        if (faqs.isEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
+            child: Text(
+              'No entries yet.',
+              style: TextStyle(color: AppTheme.faint(context, 0.5)),
+            ),
+          ),
+        for (final faq in faqs) ...[
+          Card(
+            shape: AppTheme.rowShape(context),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => _showFaqSheet(context, ref, faq: faq),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.help_outline,
+                      size: 20,
+                      color: AppTheme.faint(context, 0.55),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        faq.question,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
-                      if (faq.status != 'published')
-                        Container(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(99),
-                          ),
-                          child: const Text(
-                            'DRAFT',
-                            style: TextStyle(
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFFB45309),
-                            ),
+                    ),
+                    if (faq.status != 'published') ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: const Text(
+                          'DRAFT',
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFFB45309),
                           ),
                         ),
+                      ),
                     ],
-                  ),
+                    const SizedBox(width: 6),
+                    Icon(
+                      Icons.chevron_right,
+                      size: 20,
+                      color: AppTheme.faint(context, 0.3),
+                    ),
+                  ],
                 ),
               ),
-              if (faq != faqs.last)
-                Divider(height: 8, color: AppTheme.faint(context, 0.05)),
-            ],
-          ],
-        ),
-      ),
+            ),
+          ),
+          if (faq != faqs.last) const SizedBox(height: 10),
+        ],
+      ],
     );
   }
 }
