@@ -31,10 +31,13 @@ class CategoriesScreen extends ConsumerWidget {
           style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
         ),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: canWrite
-          ? AddPill(
-              label: 'New',
-              onPressed: () => showCategoryForm(context),
+          ? FloatingShelf(
+              child: AddPill(
+                label: 'New',
+                onPressed: () => showCategoryForm(context),
+              ),
             )
           : null,
       body: categories.when(

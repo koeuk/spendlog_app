@@ -30,8 +30,9 @@ abstract final class AppTheme {
   static const pageInset = 16.0;
 
   /// Room a scrollable must leave at its bottom so its last row clears the
-  /// floating nav bar, which the tabs' content now runs underneath.
-  static const navBarClearance = 104.0;
+  /// floating nav bar, which the tabs' content now runs underneath. Also where
+  /// the tabs' add button comes to rest: a clear gap above the bar.
+  static const navBarClearance = 108.0;
 
   /// A tab's Scaffold is nested inside the shell's, whose body extends under
   /// the nav bar — so its FAB would otherwise come to rest behind the glass.
@@ -74,7 +75,8 @@ abstract final class AppTheme {
   }
 
   /// The card/sheet background for the active palette.
-  static Color surface(BuildContext context) => Theme.of(context).colorScheme.surface;
+  static Color surface(BuildContext context) =>
+      Theme.of(context).colorScheme.surface;
 
   static ThemeData light() => _build(Brightness.light);
 
@@ -94,7 +96,9 @@ abstract final class AppTheme {
     final base = ThemeData(useMaterial3: true, colorScheme: scheme);
     final text = isDark ? paper : ink;
     final hairline = scheme.onSurface.withValues(alpha: isDark ? 0.10 : 0.06);
-    final inputBorder = scheme.onSurface.withValues(alpha: isDark ? 0.14 : 0.10);
+    final inputBorder = scheme.onSurface.withValues(
+      alpha: isDark ? 0.14 : 0.10,
+    );
     final fill = _fill(isDark);
     final edge = _edge(isDark);
     final opaque = isDark ? darkSurface : Colors.white;
@@ -103,10 +107,8 @@ abstract final class AppTheme {
       // Transparent on purpose: the gradient ground is painted once, beneath
       // the navigator, by GlassBackdrop.
       scaffoldBackgroundColor: Colors.transparent,
-      textTheme: GoogleFonts.interTextTheme(base.textTheme).apply(
-        bodyColor: text,
-        displayColor: text,
-      ),
+      textTheme: GoogleFonts.interTextTheme(base.textTheme)
+          .apply(bodyColor: text, displayColor: text),
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -135,7 +137,8 @@ abstract final class AppTheme {
             (states) => states.contains(WidgetState.selected) ? green : fill,
           ),
           foregroundColor: WidgetStateProperty.resolveWith(
-            (states) => states.contains(WidgetState.selected) ? Colors.white : text,
+            (states) =>
+                states.contains(WidgetState.selected) ? Colors.white : text,
           ),
           side: WidgetStatePropertyAll(BorderSide(color: inputBorder)),
         ),
@@ -143,7 +146,9 @@ abstract final class AppTheme {
       dialogTheme: DialogThemeData(
         backgroundColor: opaque,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(cardRadius)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(cardRadius),
+        ),
       ),
       popupMenuTheme: PopupMenuThemeData(
         color: opaque,
@@ -158,7 +163,10 @@ abstract final class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: fill,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 22,
+          vertical: 16,
+        ),
         hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.35)),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(pillRadius),
@@ -187,11 +195,16 @@ abstract final class AppTheme {
           foregroundColor: Colors.white,
           minimumSize: const Size.fromHeight(52),
           shape: const StadiumBorder(),
-          textStyle: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600),
+          textStyle: GoogleFonts.inter(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(foregroundColor: isDark ? greenBright : green),
+        style: TextButton.styleFrom(
+          foregroundColor: isDark ? greenBright : green,
+        ),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,

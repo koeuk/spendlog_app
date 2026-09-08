@@ -26,28 +26,21 @@ class SavingsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           'Savings',
-          style:
-              Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          style: Theme.of(context).textTheme.titleLarge
+              ?.copyWith(fontWeight: FontWeight.w700),
         ),
-        actions: [
-          // Only the "saved this month" line is month-bound; the goals and
-          // their totals are all-time. The stepper is here for that one line.
-          MonthStepper(
-            label: monthLabel(month),
-            onPrevious: () =>
-                ref.read(savingsMonthProvider.notifier).state = shiftMonth(month, -1),
-            onNext: () =>
-                ref.read(savingsMonthProvider.notifier).state = shiftMonth(month, 1),
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
-      floatingActionButton: AddPill(
-        label: 'New goal',
-        onPressed: () => showSavingsGoalSheet(context),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: FloatingShelf(
+        child: AddPill(
+          label: 'New goal',
+          onPressed: () => showSavingsGoalSheet(context),
+        ),
       ),
       body: summary.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.green)),
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppTheme.green),
+        ),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
           onRetry: () {
@@ -65,11 +58,27 @@ class SavingsScreen extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(
               AppTheme.pageInset,
-              8,
+              0,
               AppTheme.pageInset,
               AppTheme.navBarClearance + 72,
             ),
             children: [
+              // The month being viewed sits with the card it governs rather
+              // than in the app bar, where it squeezed the title.
+              // Only the "saved this month" line is month-bound; the goals
+              // and their totals are all-time. The stepper is for that line.
+              Align(
+                alignment: Alignment.centerRight,
+                child: MonthStepper(
+                  label: monthLabel(month),
+                  onPrevious: () =>
+                      ref.read(savingsMonthProvider.notifier).state =
+                          shiftMonth(month, -1),
+                  onNext: () => ref.read(savingsMonthProvider.notifier).state =
+                      shiftMonth(month, 1),
+                ),
+              ),
+              const SizedBox(height: 4),
               _SummaryCard(summary: data, month: month),
               const SizedBox(height: 16),
               ..._goalCards(context, ref, goals),
@@ -93,7 +102,10 @@ class SavingsScreen extends ConsumerWidget {
             child: SizedBox(
               width: 22,
               height: 22,
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.green),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppTheme.green,
+              ),
             ),
           ),
         ),
@@ -111,7 +123,11 @@ class SavingsScreen extends ConsumerWidget {
               padding: const EdgeInsets.only(top: 40),
               child: Column(
                 children: [
-                  Icon(Icons.savings_outlined, size: 44, color: AppTheme.faint(context, 0.25)),
+                  Icon(
+                    Icons.savings_outlined,
+                    size: 44,
+                    color: AppTheme.faint(context, 0.25),
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     'No goals yet — start one.',
@@ -165,8 +181,10 @@ class _SummaryCard extends StatelessWidget {
               children: [
                 Text(
                   money(summary.totalSaved),
-                  style: textTheme.headlineMedium
-                      ?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
+                  style: textTheme.headlineMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Flexible(
@@ -228,14 +246,20 @@ class GoalCard extends StatelessWidget {
                   Container(
                     width: 12,
                     height: 12,
-                    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       goal.name,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
                     ),
                   ),
                   if (goal.reached) ...[
@@ -252,7 +276,11 @@ class GoalCard extends StatelessWidget {
                     ),
                   if (onTap != null) ...[
                     const SizedBox(width: 6),
-                    Icon(Icons.chevron_right, size: 20, color: AppTheme.faint(context, 0.25)),
+                    Icon(
+                      Icons.chevron_right,
+                      size: 20,
+                      color: AppTheme.faint(context, 0.25),
+                    ),
                   ],
                 ],
               ),
@@ -264,13 +292,19 @@ class GoalCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       '${money(goal.saved)} of ${money(goal.targetAmount)}',
-                      style: TextStyle(fontSize: 13, color: AppTheme.faint(context, 0.55)),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.faint(context, 0.55),
+                      ),
                     ),
                   ),
                   if (goal.deadline != null)
                     Text(
                       'By ${dayLabel(goal.deadline!)}',
-                      style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.45)),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.faint(context, 0.45),
+                      ),
                     ),
                 ],
               ),

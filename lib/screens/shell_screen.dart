@@ -1,11 +1,11 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../theme.dart';
+import '../widgets/common.dart';
+import 'menu_sheet.dart';
 
-/// The signed-in frame: one bottom bar, four tabs, each tab keeping its own
+/// The signed-in frame: one bottom bar, five tabs, each tab keeping its own
 /// navigation state via the router's indexed stack.
 class ShellScreen extends StatelessWidget {
   const ShellScreen({super.key, required this.navigationShell});
@@ -22,12 +22,20 @@ class ShellScreen extends StatelessWidget {
       body: navigationShell,
       bottomNavigationBar: _FloatingNavBar(
         currentIndex: navigationShell.currentIndex,
-        onSelected: (index) => navigationShell.goBranch(
-          index,
-          // Re-tapping the active tab pops it back to its root — the platform
-          // convention.
-          initialLocation: index == navigationShell.currentIndex,
-        ),
+        onSelected: (index) {
+          // The last tab is not a destination: it opens the menu sheet, and
+          // its branch is only ever entered from a row in that sheet.
+          if (index == _menuIndex) {
+            showMenuSheet(context);
+            return;
+          }
+          navigationShell.goBranch(
+            index,
+            // Re-tapping the active tab pops it back to its root — the
+            // platform convention.
+            initialLocation: index == navigationShell.currentIndex,
+          );
+        },
       ),
     );
   }
@@ -36,22 +44,40 @@ class ShellScreen extends StatelessWidget {
 typedef _Destination = ({IconData icon, IconData active, String label});
 
 const _destinations = <_Destination>[
-  (icon: Icons.grid_view_outlined, active: Icons.grid_view_rounded, label: 'Dashboard'),
-  (icon: Icons.receipt_long_outlined, active: Icons.receipt_long_rounded, label: 'Expenses'),
-  (icon: Icons.savings_outlined, active: Icons.savings_rounded, label: 'Budgets'),
-  (icon: Icons.insights_outlined, active: Icons.insights_rounded, label: 'Reports'),
-  (icon: Icons.person_outline, active: Icons.person_rounded, label: 'Profile'),
+  (icon: Icons.home_outlined, active: Icons.home_rounded, label: 'Home'),
+  (
+    icon: Icons.receipt_long_outlined,
+    active: Icons.receipt_long_rounded,
+    label: 'Expenses',
+  ),
+  (
+    icon: Icons.savings_outlined,
+    active: Icons.savings_rounded,
+    label: 'Budgets',
+  ),
+  (
+    icon: Icons.insights_outlined,
+    active: Icons.insights_rounded,
+    label: 'Reports',
+  ),
+  (icon: Icons.menu_rounded, active: Icons.menu_rounded, label: 'Menu'),
 ];
 
-const _radius = 28.0;
+/// The Menu tab: opens a sheet rather than switching branch. It still lights
+/// up while the profile branch beneath it is showing, since every row in the
+/// sheet leads there.
+const _menuIndex = 4;
 
-/// The gap between the active pill and the bar around it, on every side.
-const _inset = 8.0;
-const _motion = Duration(milliseconds: 320);
+const _iconSize = 26.0;
 
-/// A detached, translucent pill holding the four tabs. Only the active tab
-/// carries its label — it widens to make room, so the bar reads as one moving
-/// shape rather than four static captions.
+const _motion = Duration(milliseconds: 200);
+
+/// A flat white bar holding the five tabs, each an icon over its label.
+/// Nothing sits behind the active tab — it is simply drawn in ink while the
+/// rest fall back to grey, so the bar stays calm and reads at a glance. The
+/// frosted shelf the reference shows above the bar belongs to the tab's
+/// floating button ([FloatingShelf]), which has to paint over the content but
+/// under the button — an order this bar, drawn last, cannot achieve.
 class _FloatingNavBar extends StatelessWidget {
   const _FloatingNavBar({required this.currentIndex, required this.onSelected});
 
@@ -60,55 +86,32 @@ class _FloatingNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-        child: DecoratedBox(
-          // Outside the clip, or the blur below would cut the shadow off.
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(_radius),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.faint(context, 0.10),
-                blurRadius: 28,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(_radius),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppTheme.glassFill(context, strong: true).withValues(alpha: 0.72),
-                  borderRadius: BorderRadius.circular(_radius),
-                  border: Border.all(color: AppTheme.glassBorder(context)),
-                ),
-                child: Padding(
-                  // Uniform, so the active pill sits the same distance from the
-                  // bar's edge whichever tab it is on.
-                  padding: const EdgeInsets.all(_inset),
-                  child: Row(
-                    // spaceBetween, not spaceEvenly: evenly also inserts a share
-                    // of the leftover width *before* the first item, which added
-                    // to the padding and left the pill further from the left edge
-                    // than from the top and bottom. Between keeps the outer gap
-                    // equal to the padding on all four sides.
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      for (var i = 0; i < _destinations.length; i++)
-                        _NavItem(
-                          destination: _destinations[i],
-                          selected: i == currentIndex,
-                          onTap: () => onSelected(i),
-                        ),
-                    ],
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // A plain rectangle, like the reference: no rounding anywhere, just a
+    // hairline along the top where the bar meets the frosted shelf. The safe
+    // area sits inside, so the bar's colour fills the home-indicator strip.
+    return Material(
+      color: AppTheme.surface(context),
+      shape: Border(
+        top: BorderSide(color: AppTheme.faint(context, isDark ? 0.12 : 0.08)),
+      ),
+      elevation: 0,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+          child: Row(
+            children: [
+              for (var i = 0; i < _destinations.length; i++)
+                Expanded(
+                  child: _NavItem(
+                    destination: _destinations[i],
+                    selected: i == currentIndex,
+                    onTap: () => onSelected(i),
                   ),
                 ),
-              ),
-            ),
+            ],
           ),
         ),
       ),
@@ -129,63 +132,49 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final color = selected ? scheme.onSurface : AppTheme.faint(context, 0.50);
+
     return Semantics(
       button: true,
       selected: selected,
       label: destination.label,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(99),
-        child: AnimatedContainer(
-          duration: _motion,
-          curve: Curves.easeOutCubic,
-          // Tight on purpose: five tabs plus the active one's label have to fit
-          // 320px, the narrowest width worth supporting.
-          padding: EdgeInsets.symmetric(horizontal: selected ? 12 : 9, vertical: 11),
-          decoration: BoxDecoration(
-            color: selected ? AppTheme.green : Colors.transparent,
-            borderRadius: BorderRadius.circular(99),
-          ),
-          child: Row(
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              AnimatedSwitcher(
-                duration: _motion,
-                child: Icon(
-                  selected ? destination.active : destination.icon,
-                  key: ValueKey(selected),
-                  size: 21,
-                  color: selected ? Colors.white : AppTheme.faint(context, 0.45),
-                ),
-              ),
-              // Slides the label out from behind the icon. Clipped so it
-              // occupies no width at all while the tab is inactive.
-              ClipRect(
-                child: AnimatedAlign(
-                  duration: _motion,
-                  curve: Curves.easeOutCubic,
-                  alignment: Alignment.centerLeft,
-                  widthFactor: selected ? 1 : 0,
-                  // Without this the Align takes every pixel of height the
-                  // Scaffold's loose constraints offer, and the bar fills the
-                  // screen.
-                  heightFactor: 1,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 6),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 72),
-                      child: Text(
-                        destination.label,
-                        softWrap: false,
-                        overflow: TextOverflow.clip,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+              SizedBox(
+                height: _iconSize + 2,
+                child: Center(
+                  child: AnimatedSwitcher(
+                    duration: _motion,
+                    child: Icon(
+                      selected ? destination.active : destination.icon,
+                      key: ValueKey(selected),
+                      size: _iconSize,
+                      color: color,
                     ),
                   ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              AnimatedDefaultTextStyle(
+                duration: _motion,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 12.5,
+                  height: 1,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                ),
+                child: Text(
+                  destination.label,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.clip,
                 ),
               ),
             ],

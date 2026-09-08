@@ -24,26 +24,18 @@ class IncomeScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           'Income',
-          style:
-              Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          style: Theme.of(context).textTheme.titleLarge
+              ?.copyWith(fontWeight: FontWeight.w700),
         ),
-        actions: [
-          MonthStepper(
-            label: monthLabel(month),
-            onPrevious: () =>
-                ref.read(incomeMonthProvider.notifier).state = shiftMonth(month, -1),
-            onNext: () =>
-                ref.read(incomeMonthProvider.notifier).state = shiftMonth(month, 1),
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
-      floatingActionButton: AddPill(
-        label: 'Add',
-        onPressed: () => showIncomeForm(context),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: FloatingShelf(
+        child: AddPill(label: 'Add', onPressed: () => showIncomeForm(context)),
       ),
       body: summary.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.green)),
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppTheme.green),
+        ),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
           onRetry: () {
@@ -61,11 +53,27 @@ class IncomeScreen extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(
               AppTheme.pageInset,
-              8,
+              0,
               AppTheme.pageInset,
               AppTheme.navBarClearance + 72,
             ),
             children: [
+              // The month being viewed sits with the card it governs rather
+              // than in the app bar, where it squeezed the title.
+              Align(
+                alignment: Alignment.centerRight,
+                child: MonthStepper(
+                  label: monthLabel(month),
+                  onPrevious: () =>
+                      ref.read(incomeMonthProvider.notifier).state = shiftMonth(
+                        month,
+                        -1,
+                      ),
+                  onNext: () => ref.read(incomeMonthProvider.notifier).state =
+                      shiftMonth(month, 1),
+                ),
+              ),
+              const SizedBox(height: 4),
               _SummaryCard(summary: data, month: month),
               const SizedBox(height: 16),
               ..._rows(context, ref, incomes),
@@ -78,7 +86,11 @@ class IncomeScreen extends ConsumerWidget {
 
   /// The month's entries live on their own provider so a slow list never
   /// holds the summary card hostage — and vice versa.
-  List<Widget> _rows(BuildContext context, WidgetRef ref, AsyncValue<List<Income>> incomes) {
+  List<Widget> _rows(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<Income>> incomes,
+  ) {
     return incomes.when(
       loading: () => const [
         Padding(
@@ -87,7 +99,10 @@ class IncomeScreen extends ConsumerWidget {
             child: SizedBox(
               width: 22,
               height: 22,
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.green),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppTheme.green,
+              ),
             ),
           ),
         ),
@@ -105,7 +120,11 @@ class IncomeScreen extends ConsumerWidget {
               padding: const EdgeInsets.only(top: 40),
               child: Column(
                 children: [
-                  Icon(Icons.payments_outlined, size: 44, color: AppTheme.faint(context, 0.25)),
+                  Icon(
+                    Icons.payments_outlined,
+                    size: 44,
+                    color: AppTheme.faint(context, 0.25),
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     'No income recorded this month.',
@@ -131,7 +150,11 @@ class IncomeScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _delete(BuildContext context, WidgetRef ref, Income income) async {
+  Future<void> _delete(
+    BuildContext context,
+    WidgetRef ref,
+    Income income,
+  ) async {
     final confirmed = await confirmDeleteIncome(context, income);
     if (confirmed != true) return;
 
@@ -173,8 +196,10 @@ class _SummaryCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               money(summary.total),
-              style: textTheme.headlineMedium
-                  ?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
+              style: textTheme.headlineMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
@@ -275,7 +300,10 @@ class _IncomeTile extends StatelessWidget {
                       Text(
                         subtitle,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.45)),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.faint(context, 0.45),
+                        ),
                       ),
                     ],
                   ],

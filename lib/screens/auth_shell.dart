@@ -67,12 +67,9 @@ class AuthShell extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 28),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: child,
-                    ),
-                  ),
+                  // The form sits straight on the page. A card around it made
+                  // a box inside a box: the fields are already pills on glass.
+                  child,
                   if (footer != null) ...[
                     const SizedBox(height: 24),
                     Center(child: footer),

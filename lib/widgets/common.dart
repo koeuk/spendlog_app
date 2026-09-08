@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
@@ -16,12 +18,70 @@ class Eyebrow extends StatelessWidget {
     return Text(
       text.toUpperCase(),
       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            letterSpacing: 1.2,
-            fontWeight: FontWeight.w700,
-            color: onBrand
-                ? Colors.white.withValues(alpha: 0.7)
-                : AppTheme.faint(context, 0.45),
+        letterSpacing: 1.2,
+        fontWeight: FontWeight.w700,
+        color: onBrand
+            ? Colors.white.withValues(alpha: 0.7)
+            : AppTheme.faint(context, 0.45),
+      ),
+    );
+  }
+}
+
+/// The frosted shelf a tab's floating button rests on: a blurred, translucent
+/// panel rising from the screen's bottom edge, fading in from nothing at its
+/// top to nearly the bar's colour where it meets the nav bar, the full width
+/// of the screen like the bar itself. Wrap a Scaffold's `floatingActionButton`
+/// in it; it paints behind the child and never intercepts a tap.
+class FloatingShelf extends StatelessWidget {
+  const FloatingShelf({super.key, required this.child});
+
+  final Widget child;
+
+  static const _height = 180.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surface = AppTheme.surface(context);
+    final width = MediaQuery.sizeOf(context).width;
+    // The FAB slot sits its margin (plus any home-indicator strip) above the
+    // screen's bottom; the shelf reaches past that to the edge itself.
+    final reach =
+        kFloatingActionButtonMargin + MediaQuery.viewPaddingOf(context).bottom;
+
+    return Stack(
+      alignment: Alignment.bottomCenter,
+      clipBehavior: Clip.none,
+      children: [
+        Positioned(
+          bottom: -reach,
+          child: IgnorePointer(
+            child: SizedBox(
+              width: width,
+              height: _height,
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          surface.withValues(alpha: 0.0),
+                          surface.withValues(alpha: isDark ? 0.55 : 0.70),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
+        ),
+        child,
+      ],
     );
   }
 }
@@ -138,7 +198,11 @@ class LoadFailed extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.cloud_off_outlined, size: 40, color: AppTheme.faint(context, 0.3)),
+            Icon(
+              Icons.cloud_off_outlined,
+              size: 40,
+              color: AppTheme.faint(context, 0.3),
+            ),
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
@@ -200,7 +264,9 @@ class PillSegment extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: selected ? Colors.white : Theme.of(context).colorScheme.onSurface,
+              color: selected
+                  ? Colors.white
+                  : Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ),
@@ -246,7 +312,11 @@ class MonthStepper extends StatelessWidget {
 /// The ten CategoryColor swatches as a row of tappable circles. Categories and
 /// savings goals both pick from the same enum, so they share the picker.
 class SwatchPicker extends StatelessWidget {
-  const SwatchPicker({super.key, required this.selected, required this.onSelected});
+  const SwatchPicker({
+    super.key,
+    required this.selected,
+    required this.onSelected,
+  });
 
   final String selected;
   final ValueChanged<String> onSelected;

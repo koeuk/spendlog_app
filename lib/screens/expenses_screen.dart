@@ -137,9 +137,12 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
               ?.copyWith(fontWeight: FontWeight.w700),
         ),
       ),
-      floatingActionButton: AddPill(
-        label: 'Add',
-        onPressed: () => showExpenseForm(context),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: FloatingShelf(
+        child: AddPill(
+          label: 'Add',
+          onPressed: () => showExpenseForm(context),
+        ),
       ),
       body: Column(
         children: [

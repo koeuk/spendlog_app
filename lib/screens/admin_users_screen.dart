@@ -26,10 +26,13 @@ class AdminUsersScreen extends ConsumerWidget {
               Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
         ),
       ),
-      floatingActionButton: AddPill(
-        label: 'Add',
-        icon: Icons.person_add_alt,
-        onPressed: () => _UserFormPage.open(context),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: FloatingShelf(
+        child: AddPill(
+          label: 'Add',
+          icon: Icons.person_add_alt,
+          onPressed: () => _UserFormPage.open(context),
+        ),
       ),
       body: users.when(
         loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.green)),
