@@ -69,7 +69,16 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<AuthState> _resolveSession() async {
-    final token = await ApiClient.instance.readToken();
+    final String? token;
+    try {
+      token = await ApiClient.instance.readToken();
+    } catch (_) {
+      // Secure storage itself failed — on Linux, no Secret Service on the
+      // session bus (e.g. the app was launched as root, or the keyring
+      // daemon is not running). There is no session to restore, and
+      // crashing the splash helps nobody; land on the login screen.
+      return const AuthState();
+    }
 
     if (token == null) return const AuthState();
 
