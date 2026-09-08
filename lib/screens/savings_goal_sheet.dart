@@ -186,13 +186,13 @@ class _GoalFormState extends ConsumerState<_GoalForm> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFDECEC),
+                    color: AppTheme.errorFill(context),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     _error!,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Color(0xFFB3261E), fontSize: 13),
+                    style: TextStyle(color: AppTheme.errorInk(context), fontSize: 13),
                   ),
                 ),
                 const SizedBox(height: 14),

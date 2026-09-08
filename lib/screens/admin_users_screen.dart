@@ -342,14 +342,14 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFDECEC),
+                  color: AppTheme.errorFill(context),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   _error!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Color(0xFFB3261E),
+                  style: TextStyle(
+                    color: AppTheme.errorInk(context),
                     fontSize: 13,
                   ),
                 ),

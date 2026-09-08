@@ -127,7 +127,7 @@ class _PeriodPicker extends ConsumerWidget {
     );
 
     return Material(
-      color: Colors.white,
+      color: AppTheme.surface(context),
       borderRadius: BorderRadius.circular(AppTheme.pillRadius),
       child: InkWell(
         onTap: () => _choose(context, ref, selected.value),

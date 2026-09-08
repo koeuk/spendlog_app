@@ -79,6 +79,18 @@ abstract final class AppTheme {
     );
   }
 
+  /// The soft red wash behind an inline error, and the ink on it — pink on
+  /// white by day, a dim red tint with a lighter red by night.
+  static Color errorFill(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFFDC2626).withValues(alpha: 0.18)
+          : const Color(0xFFFDECEC);
+
+  static Color errorInk(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFFF87171)
+          : const Color(0xFFB3261E);
+
   /// The card/sheet background for the active palette.
   static Color surface(BuildContext context) =>
       Theme.of(context).colorScheme.surface;
