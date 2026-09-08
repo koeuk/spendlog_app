@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../api/api_client.dart';
 import '../models/user.dart';
@@ -22,7 +21,6 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider).user;
-    final isAdmin = user?.isAdmin ?? false;
     final themeMode = ref.watch(themeModeProvider);
 
     return Scaffold(
@@ -46,21 +44,6 @@ class ProfileScreen extends ConsumerWidget {
                 value: _themeLabel(themeMode),
                 onTap: () => _chooseTheme(context, ref, themeMode),
               ),
-              _SettingsRow(
-                icon: Icons.payments_outlined,
-                label: 'Income',
-                onTap: () => context.go('/income'),
-              ),
-              _SettingsRow(
-                icon: Icons.savings_outlined,
-                label: 'Savings',
-                onTap: () => context.go('/savings'),
-              ),
-              _SettingsRow(
-                icon: Icons.category_outlined,
-                label: 'Categories',
-                onTap: () => context.go('/profile/categories'),
-              ),
             ],
           ),
           _Section(
@@ -78,22 +61,6 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ],
           ),
-          if (isAdmin)
-            _Section(
-              title: 'Admin',
-              rows: [
-                _SettingsRow(
-                  icon: Icons.group_outlined,
-                  label: 'Users',
-                  onTap: () => context.go('/profile/admin-users'),
-                ),
-                _SettingsRow(
-                  icon: Icons.tune,
-                  label: 'App settings',
-                  onTap: () => context.go('/profile/admin-settings'),
-                ),
-              ],
-            ),
           _Section(
             rows: [
               _SettingsRow(
