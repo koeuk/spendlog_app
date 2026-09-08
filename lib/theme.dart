@@ -12,9 +12,10 @@ abstract final class AppTheme {
   static const cream = Color(0xFFF7F6F2);
   static const ink = Color(0xFF171717);
 
-  // The dark palette: near-black ground, one step lighter for cards.
-  static const darkGround = Color(0xFF121412);
-  static const darkSurface = Color(0xFF1D201D);
+  // The dark palette follows Telegram's night theme: a deep blue-grey
+  // ground (see GlassBackdrop) and one step lighter for cards.
+  static const darkGround = Color(0xFF17212B);
+  static const darkSurface = Color(0xFF232E3C);
   static const paper = Color(0xFFECECEA);
 
   static const cardRadius = 24.0;
@@ -57,7 +58,7 @@ abstract final class AppTheme {
       _edge(Theme.of(context).brightness == Brightness.dark);
 
   static Color _fill(bool isDark, {bool strong = false}) {
-    final base = isDark ? const Color(0xFF232823) : Colors.white;
+    final base = isDark ? darkSurface : Colors.white;
     final alpha = strong ? (isDark ? 0.94 : 0.92) : (isDark ? 0.55 : 0.62);
     return base.withValues(alpha: alpha);
   }

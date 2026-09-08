@@ -4,9 +4,10 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
-/// The ground every screen sits on: a soft gradient with a few large, blurred
-/// colour blobs. Cards and inputs are translucent, so this is what shows
-/// through them — without it the "glass" would be glass over nothing.
+/// The ground every screen sits on: flat and neutral, the way Telegram's
+/// settings and chat list are — light grey by day, a deep blue-grey at night.
+/// Cards and inputs are translucent panes over it, so the tone here is what
+/// gives them their slight tint.
 ///
 /// Installed once, in `MaterialApp.builder`, beneath the navigator, so every
 /// route (signed-out screens included) shares the same ground and the
@@ -16,79 +17,17 @@ class GlassBackdrop extends StatelessWidget {
 
   final Widget child;
 
+  /// Telegram's light background and its "night" theme, respectively.
+  static const lightGround = Color(0xFFEFF2F5);
+  static const darkGround = Color(0xFF17212B);
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: isDark
-                  ? const [Color(0xFF0F120F), Color(0xFF161C17)]
-                  : const [Color(0xFFF5F7F2), Color(0xFFEBF0E8)],
-            ),
-          ),
-        ),
-        _Blob(
-          alignment: const Alignment(-1.3, -1.0),
-          size: 440,
-          color: AppTheme.green,
-          alpha: isDark ? 0.28 : 0.18,
-        ),
-        _Blob(
-          alignment: const Alignment(1.4, -0.15),
-          size: 380,
-          color: AppTheme.greenBright,
-          alpha: isDark ? 0.18 : 0.16,
-        ),
-        _Blob(
-          alignment: const Alignment(0.9, 1.3),
-          size: 480,
-          color: const Color(0xFFD9A441),
-          alpha: isDark ? 0.10 : 0.12,
-        ),
-        child,
-      ],
-    );
-  }
-}
-
-/// A radial fade rather than a blurred circle: same look, no filter to pay
-/// for on every frame.
-class _Blob extends StatelessWidget {
-  const _Blob({
-    required this.alignment,
-    required this.size,
-    required this.color,
-    required this.alpha,
-  });
-
-  final Alignment alignment;
-  final double size;
-  final Color color;
-  final double alpha;
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Align(
-        alignment: alignment,
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: RadialGradient(
-              colors: [color.withValues(alpha: alpha), color.withValues(alpha: 0)],
-            ),
-          ),
-        ),
-      ),
+    return ColoredBox(
+      color: isDark ? darkGround : lightGround,
+      child: child,
     );
   }
 }
