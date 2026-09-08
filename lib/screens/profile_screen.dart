@@ -47,14 +47,19 @@ class ProfileScreen extends ConsumerWidget {
                 onTap: () => _chooseTheme(context, ref, themeMode),
               ),
               _SettingsRow(
+                icon: Icons.payments_outlined,
+                label: 'Income',
+                onTap: () => context.go('/income'),
+              ),
+              _SettingsRow(
+                icon: Icons.savings_outlined,
+                label: 'Savings',
+                onTap: () => context.go('/savings'),
+              ),
+              _SettingsRow(
                 icon: Icons.category_outlined,
                 label: 'Categories',
                 onTap: () => context.go('/profile/categories'),
-              ),
-              _SettingsRow(
-                icon: Icons.fitness_center_outlined,
-                label: 'Workouts',
-                onTap: () => context.go('/profile/workouts'),
               ),
             ],
           ),

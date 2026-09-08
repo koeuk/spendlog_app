@@ -6,8 +6,9 @@ import '../models/category.dart';
 import '../models/dashboard.dart';
 import '../models/expense.dart';
 import '../models/expense_filters.dart';
+import '../models/income.dart';
 import '../models/report.dart';
-import '../models/workout.dart';
+import '../models/savings.dart';
 import '../repositories/spendlog_repository.dart';
 import '../utils/format.dart';
 
@@ -156,6 +157,62 @@ class ExpensesNotifier extends AutoDisposeAsyncNotifier<ExpensesState> {
 final expensesProvider =
     AsyncNotifierProvider.autoDispose<ExpensesNotifier, ExpensesState>(ExpensesNotifier.new);
 
+// ------------------------------------------------------------------ incomes
+
+final incomeMonthProvider = StateProvider<String>((ref) => currentYm());
+
+final incomeSummaryProvider = FutureProvider.autoDispose<IncomeSummary>(
+  (ref) => ref.watch(repositoryProvider).incomeSummary(ref.watch(incomeMonthProvider)),
+);
+
+/// The month's rows. One page of 100 — the API's maximum — rather than a
+/// paging notifier: a month with more than a hundred income entries is not a
+/// case worth the machinery ExpensesNotifier carries.
+final incomesProvider = FutureProvider.autoDispose<List<Income>>((ref) async {
+  final bounds = monthBounds(ref.watch(incomeMonthProvider));
+  final page = await ref
+      .watch(repositoryProvider)
+      .incomes(from: bounds.from, to: bounds.to, perPage: 100);
+
+  return page.items;
+});
+
+// ------------------------------------------------------------------ savings
+
+final savingsMonthProvider = StateProvider<String>((ref) => currentYm());
+
+final savingsSummaryProvider = FutureProvider.autoDispose<SavingsSummary>(
+  (ref) => ref.watch(repositoryProvider).savingsSummary(ref.watch(savingsMonthProvider)),
+);
+
+final savingsGoalsProvider = FutureProvider.autoDispose<List<SavingsGoal>>(
+  (ref) => ref.watch(repositoryProvider).savingsGoals(),
+);
+
+/// One goal with its entries, for the detail screen.
+final savingsGoalProvider = FutureProvider.autoDispose.family<SavingsGoal, String>(
+  (ref, uuid) => ref.watch(repositoryProvider).savingsGoal(uuid),
+);
+
+/// Drops every savings figure a goal or entry write can move. The dashboard
+/// carries the savings totals too, so it goes with them.
+void invalidateSavings(WidgetRef ref) {
+  ref
+    ..invalidate(savingsGoalsProvider)
+    ..invalidate(savingsSummaryProvider)
+    ..invalidate(savingsGoalProvider)
+    ..invalidate(dashboardProvider);
+}
+
+/// Same for income: the month's rows, its summary, and the dashboard's
+/// income and balance lines.
+void invalidateIncome(WidgetRef ref) {
+  ref
+    ..invalidate(incomesProvider)
+    ..invalidate(incomeSummaryProvider)
+    ..invalidate(dashboardProvider);
+}
+
 // ------------------------------------------------------------------- writes
 
 /// Drops every cached figure that a write can move.
@@ -181,65 +238,6 @@ void invalidateMoney(WidgetRef ref) {
     // expense write can change this list.
     ..invalidate(categoriesProvider);
 }
-
-// ----------------------------------------------------------------- workouts
-
-final workoutMonthProvider = StateProvider<String>((ref) => currentYm());
-
-final workoutSummaryProvider = FutureProvider.autoDispose<WorkoutSummary>(
-  (ref) => ref
-      .watch(repositoryProvider)
-      .workoutSummary(month: ref.watch(workoutMonthProvider)),
-);
-
-final exercisesProvider = FutureProvider.autoDispose<List<ExerciseType>>(
-  (ref) => ref.watch(repositoryProvider).exercises(),
-);
-
-class WorkoutsState {
-  const WorkoutsState({required this.items, required this.hasMore, required this.page});
-
-  final List<Workout> items;
-  final bool hasMore;
-  final int page;
-}
-
-class WorkoutsNotifier extends AutoDisposeAsyncNotifier<WorkoutsState> {
-  bool _loadingMore = false;
-
-  @override
-  Future<WorkoutsState> build() async {
-    _loadingMore = false;
-    final first = await ref.watch(repositoryProvider).workouts();
-
-    return WorkoutsState(items: first.items, hasMore: first.hasMore, page: 1);
-  }
-
-  Future<void> loadMore() async {
-    final current = state.valueOrNull;
-    if (_loadingMore || current == null || !current.hasMore) return;
-
-    _loadingMore = true;
-
-    try {
-      final next = await ref.read(repositoryProvider).workouts(page: current.page + 1);
-
-      state = AsyncData(WorkoutsState(
-        items: [...current.items, ...next.items],
-        hasMore: next.hasMore,
-        page: current.page + 1,
-      ));
-    } catch (_) {
-      // Same reasoning as ExpensesNotifier.loadMore: scroll callbacks cannot
-      // await, so failures keep the loaded pages and the next scroll retries.
-    } finally {
-      _loadingMore = false;
-    }
-  }
-}
-
-final workoutsProvider =
-    AsyncNotifierProvider.autoDispose<WorkoutsNotifier, WorkoutsState>(WorkoutsNotifier.new);
 
 // -------------------------------------------------------------------- admin
 

@@ -6,8 +6,9 @@ import '../models/dashboard.dart';
 import '../models/expense.dart';
 import '../models/expense_filters.dart';
 import '../models/admin.dart';
+import '../models/income.dart';
 import '../models/report.dart';
-import '../models/workout.dart';
+import '../models/savings.dart';
 import '../models/user.dart';
 
 /// Every data call the app makes, one thin method per endpoint. Shapes follow
@@ -89,6 +90,160 @@ class SpendLogRepository {
   }
 
   Future<void> deleteExpense(String uuid) => _client.dio.delete('/expenses/$uuid');
+
+  // -------------------------------------------------------------- incomes
+
+  Future<({List<Income> items, bool hasMore})> incomes({
+    String? from,
+    String? to,
+    int page = 1,
+    int perPage = 50,
+  }) async {
+    final response = await _client.dio.get('/incomes', queryParameters: {
+      'page': page,
+      'per_page': perPage,
+      'filter[from]': ?from,
+      'filter[to]': ?to,
+    });
+
+    final data = response.data as Map<String, dynamic>;
+    final items = (data['data'] as List<dynamic>)
+        .map((e) => Income.fromJson(e as Map<String, dynamic>))
+        .toList();
+
+    return (items: items, hasMore: (data['links'] as Map<String, dynamic>?)?['next'] != null);
+  }
+
+  Future<IncomeSummary> incomeSummary(String month) async {
+    final response =
+        await _client.dio.get('/incomes/summary', queryParameters: {'month': month});
+
+    return IncomeSummary.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<void> createIncome({
+    required String source,
+    required String amount,
+    required String receivedOn,
+    String? note,
+    String currency = 'USD',
+  }) async {
+    await _client.dio.post('/incomes', data: {
+      'source': source,
+      'amount': amount,
+      'received_on': receivedOn,
+      'note': note,
+      if (currency != 'USD') 'currency': currency,
+    });
+  }
+
+  Future<void> updateIncome(
+    String uuid, {
+    required String source,
+    required String amount,
+    required String receivedOn,
+    String? note,
+    String currency = 'USD',
+  }) async {
+    await _client.dio.patch('/incomes/$uuid', data: {
+      'source': source,
+      'amount': amount,
+      'received_on': receivedOn,
+      'note': note,
+      if (currency != 'USD') 'currency': currency,
+    });
+  }
+
+  Future<void> deleteIncome(String uuid) => _client.dio.delete('/incomes/$uuid');
+
+  // -------------------------------------------------------------- savings
+
+  /// Every goal, newest first, without entries — those come with [savingsGoal].
+  Future<List<SavingsGoal>> savingsGoals() async {
+    final response = await _client.dio.get('/savings');
+
+    return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>)
+        .map((e) => SavingsGoal.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<SavingsSummary> savingsSummary(String month) async {
+    final response =
+        await _client.dio.get('/savings/summary', queryParameters: {'month': month});
+
+    return SavingsSummary.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
+  /// One goal with its latest entries loaded.
+  Future<SavingsGoal> savingsGoal(String uuid) async {
+    final response = await _client.dio.get('/savings/$uuid');
+
+    return SavingsGoal.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<void> createSavingsGoal({
+    required String name,
+    required String targetAmount,
+    String? deadline,
+    String? color,
+    String currency = 'USD',
+  }) async {
+    await _client.dio.post('/savings', data: {
+      'name': name,
+      'target_amount': targetAmount,
+      'deadline': deadline,
+      'color': ?color,
+      if (currency != 'USD') 'currency': currency,
+    });
+  }
+
+  Future<void> updateSavingsGoal(
+    String uuid, {
+    required String name,
+    required String targetAmount,
+    String? deadline,
+    String? color,
+    String currency = 'USD',
+  }) async {
+    await _client.dio.patch('/savings/$uuid', data: {
+      'name': name,
+      'target_amount': targetAmount,
+      // Sent even when null: that is how a deadline gets cleared on edit.
+      'deadline': deadline,
+      'color': ?color,
+      if (currency != 'USD') 'currency': currency,
+    });
+  }
+
+  Future<void> deleteSavingsGoal(String uuid) => _client.dio.delete('/savings/$uuid');
+
+  /// [type] is deposit | withdraw; [amount] is always positive — the server
+  /// applies the sign. A withdrawal past what is saved comes back as a 422.
+  Future<void> addSavingsEntry(
+    String goalUuid, {
+    required String type,
+    required String amount,
+    required String savedOn,
+    String? note,
+    String currency = 'USD',
+  }) async {
+    await _client.dio.post('/savings/$goalUuid/entries', data: {
+      'type': type,
+      'amount': amount,
+      'saved_on': savedOn,
+      'note': note,
+      if (currency != 'USD') 'currency': currency,
+    });
+  }
+
+  Future<void> deleteSavingsEntry(String goalUuid, String entryUuid) =>
+      _client.dio.delete('/savings/$goalUuid/entries/$entryUuid');
 
   // -------------------------------------------------------------- reports
 
@@ -183,65 +338,6 @@ class SpendLogRepository {
   }
 
   Future<void> deleteBudget(String uuid) => _client.dio.delete('/budgets/$uuid');
-
-  // ------------------------------------------------------------- workouts
-
-  Future<({List<Workout> items, bool hasMore})> workouts({int page = 1}) async {
-    final response = await _client.dio.get('/workouts', queryParameters: {'page': page});
-
-    final data = response.data as Map<String, dynamic>;
-
-    return (
-      items: (data['data'] as List<dynamic>)
-          .map((e) => Workout.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      hasMore: (data['links'] as Map<String, dynamic>?)?['next'] != null,
-    );
-  }
-
-  Future<WorkoutSummary> workoutSummary({String? month}) async {
-    final response = await _client.dio.get('/workouts/summary', queryParameters: {
-      'month': ?month,
-    });
-
-    return WorkoutSummary.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
-  }
-
-  /// The movements available to the caller: the global catalogue plus their own.
-  Future<List<ExerciseType>> exercises() async {
-    final response = await _client.dio.get('/exercises');
-
-    return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>)
-        .map((e) => ExerciseType.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
-
-  /// A workout is submitted whole — the session plus its sets. Weights ride in
-  /// [weightUnit]; the server stores kilograms either way, mirroring currency.
-  Future<void> saveWorkout({
-    String? uuid,
-    required String performedOn,
-    int? durationSeconds,
-    String? notes,
-    required List<Map<String, dynamic>> sets,
-    String weightUnit = 'kg',
-  }) async {
-    final payload = {
-      'performed_on': performedOn,
-      'duration_seconds': durationSeconds,
-      'notes': notes,
-      'sets': sets,
-      if (weightUnit != 'kg') 'weight_unit': weightUnit,
-    };
-
-    uuid == null
-        ? await _client.dio.post('/workouts', data: payload)
-        : await _client.dio.patch('/workouts/$uuid', data: payload);
-  }
-
-  Future<void> deleteWorkout(String uuid) => _client.dio.delete('/workouts/$uuid');
 
   // ---------------------------------------------------------------- admin
 

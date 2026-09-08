@@ -301,7 +301,7 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
               const SizedBox(height: 18),
               const Eyebrow('Colour'),
               const SizedBox(height: 10),
-              _ColorPicker(
+              SwatchPicker(
                 selected: _color,
                 onSelected: (value) => setState(() => _color = value),
               ),
@@ -336,42 +336,6 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _ColorPicker extends StatelessWidget {
-  const _ColorPicker({required this.selected, required this.onSelected});
-
-  final String selected;
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: [
-        for (final name in CategoryStyle.colorNames)
-          GestureDetector(
-            onTap: () => onSelected(name),
-            child: Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: CategoryStyle.color(name),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: name == selected ? Theme.of(context).colorScheme.onSurface : Colors.transparent,
-                  width: 2.5,
-                ),
-              ),
-              child: name == selected
-                  ? const Icon(Icons.check, size: 16, color: Colors.white)
-                  : null,
-            ),
-          ),
-      ],
     );
   }
 }

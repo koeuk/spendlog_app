@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../api/api_client.dart';
 import '../models/dashboard.dart';
@@ -67,6 +68,12 @@ class DashboardScreen extends ConsumerWidget {
               _MonthCard(data: data),
               const SizedBox(height: 16),
               _TodayCard(total: data.todayTotal),
+              // Hidden entirely against a server that predates income and
+              // savings, rather than showing two cards of zeros.
+              if (data.incomeTotal != null || data.savings != null) ...[
+                const SizedBox(height: 16),
+                _MoneyRow(data: data),
+              ],
               const SizedBox(height: 16),
               const _SpendingCard(),
               if (data.breakdown.isNotEmpty) ...[
@@ -124,7 +131,121 @@ class _MonthCard extends StatelessWidget {
                 'No budget set for ${monthLabel(data.budgetMonth)}',
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13),
               ),
+            if (data.balance != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Balance ${moneySigned(data.balance!)}',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Income and savings side by side: the two figures the month card's balance
+/// is made of, each a door into its own screen.
+class _MoneyRow extends StatelessWidget {
+  const _MoneyRow({required this.data});
+
+  final Dashboard data;
+
+  @override
+  Widget build(BuildContext context) {
+    final savings = data.savings;
+
+    // IntrinsicHeight so the two cards stand equally tall even when one has
+    // a second line and the other does not; a bare stretch in a ListView's
+    // unbounded height would ask each card to be infinite.
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _MoneyCard(
+              label: 'Income',
+              value: money(data.incomeTotal ?? '0.00'),
+              detail: monthLabel(data.budgetMonth),
+              onTap: () => context.go('/income'),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _MoneyCard(
+              label: 'Savings',
+              value: money(savings?.totalSaved ?? '0.00'),
+              detail: savings == null
+                  ? ''
+                  : savings.goalsCount == 0
+                      ? 'No goals yet'
+                      : '${savings.percent}% of ${money(savings.totalTarget)}',
+              onTap: () => context.go('/savings'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MoneyCard extends StatelessWidget {
+  const _MoneyCard({
+    required this.label,
+    required this.value,
+    required this.detail,
+    required this.onTap,
+  });
+
+  final String label;
+  final String value;
+  final String detail;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: Eyebrow(label)),
+                  Icon(Icons.chevron_right, size: 18, color: AppTheme.faint(context, 0.25)),
+                ],
+              ),
+              const SizedBox(height: 6),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  value,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w800),
+                ),
+              ),
+              if (detail.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  detail,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.45)),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

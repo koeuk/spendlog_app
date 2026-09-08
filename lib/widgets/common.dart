@@ -82,14 +82,19 @@ class ProgressTrack extends StatelessWidget {
   const ProgressTrack({
     super.key,
     required this.percent,
-    required this.status,
+    this.status = 'ok',
     this.onBrand = false,
+    this.color,
   });
 
   /// Already capped at 100 server-side (`bar_percent`).
   final num percent;
   final String status;
   final bool onBrand;
+
+  /// An explicit fill — a savings goal's own colour — instead of the one
+  /// [status] implies. Ignored when [onBrand], where the fill is always white.
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -107,7 +112,9 @@ class ProgressTrack extends StatelessWidget {
             FractionallySizedBox(
               widthFactor: (percent.clamp(0, 100)) / 100,
               child: Container(
-                color: onBrand ? Colors.white : CategoryStyle.statusColor(status),
+                color: onBrand
+                    ? Colors.white
+                    : color ?? CategoryStyle.statusColor(status),
               ),
             ),
           ],
@@ -231,6 +238,46 @@ class MonthStepper extends StatelessWidget {
           icon: const Icon(Icons.chevron_right),
           visualDensity: VisualDensity.compact,
         ),
+      ],
+    );
+  }
+}
+
+/// The ten CategoryColor swatches as a row of tappable circles. Categories and
+/// savings goals both pick from the same enum, so they share the picker.
+class SwatchPicker extends StatelessWidget {
+  const SwatchPicker({super.key, required this.selected, required this.onSelected});
+
+  final String selected;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        for (final name in CategoryStyle.colorNames)
+          GestureDetector(
+            onTap: () => onSelected(name),
+            child: Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: CategoryStyle.color(name),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: name == selected
+                      ? Theme.of(context).colorScheme.onSurface
+                      : Colors.transparent,
+                  width: 2.5,
+                ),
+              ),
+              child: name == selected
+                  ? const Icon(Icons.check, size: 16, color: Colors.white)
+                  : null,
+            ),
+          ),
       ],
     );
   }

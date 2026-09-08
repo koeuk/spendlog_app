@@ -10,13 +10,15 @@ import 'screens/categories_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/expenses_screen.dart';
 import 'screens/forgot_password_screen.dart';
+import 'screens/income_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/reports_screen.dart';
 import 'screens/reset_password_screen.dart';
+import 'screens/savings_goal_screen.dart';
+import 'screens/savings_screen.dart';
 import 'screens/shell_screen.dart';
 import 'screens/splash_screen.dart';
-import 'screens/workouts_screen.dart';
 
 /// Turns auth changes into a `refreshListenable` tick.
 ///
@@ -76,7 +78,30 @@ final routerProvider = Provider<GoRouter>((ref) {
             ShellScreen(navigationShell: navigationShell),
         branches: [
           StatefulShellBranch(routes: [
-            GoRoute(path: '/', builder: (context, state) => const DashboardScreen()),
+            GoRoute(
+              path: '/',
+              builder: (context, state) => const DashboardScreen(),
+              // Income and savings are reached from the dashboard's cards (and
+              // Profile), not from a tab of their own. Nested here so the bar
+              // stays put and back returns to the dashboard.
+              routes: [
+                GoRoute(
+                  path: 'income',
+                  builder: (context, state) => const IncomeScreen(),
+                ),
+                GoRoute(
+                  path: 'savings',
+                  builder: (context, state) => const SavingsScreen(),
+                  routes: [
+                    GoRoute(
+                      path: ':uuid',
+                      builder: (context, state) =>
+                          SavingsGoalScreen(uuid: state.pathParameters['uuid']!),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/expenses', builder: (context, state) => const ExpensesScreen()),
@@ -98,10 +123,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                 GoRoute(
                   path: 'categories',
                   builder: (context, state) => const CategoriesScreen(),
-                ),
-                GoRoute(
-                  path: 'workouts',
-                  builder: (context, state) => const WorkoutsScreen(),
                 ),
                 GoRoute(
                   path: 'admin-users',

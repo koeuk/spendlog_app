@@ -20,7 +20,7 @@ abstract final class AppTheme {
   static const cardRadius = 24.0;
   static const pillRadius = 28.0;
 
-  /// Rows in a list — expenses, categories, users, workouts — are short and
+  /// Rows in a list — expenses, categories, users — are short and
   /// stack tightly, so the panel radius reads as lumpy on them. They round a
   /// step less than the big cards.
   static const rowRadius = 18.0;

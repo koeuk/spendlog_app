@@ -25,6 +25,29 @@ class BreakdownSlice {
       );
 }
 
+/// The savings block on GET /dashboard — the totals across every goal, so
+/// the home screen can show "$320 of $1,500" without a second call.
+class DashboardSavings {
+  const DashboardSavings({
+    required this.totalSaved,
+    required this.totalTarget,
+    required this.percent,
+    required this.goalsCount,
+  });
+
+  final String totalSaved;
+  final String totalTarget;
+  final num percent;
+  final int goalsCount;
+
+  factory DashboardSavings.fromJson(Map<String, dynamic> json) => DashboardSavings(
+        totalSaved: json['total_saved'] as String? ?? '0.00',
+        totalTarget: json['total_target'] as String? ?? '0.00',
+        percent: json['percent'] as num? ?? 0,
+        goalsCount: (json['goals_count'] as num?)?.toInt() ?? 0,
+      );
+}
+
 /// Everything the home screen needs, from the one GET /dashboard call.
 class Dashboard {
   const Dashboard({
@@ -36,6 +59,9 @@ class Dashboard {
     required this.breakdown,
     required this.breakdownMonth,
     required this.recent,
+    this.incomeTotal,
+    this.balance,
+    this.savings,
   });
 
   final String todayDate;
@@ -47,8 +73,21 @@ class Dashboard {
   final String breakdownMonth;
   final List<Expense> recent;
 
+  /// The `income`, `balance` and `savings` blocks arrived with the Income and
+  /// Savings features. All three are optional so a build talking to an older
+  /// server still renders the rest of the dashboard — the cards that need
+  /// them simply stay hidden.
+  final String? incomeTotal;
+
+  /// Income minus spent for the budget month; may be negative.
+  final String? balance;
+
+  final DashboardSavings? savings;
+
   factory Dashboard.fromJson(Map<String, dynamic> json) {
     final today = json['today'] as Map<String, dynamic>? ?? {};
+    final income = json['income'];
+    final savings = json['savings'];
 
     return Dashboard(
       todayDate: today['date'] as String? ?? '',
@@ -63,6 +102,9 @@ class Dashboard {
       recent: (json['recent'] as List<dynamic>? ?? [])
           .map((e) => Expense.fromJson(e as Map<String, dynamic>))
           .toList(),
+      incomeTotal: income is Map<String, dynamic> ? income['total'] as String? : null,
+      balance: json['balance'] as String?,
+      savings: savings is Map<String, dynamic> ? DashboardSavings.fromJson(savings) : null,
     );
   }
 }
