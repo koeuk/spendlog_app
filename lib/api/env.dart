@@ -1,10 +1,10 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 /// Where the SpendLog API lives.
 ///
 /// Pick with a compile-time flag; the default adapts to where the app runs —
-/// Chrome talks straight to localhost, the Android emulator goes through its
-/// 10.0.2.2 alias for the host machine:
+/// Chrome, desktop and the iOS simulator talk straight to localhost, the
+/// Android emulator goes through its 10.0.2.2 alias for the host machine:
 ///
 ///   flutter run                                        // emulator / Chrome
 ///   flutter run --dart-define=API=lan                  // real phone, same Wi-Fi
@@ -37,6 +37,10 @@ class Env {
     'prod': 'https://spendlog.example.com/api/v1', // adjust once deployed
   };
 
+  /// Only the Android emulator needs the alias; web, Linux/macOS/Windows
+  /// desktop and the iOS simulator all share the host's loopback.
+  static bool get _isAndroid => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
   static String get baseUrl =>
-      _urls[_selected] ?? 'http://${kIsWeb ? _host : _emulatorHost}:$_port/api/v1';
+      _urls[_selected] ?? 'http://${_isAndroid ? _emulatorHost : _host}:$_port/api/v1';
 }

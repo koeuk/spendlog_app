@@ -6,7 +6,8 @@ plugins {
 
 android {
     namespace = "com.spendlog.spendlog_app"
-    compileSdk = flutter.compileSdkVersion
+    // flutter_secure_storage requires API 37; Flutter's default is still 36.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
