@@ -221,8 +221,10 @@ class PillSegment extends StatelessWidget {
 }
 
 /// The "Repeat" line the expense and income forms share on create: Never
-/// plus the four frequencies as one row of short pills. Picking any of them
-/// turns the save into a recurring rule rather than a single row.
+/// plus the four frequencies. A dropdown rather than a row of pills — five
+/// labels beside an icon overflow a phone-width sheet, and the form already
+/// picks its category the same way. Choosing any frequency turns the save
+/// into a recurring rule rather than a single row.
 class RepeatRow extends StatelessWidget {
   const RepeatRow({super.key, required this.value, required this.onChanged});
 
@@ -230,24 +232,21 @@ class RepeatRow extends StatelessWidget {
   final String? value;
   final ValueChanged<String?> onChanged;
 
+  static const _never = 'never';
+
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(Icons.repeat, size: 18, color: AppTheme.faint(context, 0.45)),
-        const SizedBox(width: 10),
-        for (final f in [null, ...recurringFrequencies]) ...[
-          Expanded(
-            child: PillSegment(
-              label: f == null ? tr('Never') : tr(frequencyLabel(f)),
-              selected: value == f,
-              onTap: () => onChanged(f),
-              height: 34,
-            ),
-          ),
-          if (f != recurringFrequencies.last) const SizedBox(width: 6),
-        ],
+    return DropdownButtonFormField<String>(
+      initialValue: value ?? _never,
+      decoration: InputDecoration(
+        prefixIcon: Icon(Icons.repeat, size: 20, color: AppTheme.faint(context, 0.5)),
+      ),
+      items: [
+        DropdownMenuItem(value: _never, child: Text(tr('Never repeats'))),
+        for (final f in recurringFrequencies)
+          DropdownMenuItem(value: f, child: Text(tr(frequencyLabel(f)))),
       ],
+      onChanged: (v) => onChanged(v == _never ? null : v),
     );
   }
 }

@@ -193,13 +193,11 @@ class _IncomeFormState extends ConsumerState<_IncomeForm> {
                 ),
                 const SizedBox(height: 14),
               ],
-              TextFormField(
-                controller: _source,
-                decoration: InputDecoration(hintText: tr('Source — salary, freelance…')),
-                textCapitalization: TextCapitalization.sentences,
-                autofocus: !_editing,
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Where did it come from?' : null,
+              // Picked from what this person has used before, or typed fresh
+              // — the same control the web's income form has.
+              _SourceField(
+                value: _source.text,
+                onChanged: (value) => setState(() => _source.text = value),
               ),
               const SizedBox(height: 14),
               Row(
@@ -344,4 +342,182 @@ Future<bool?> confirmDeleteIncome(BuildContext context, Income income) {
       ],
     ),
   );
+}
+
+/// The source, as a pick-or-type field: tapping opens a sheet listing the
+/// sources already used (most frequent first) with a search box that also
+/// offers to use whatever is typed when nothing matches. A source is only a
+/// string on each row, so "creating" one is just choosing a new string.
+class _SourceField extends StatelessWidget {
+  const _SourceField({required this.value, required this.onChanged});
+
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  Future<void> _open(BuildContext context) async {
+    final chosen = await showGlassSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => _SourcePickerSheet(current: value),
+    );
+
+    if (chosen != null) onChanged(chosen);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FormField<String>(
+      initialValue: value,
+      validator: (_) => value.trim().isEmpty ? 'Where did it come from?' : null,
+      builder: (state) => InkWell(
+        onTap: () => _open(context),
+        borderRadius: BorderRadius.circular(AppTheme.pillRadius),
+        child: InputDecorator(
+          decoration: InputDecoration(
+            hintText: tr('Source — salary, freelance…'),
+            errorText: state.errorText,
+            suffixIcon: const Icon(Icons.expand_more),
+          ),
+          isEmpty: value.isEmpty,
+          child: value.isEmpty
+              ? null
+              : Text(value, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+      ),
+    );
+  }
+}
+
+class _SourcePickerSheet extends ConsumerStatefulWidget {
+  const _SourcePickerSheet({required this.current});
+
+  final String current;
+
+  @override
+  ConsumerState<_SourcePickerSheet> createState() => _SourcePickerSheetState();
+}
+
+class _SourcePickerSheetState extends ConsumerState<_SourcePickerSheet> {
+  final _search = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  /// Compared loosely, so typing "salary" against an existing "Salary" is a
+  /// pick, not a new source.
+  static bool _known(List<String> sources, String name) =>
+      sources.any((s) => s.toLowerCase() == name.trim().toLowerCase());
+
+  @override
+  Widget build(BuildContext context) {
+    final sources = ref.watch(incomeSourcesProvider);
+    final query = _search.text.trim();
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 14, AppTheme.pageInset, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                tr('Source'),
+                textAlign: TextAlign.center,
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _search,
+                autofocus: true,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: InputDecoration(
+                  hintText: tr('Search or type a new source…'),
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                ),
+                onChanged: (_) => setState(() {}),
+                // Enter takes the typed text as-is, the fastest path for a
+                // source used for the first time.
+                onSubmitted: (v) => v.trim().isEmpty ? null : Navigator.of(context).pop(v.trim()),
+              ),
+              const SizedBox(height: 10),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.45),
+                child: sources.when(
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(
+                      child: SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  ),
+                  error: (e, _) => Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(apiErrorMessage(e), textAlign: TextAlign.center),
+                  ),
+                  data: (list) {
+                    final matches = query.isEmpty
+                        ? list
+                        : list.where((s) => s.toLowerCase().contains(query.toLowerCase())).toList();
+                    final creatable = query.isNotEmpty && !_known(list, query) ? query : null;
+
+                    if (matches.isEmpty && creatable == null) {
+                      return Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Text(
+                          tr('No sources yet — type one above.'),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: AppTheme.faint(context, 0.5)),
+                        ),
+                      );
+                    }
+
+                    return ListView(
+                      shrinkWrap: true,
+                      children: [
+                        // Only offered for what does not already exist; a
+                        // match is picked instead.
+                        if (creatable != null)
+                          ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            leading: Icon(Icons.add, color: AppTheme.accent(context)),
+                            title: Text(
+                              '${tr('Use')} "$creatable"',
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            onTap: () => Navigator.of(context).pop(creatable),
+                          ),
+                        for (final source in matches)
+                          ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            leading: Icon(Icons.payments_outlined, color: AppTheme.faint(context, 0.55)),
+                            title: Text(source),
+                            trailing: source.toLowerCase() == widget.current.trim().toLowerCase()
+                                ? Icon(Icons.check_circle, color: AppTheme.accent(context))
+                                : null,
+                            onTap: () => Navigator.of(context).pop(source),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

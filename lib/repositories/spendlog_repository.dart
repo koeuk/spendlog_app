@@ -111,6 +111,14 @@ class SpendLogRepository {
 
   // -------------------------------------------------------------- incomes
 
+  /// The caller's sources, most used first — the picker's list. A new one
+  /// is created by simply saving an income with it.
+  Future<List<String>> incomeSources() async {
+    final response = await _client.dio.get('/incomes/sources');
+
+    return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>).cast<String>();
+  }
+
   Future<({List<Income> items, bool hasMore})> incomes({
     String? from,
     String? to,

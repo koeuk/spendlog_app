@@ -281,6 +281,10 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                 ),
                 error: (e, _) => Text(apiErrorMessage(e)),
                 data: (list) => DropdownButtonFormField<String>(
+                  // Rebuilt when the repeat toggles: the "new category" item
+                  // comes and goes with it, and a dropdown must never hold a
+                  // value its items no longer contain.
+                  key: ValueKey(_repeat == null),
                   initialValue: _categoryUuid,
                   decoration: InputDecoration(hintText: tr('Category')),
                   items: [

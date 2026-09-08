@@ -188,6 +188,10 @@ final expensesProvider =
 
 final incomeMonthProvider = StateProvider<String>((ref) => currentYm());
 
+final incomeSourcesProvider = FutureProvider.autoDispose<List<String>>(
+  (ref) => ref.watch(repositoryProvider).incomeSources(),
+);
+
 final incomeSummaryProvider = FutureProvider.autoDispose<IncomeSummary>(
   (ref) => ref
       .watch(repositoryProvider)
@@ -242,6 +246,8 @@ void invalidateIncome(WidgetRef ref) {
   ref
     ..invalidate(incomesProvider)
     ..invalidate(incomeSummaryProvider)
+    // A save can introduce a source the picker has not offered before.
+    ..invalidate(incomeSourcesProvider)
     ..invalidate(dashboardProvider);
 }
 
