@@ -13,6 +13,9 @@ import '../widgets/glass.dart';
 Future<void> showMenuSheet(BuildContext context) {
   return showGlassSheet<void>(
     context: context,
+    // Scroll-controlled so the sheet may grow past the default 9/16 of the
+    // screen; the list below scrolls once it hits the cap it sets itself.
+    isScrollControlled: true,
     builder: (context) => const _MenuSheet(),
   );
 }
@@ -73,63 +76,70 @@ class _MenuSheet extends ConsumerWidget {
 
     return SafeArea(
       top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppTheme.pageInset,
-          10,
-          AppTheme.pageInset,
-          16,
+      child: ConstrainedBox(
+        // Never taller than most of the screen — on a short window the rows
+        // scroll rather than overflow the sheet's bottom edge.
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppTheme.faint(context, 0.18),
-                  borderRadius: BorderRadius.circular(99),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(
+            AppTheme.pageInset,
+            10,
+            AppTheme.pageInset,
+            16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppTheme.faint(context, 0.18),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 10),
-              child: Text(
-                'Menu',
-                style: Theme.of(context).textTheme.titleLarge
-                    ?.copyWith(fontWeight: FontWeight.w700),
-              ),
-            ),
-            // Rows sit straight on the glass, a hairline between each pair.
-            // A card around them made a box inside a box.
-            for (var i = 0; i < rows.length; i++) ...[
-              if (i > 0)
-                Padding(
-                  padding: const EdgeInsets.only(left: 42),
-                  child: Divider(height: 1, thickness: 1, color: hairline),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 10),
+                child: Text(
+                  'Menu',
+                  style: Theme.of(context).textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w700),
                 ),
-              _MenuRow(
-                entry: rows[i],
-                onTap: () {
-                  // Close first, then go: the sheet lives above the shell's
-                  // navigator, so leaving it open would strand it over the
-                  // new screen.
-                  Navigator.of(context).pop();
-                  context.go(rows[i].path);
-                },
               ),
+              // Rows sit straight on the glass, a hairline between each pair.
+              // A card around them made a box inside a box.
+              for (var i = 0; i < rows.length; i++) ...[
+                if (i > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 42),
+                    child: Divider(height: 1, thickness: 1, color: hairline),
+                  ),
+                _MenuRow(
+                  entry: rows[i],
+                  onTap: () {
+                    // Close first, then go: the sheet lives above the shell's
+                    // navigator, so leaving it open would strand it over the
+                    // new screen.
+                    Navigator.of(context).pop();
+                    context.go(rows[i].path);
+                  },
+                ),
+              ],
+              // A quick theme flip lives here as well as in Settings, so it is
+              // one tap from anywhere; the sheet stays open to show the change.
+              Padding(
+                padding: const EdgeInsets.only(left: 42),
+                child: Divider(height: 1, thickness: 1, color: hairline),
+              ),
+              const _ThemeRow(),
             ],
-            // A quick theme flip lives here as well as in Settings, so it is
-            // one tap from anywhere; the sheet stays open to show the change.
-            Padding(
-              padding: const EdgeInsets.only(left: 42),
-              child: Divider(height: 1, thickness: 1, color: hairline),
-            ),
-            const _ThemeRow(),
-          ],
+          ),
         ),
       ),
     );
