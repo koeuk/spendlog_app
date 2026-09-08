@@ -44,29 +44,6 @@ class ProfileScreen extends ConsumerWidget {
         children: [
           _Header(user: user),
           _Section(
-            title: 'Info',
-            rows: [
-              _SettingsRow(
-                icon: Icons.alternate_email,
-                label: 'Username',
-                value: user?.username ?? 'Not set',
-                onTap: () => _showSheet(context, const _ProfileSheet()),
-              ),
-              _SettingsRow(
-                icon: Icons.mail_outline,
-                label: 'Email',
-                value: user?.email ?? '',
-                onTap: () => _showSheet(context, const _ProfileSheet()),
-              ),
-              _SettingsRow(
-                icon: Icons.phone_outlined,
-                label: 'Phone',
-                value: user?.phone ?? 'Not set',
-                onTap: () => _showSheet(context, const _ProfileSheet()),
-              ),
-            ],
-          ),
-          _Section(
             title: 'General',
             rows: [
               _SettingsRow(
