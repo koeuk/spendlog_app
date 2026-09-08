@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../api/api_client.dart';
 import '../models/user.dart';
@@ -22,19 +24,48 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider).user;
     final themeMode = ref.watch(themeModeProvider);
+    final isAdmin = user?.isAdmin ?? false;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Profile',
-          style:
-              Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          'Settings',
+          style: Theme.of(context).textTheme.titleLarge
+              ?.copyWith(fontWeight: FontWeight.w700),
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 8, AppTheme.pageInset, AppTheme.navBarClearance),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.pageInset,
+          8,
+          AppTheme.pageInset,
+          AppTheme.navBarClearance,
+        ),
         children: [
-          _Header(user: user, onTap: () => _showSheet(context, const _ProfileSheet())),
+          _Header(user: user),
+          _Section(
+            title: 'Info',
+            rows: [
+              _SettingsRow(
+                icon: Icons.alternate_email,
+                label: 'Username',
+                value: user?.username ?? 'Not set',
+                onTap: () => _showSheet(context, const _ProfileSheet()),
+              ),
+              _SettingsRow(
+                icon: Icons.mail_outline,
+                label: 'Email',
+                value: user?.email ?? '',
+                onTap: () => _showSheet(context, const _ProfileSheet()),
+              ),
+              _SettingsRow(
+                icon: Icons.phone_outlined,
+                label: 'Phone',
+                value: user?.phone ?? 'Not set',
+                onTap: () => _showSheet(context, const _ProfileSheet()),
+              ),
+            ],
+          ),
           _Section(
             title: 'General',
             rows: [
@@ -44,16 +75,19 @@ class ProfileScreen extends ConsumerWidget {
                 value: _themeLabel(themeMode),
                 onTap: () => _chooseTheme(context, ref, themeMode),
               ),
+              // App-wide settings (exchange rate, FAQ) are admin-only; the
+              // server gates the page too, this just keeps the row honest.
+              if (isAdmin)
+                _SettingsRow(
+                  icon: Icons.tune,
+                  label: 'App settings',
+                  onTap: () => context.go('/profile/admin-settings'),
+                ),
             ],
           ),
           _Section(
             title: 'Account',
             rows: [
-              _SettingsRow(
-                icon: Icons.person_outline,
-                label: 'Edit profile',
-                onTap: () => _showSheet(context, const _ProfileSheet()),
-              ),
               _SettingsRow(
                 icon: Icons.key_outlined,
                 label: 'Change password',
@@ -78,13 +112,20 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   static String _themeLabel(ThemeMode mode) => switch (mode) {
-        ThemeMode.system => 'Auto',
-        ThemeMode.light => 'Light',
-        ThemeMode.dark => 'Dark',
-      };
+    ThemeMode.system => 'Auto',
+    ThemeMode.light => 'Light',
+    ThemeMode.dark => 'Dark',
+  };
 
-  Future<void> _chooseTheme(BuildContext context, WidgetRef ref, ThemeMode current) async {
-    final chosen = await _showSheet<ThemeMode>(context, _AppearanceSheet(current: current));
+  Future<void> _chooseTheme(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeMode current,
+  ) async {
+    final chosen = await _showSheet<ThemeMode>(
+      context,
+      _AppearanceSheet(current: current),
+    );
 
     if (chosen != null) ref.read(themeModeProvider.notifier).set(chosen);
   }
@@ -95,7 +136,9 @@ Future<T?> _showSheet<T>(BuildContext context, Widget child) {
     context: context,
     isScrollControlled: true,
     builder: (context) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: child,
     ),
   );
@@ -105,86 +148,253 @@ Future<T?> _showSheet<T>(BuildContext context, Widget child) {
 // List pieces
 // ---------------------------------------------------------------------------
 
-class _Header extends StatelessWidget {
-  const _Header({required this.user, required this.onTap});
+/// The account's photo, or its initial on green while it has none (or while
+/// the photo fails to load — a dead URL should not leave a blank square).
+class _AvatarBox extends StatelessWidget {
+  const _AvatarBox({required this.user, required this.size, this.circle = false});
 
   final User? user;
-  final VoidCallback onTap;
+  final double size;
+
+  /// A circle for the big profile portrait; rounded square elsewhere.
+  final bool circle;
 
   @override
   Widget build(BuildContext context) {
-    final initial =
-        (user?.name.isNotEmpty ?? false) ? user!.name[0].toUpperCase() : '?';
+    final initial = (user?.name.isNotEmpty ?? false)
+        ? user!.name[0].toUpperCase()
+        : '?';
+    final url = user?.avatarUrl;
 
-    return Card(
-      shape: AppTheme.rowShape(context),
+    final fallback = Center(
+      child: Text(
+        initial,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: size * 0.41,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+
+    return Container(
+      width: size,
+      height: size,
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-          child: Row(
+      decoration: BoxDecoration(
+        color: AppTheme.green,
+        borderRadius: BorderRadius.circular(circle ? size : size * 0.32),
+      ),
+      child: url == null
+          ? fallback
+          : Image.network(
+              url,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => fallback,
+            ),
+    );
+  }
+}
+
+/// The portrait: photo (or initial) with a camera badge that changes it,
+/// the name beneath, and an ADMIN chip where it applies. Details live in the
+/// rows below rather than crowding the picture.
+class _Header extends ConsumerStatefulWidget {
+  const _Header({required this.user});
+
+  final User? user;
+
+  @override
+  ConsumerState<_Header> createState() => _HeaderState();
+}
+
+class _HeaderState extends ConsumerState<_Header> {
+  bool _busy = false;
+
+  Future<void> _photoMenu() async {
+    final user = widget.user;
+    final action = await _showSheet<String>(
+      context,
+      _SheetFrame(
+        title: 'Profile photo',
+        child: Column(
+          children: [
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              leading: Icon(
+                Icons.photo_outlined,
+                color: AppTheme.faint(context, 0.6),
+              ),
+              title: Text(
+                user?.avatarUrl == null ? 'Choose a photo' : 'Change photo',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              onTap: () => Navigator.of(context).pop('change'),
+            ),
+            if (user?.avatarUrl != null)
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                leading: const Icon(
+                  Icons.delete_outline,
+                  color: ProfileScreen._danger,
+                ),
+                title: const Text(
+                  'Remove photo',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: ProfileScreen._danger,
+                  ),
+                ),
+                onTap: () => Navigator.of(context).pop('remove'),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (action == null || !mounted) return;
+
+    setState(() => _busy = true);
+    try {
+      if (action == 'change') {
+        await _pickAndUploadPhoto(context, ref);
+      } else {
+        await _removePhoto(context, ref);
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = widget.user;
+    final surface = Theme.of(context).colorScheme.surface;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 6),
+      child: Column(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
             children: [
               Container(
-                width: 44,
-                height: 44,
+                padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.glassFill(context),
+                  border: Border.all(color: AppTheme.glassBorder(context)),
+                ),
+                child: _AvatarBox(user: user, size: 96, circle: true),
+              ),
+              // The camera badge sits on the rim, the way every profile
+              // screen's does, so it reads as "edit the picture".
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: Material(
                   color: AppTheme.green,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Center(
-                  child: Text(
-                    initial,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
+                  shape: CircleBorder(side: BorderSide(color: surface, width: 3)),
+                  child: InkWell(
+                    onTap: _busy ? null : _photoMenu,
+                    customBorder: const CircleBorder(),
+                    child: SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: _busy
+                          ? const Padding(
+                              padding: EdgeInsets.all(8),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.photo_camera_outlined,
+                              size: 16,
+                              color: Colors.white,
+                            ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      user?.name ?? '',
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      user?.email ?? '',
-                      style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.5)),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              if (user?.isAdmin ?? false) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                  child: Text(
-                    'ADMIN',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.surface,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ),
-              ],
-              const SizedBox(width: 6),
-              Icon(Icons.chevron_right, size: 20, color: AppTheme.faint(context, 0.3)),
             ],
           ),
-        ),
+          const SizedBox(height: 14),
+          Text(
+            user?.name ?? '',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
+          ),
+          if (user?.isAdmin ?? false) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.onSurface,
+                borderRadius: BorderRadius.circular(99),
+              ),
+              child: Text(
+                'ADMIN',
+                style: TextStyle(
+                  color: surface,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Photo changes save on their own, the moment one is picked — they do not
+/// wait for the edit sheet's "Save changes", which validates the text fields
+/// and would hold a perfectly good photo hostage to a blank name. Shared by
+/// the portrait's badge and the edit sheet.
+Future<void> _pickAndUploadPhoto(BuildContext context, WidgetRef ref) async {
+  final picked = await ImagePicker().pickImage(
+    source: ImageSource.gallery,
+    // Downscaled on the device: the server caps uploads at 4 MB and shows
+    // the photo at 96px at most, so a full camera frame is waste on both ends.
+    maxWidth: 1024,
+    maxHeight: 1024,
+    imageQuality: 85,
+  );
+  if (picked == null || !context.mounted) return;
+
+  await _applyPhoto(
+    context,
+    ref,
+    () async => ref
+        .read(repositoryProvider)
+        .uploadAvatar(bytes: await picked.readAsBytes(), filename: picked.name),
+  );
+}
+
+Future<void> _removePhoto(BuildContext context, WidgetRef ref) =>
+    _applyPhoto(context, ref, () => ref.read(repositoryProvider).removeAvatar());
+
+Future<void> _applyPhoto(
+  BuildContext context,
+  WidgetRef ref,
+  Future<User> Function() call,
+) async {
+  try {
+    ref.read(authProvider.notifier).setUser(await call());
+  } catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(apiErrorMessage(e, fallback: 'Could not update the photo.')),
       ),
     );
   }
@@ -278,22 +488,37 @@ class _SettingsRow extends StatelessWidget {
           children: [
             Icon(icon, size: 20, color: color ?? AppTheme.faint(context, 0.6)),
             const SizedBox(width: 18),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: fg),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: fg,
               ),
             ),
+            const SizedBox(width: 12),
+            const Spacer(),
             if (value != null)
-              Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: Text(
-                  value!,
-                  style: TextStyle(fontSize: 14, color: AppTheme.faint(context, 0.45)),
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: Text(
+                    value!,
+                    textAlign: TextAlign.end,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.faint(context, 0.45),
+                    ),
+                  ),
                 ),
               ),
             if (chevron)
-              Icon(Icons.chevron_right, size: 20, color: AppTheme.faint(context, 0.3)),
+              Icon(
+                Icons.chevron_right,
+                size: 20,
+                color: AppTheme.faint(context, 0.3),
+              ),
           ],
         ),
       ),
@@ -333,9 +558,7 @@ class _SheetFrame extends StatelessWidget {
             const SizedBox(height: 20),
             Text(
               title,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
+              style: Theme.of(context).textTheme.titleLarge
                   ?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 20),
@@ -353,7 +576,12 @@ class _AppearanceSheet extends StatelessWidget {
   final ThemeMode current;
 
   static const _options = [
-    (ThemeMode.system, Icons.brightness_auto_outlined, 'Auto', 'Follow the system setting'),
+    (
+      ThemeMode.system,
+      Icons.brightness_auto_outlined,
+      'Auto',
+      'Follow the system setting',
+    ),
     (ThemeMode.light, Icons.light_mode_outlined, 'Light', 'Always light'),
     (ThemeMode.dark, Icons.dark_mode_outlined, 'Dark', 'Always dark'),
   ];
@@ -367,13 +595,30 @@ class _AppearanceSheet extends StatelessWidget {
           for (final (mode, icon, label, hint) in _options)
             ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              leading: Icon(icon, size: 22, color: AppTheme.faint(context, 0.6)),
-              title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text(hint,
-                  style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.45))),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              leading: Icon(
+                icon,
+                size: 22,
+                color: AppTheme.faint(context, 0.6),
+              ),
+              title: Text(
+                label,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                hint,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.faint(context, 0.45),
+                ),
+              ),
               trailing: mode == current
-                  ? Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary)
+                  ? Icon(
+                      Icons.check_circle,
+                      color: Theme.of(context).colorScheme.primary,
+                    )
                   : null,
               onTap: () => Navigator.of(context).pop(mode),
             ),
@@ -399,15 +644,31 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
   late final _name = TextEditingController(text: _user?.name ?? '');
   late final _username = TextEditingController(text: _user?.username ?? '');
   late final _email = TextEditingController(text: _user?.email ?? '');
+  late final _phone = TextEditingController(text: _user?.phone ?? '');
 
   bool _saving = false;
+  bool _photoBusy = false;
 
   @override
   void dispose() {
     _name.dispose();
     _username.dispose();
     _email.dispose();
+    _phone.dispose();
     super.dispose();
+  }
+
+  Future<void> _changePhoto() => _withPhotoBusy(() => _pickAndUploadPhoto(context, ref));
+
+  Future<void> _removePhotoFromSheet() => _withPhotoBusy(() => _removePhoto(context, ref));
+
+  Future<void> _withPhotoBusy(Future<void> Function() call) async {
+    setState(() => _photoBusy = true);
+    try {
+      await call();
+    } finally {
+      if (mounted) setState(() => _photoBusy = false);
+    }
   }
 
   Future<void> _save() async {
@@ -416,10 +677,13 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
     setState(() => _saving = true);
 
     try {
-      final user = await ref.read(repositoryProvider).updateProfile(
+      final user = await ref
+          .read(repositoryProvider)
+          .updateProfile(
             name: _name.text.trim(),
             email: _email.text.trim(),
             username: _username.text.trim(),
+            phone: _phone.text.trim(),
           );
 
       ref.read(authProvider.notifier).setUser(user);
@@ -431,7 +695,11 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(apiErrorMessage(e, fallback: 'Could not save the profile.'))),
+        SnackBar(
+          content: Text(
+            apiErrorMessage(e, fallback: 'Could not save the profile.'),
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -440,6 +708,9 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
 
   @override
   Widget build(BuildContext context) {
+    // Watched, not read: the box below must repaint the moment a photo lands.
+    final user = ref.watch(authProvider).user;
+
     return _SheetFrame(
       title: 'Edit profile',
       child: Form(
@@ -447,16 +718,59 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Row(
+              children: [
+                _AvatarBox(user: user, size: 64),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Wrap(
+                    spacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      TextButton.icon(
+                        onPressed: _photoBusy ? null : _changePhoto,
+                        icon: _photoBusy
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.photo_outlined, size: 18),
+                        label: Text(
+                          user?.avatarUrl == null
+                              ? 'Add photo'
+                              : 'Change photo',
+                        ),
+                      ),
+                      if (user?.avatarUrl != null)
+                        TextButton(
+                          onPressed: _photoBusy ? null : _removePhotoFromSheet,
+                          style: TextButton.styleFrom(
+                            foregroundColor: ProfileScreen._danger,
+                          ),
+                          child: const Text('Remove'),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _name,
               decoration: const InputDecoration(hintText: 'Name'),
               textCapitalization: TextCapitalization.words,
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter your name.' : null,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Enter your name.' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _username,
-              decoration: const InputDecoration(hintText: 'Username (optional)'),
+              decoration: const InputDecoration(
+                hintText: 'Username (optional)',
+              ),
               autocorrect: false,
             ),
             const SizedBox(height: 12),
@@ -465,7 +779,15 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
               decoration: const InputDecoration(hintText: 'Email'),
               keyboardType: TextInputType.emailAddress,
               autocorrect: false,
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter your email.' : null,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Enter your email.' : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _phone,
+              decoration: const InputDecoration(hintText: 'Phone (optional)'),
+              keyboardType: TextInputType.phone,
+              autocorrect: false,
             ),
             const SizedBox(height: 20),
             FilledButton(
@@ -507,7 +829,9 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
     setState(() => _saving = true);
 
     try {
-      await ref.read(repositoryProvider).changePassword(
+      await ref
+          .read(repositoryProvider)
+          .changePassword(
             password: _password.text,
             passwordConfirmation: _confirm.text,
           );
@@ -520,7 +844,10 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(apiErrorMessage(e, fallback: 'Could not change the password.'))),
+          content: Text(
+            apiErrorMessage(e, fallback: 'Could not change the password.'),
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -544,19 +871,25 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
                 suffixIcon: IconButton(
                   onPressed: () => setState(() => _show = !_show),
                   icon: Icon(
-                    _show ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    _show
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
                     size: 20,
                   ),
                 ),
               ),
-              validator: (v) => (v == null || v.length < 8) ? 'At least 8 characters.' : null,
+              validator: (v) =>
+                  (v == null || v.length < 8) ? 'At least 8 characters.' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _confirm,
               obscureText: !_show,
-              decoration: const InputDecoration(hintText: 'Confirm new password'),
-              validator: (v) => v != _password.text ? 'Passwords do not match.' : null,
+              decoration: const InputDecoration(
+                hintText: 'Confirm new password',
+              ),
+              validator: (v) =>
+                  v != _password.text ? 'Passwords do not match.' : null,
             ),
             const SizedBox(height: 20),
             FilledButton(

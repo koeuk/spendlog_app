@@ -37,15 +37,11 @@ const _entries = <_Entry>[
     path: '/profile/categories',
     admin: false,
   ),
+  // The account page: photo, details, appearance, password — and, for
+  // admins, the door to the app-wide settings.
   (
-    icon: Icons.tune,
+    icon: Icons.settings_outlined,
     label: 'Settings',
-    path: '/profile/admin-settings',
-    admin: true,
-  ),
-  (
-    icon: Icons.person_outline,
-    label: 'Profile',
     path: '/profile',
     admin: false,
   ),

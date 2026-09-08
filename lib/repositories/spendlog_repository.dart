@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../api/api_client.dart';
 import '../models/budget.dart';
 import '../models/budget_summary.dart';
@@ -22,10 +24,10 @@ class SpendLogRepository {
   // ------------------------------------------------------------ dashboard
 
   Future<Dashboard> dashboard({String? month}) async {
-    final response = await _client.dio.get('/dashboard', queryParameters: {
-      'budget_month': ?month,
-      'breakdown_month': ?month,
-    });
+    final response = await _client.dio.get(
+      '/dashboard',
+      queryParameters: {'budget_month': ?month, 'breakdown_month': ?month},
+    );
 
     return Dashboard.fromJson(
       (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
@@ -38,20 +40,26 @@ class SpendLogRepository {
     int page = 1,
     ExpenseFilters? filters,
   }) async {
-    final response = await _client.dio.get('/expenses', queryParameters: {
-      'page': page,
-      'filter[item]': ?filters?.search,
-      'filter[category]': ?filters?.categoryUuid,
-      'filter[from]': ?filters?.from,
-      'filter[to]': ?filters?.to,
-    });
+    final response = await _client.dio.get(
+      '/expenses',
+      queryParameters: {
+        'page': page,
+        'filter[item]': ?filters?.search,
+        'filter[category]': ?filters?.categoryUuid,
+        'filter[from]': ?filters?.from,
+        'filter[to]': ?filters?.to,
+      },
+    );
 
     final data = response.data as Map<String, dynamic>;
     final items = (data['data'] as List<dynamic>)
         .map((e) => Expense.fromJson(e as Map<String, dynamic>))
         .toList();
 
-    return (items: items, hasMore: (data['links'] as Map<String, dynamic>?)?['next'] != null);
+    return (
+      items: items,
+      hasMore: (data['links'] as Map<String, dynamic>?)?['next'] != null,
+    );
   }
 
   Future<void> createExpense({
@@ -62,14 +70,17 @@ class SpendLogRepository {
     String? newCategory,
     String currency = 'USD',
   }) async {
-    await _client.dio.post('/expenses', data: {
-      'item': item,
-      'price': price,
-      'spent_on': spentOn,
-      'category_uuid': ?categoryUuid,
-      'new_category': ?newCategory,
-      if (currency != 'USD') 'currency': currency,
-    });
+    await _client.dio.post(
+      '/expenses',
+      data: {
+        'item': item,
+        'price': price,
+        'spent_on': spentOn,
+        'category_uuid': ?categoryUuid,
+        'new_category': ?newCategory,
+        if (currency != 'USD') 'currency': currency,
+      },
+    );
   }
 
   Future<void> updateExpense(
@@ -80,16 +91,20 @@ class SpendLogRepository {
     String? categoryUuid,
     String currency = 'USD',
   }) async {
-    await _client.dio.patch('/expenses/$uuid', data: {
-      'item': item,
-      'price': price,
-      'spent_on': spentOn,
-      'category_uuid': ?categoryUuid,
-      if (currency != 'USD') 'currency': currency,
-    });
+    await _client.dio.patch(
+      '/expenses/$uuid',
+      data: {
+        'item': item,
+        'price': price,
+        'spent_on': spentOn,
+        'category_uuid': ?categoryUuid,
+        if (currency != 'USD') 'currency': currency,
+      },
+    );
   }
 
-  Future<void> deleteExpense(String uuid) => _client.dio.delete('/expenses/$uuid');
+  Future<void> deleteExpense(String uuid) =>
+      _client.dio.delete('/expenses/$uuid');
 
   // -------------------------------------------------------------- incomes
 
@@ -99,24 +114,32 @@ class SpendLogRepository {
     int page = 1,
     int perPage = 50,
   }) async {
-    final response = await _client.dio.get('/incomes', queryParameters: {
-      'page': page,
-      'per_page': perPage,
-      'filter[from]': ?from,
-      'filter[to]': ?to,
-    });
+    final response = await _client.dio.get(
+      '/incomes',
+      queryParameters: {
+        'page': page,
+        'per_page': perPage,
+        'filter[from]': ?from,
+        'filter[to]': ?to,
+      },
+    );
 
     final data = response.data as Map<String, dynamic>;
     final items = (data['data'] as List<dynamic>)
         .map((e) => Income.fromJson(e as Map<String, dynamic>))
         .toList();
 
-    return (items: items, hasMore: (data['links'] as Map<String, dynamic>?)?['next'] != null);
+    return (
+      items: items,
+      hasMore: (data['links'] as Map<String, dynamic>?)?['next'] != null,
+    );
   }
 
   Future<IncomeSummary> incomeSummary(String month) async {
-    final response =
-        await _client.dio.get('/incomes/summary', queryParameters: {'month': month});
+    final response = await _client.dio.get(
+      '/incomes/summary',
+      queryParameters: {'month': month},
+    );
 
     return IncomeSummary.fromJson(
       (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
@@ -130,13 +153,16 @@ class SpendLogRepository {
     String? note,
     String currency = 'USD',
   }) async {
-    await _client.dio.post('/incomes', data: {
-      'source': source,
-      'amount': amount,
-      'received_on': receivedOn,
-      'note': note,
-      if (currency != 'USD') 'currency': currency,
-    });
+    await _client.dio.post(
+      '/incomes',
+      data: {
+        'source': source,
+        'amount': amount,
+        'received_on': receivedOn,
+        'note': note,
+        if (currency != 'USD') 'currency': currency,
+      },
+    );
   }
 
   Future<void> updateIncome(
@@ -147,16 +173,20 @@ class SpendLogRepository {
     String? note,
     String currency = 'USD',
   }) async {
-    await _client.dio.patch('/incomes/$uuid', data: {
-      'source': source,
-      'amount': amount,
-      'received_on': receivedOn,
-      'note': note,
-      if (currency != 'USD') 'currency': currency,
-    });
+    await _client.dio.patch(
+      '/incomes/$uuid',
+      data: {
+        'source': source,
+        'amount': amount,
+        'received_on': receivedOn,
+        'note': note,
+        if (currency != 'USD') 'currency': currency,
+      },
+    );
   }
 
-  Future<void> deleteIncome(String uuid) => _client.dio.delete('/incomes/$uuid');
+  Future<void> deleteIncome(String uuid) =>
+      _client.dio.delete('/incomes/$uuid');
 
   // -------------------------------------------------------------- savings
 
@@ -170,8 +200,10 @@ class SpendLogRepository {
   }
 
   Future<SavingsSummary> savingsSummary(String month) async {
-    final response =
-        await _client.dio.get('/savings/summary', queryParameters: {'month': month});
+    final response = await _client.dio.get(
+      '/savings/summary',
+      queryParameters: {'month': month},
+    );
 
     return SavingsSummary.fromJson(
       (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
@@ -194,13 +226,16 @@ class SpendLogRepository {
     String? color,
     String currency = 'USD',
   }) async {
-    await _client.dio.post('/savings', data: {
-      'name': name,
-      'target_amount': targetAmount,
-      'deadline': deadline,
-      'color': ?color,
-      if (currency != 'USD') 'currency': currency,
-    });
+    await _client.dio.post(
+      '/savings',
+      data: {
+        'name': name,
+        'target_amount': targetAmount,
+        'deadline': deadline,
+        'color': ?color,
+        if (currency != 'USD') 'currency': currency,
+      },
+    );
   }
 
   Future<void> updateSavingsGoal(
@@ -211,17 +246,21 @@ class SpendLogRepository {
     String? color,
     String currency = 'USD',
   }) async {
-    await _client.dio.patch('/savings/$uuid', data: {
-      'name': name,
-      'target_amount': targetAmount,
-      // Sent even when null: that is how a deadline gets cleared on edit.
-      'deadline': deadline,
-      'color': ?color,
-      if (currency != 'USD') 'currency': currency,
-    });
+    await _client.dio.patch(
+      '/savings/$uuid',
+      data: {
+        'name': name,
+        'target_amount': targetAmount,
+        // Sent even when null: that is how a deadline gets cleared on edit.
+        'deadline': deadline,
+        'color': ?color,
+        if (currency != 'USD') 'currency': currency,
+      },
+    );
   }
 
-  Future<void> deleteSavingsGoal(String uuid) => _client.dio.delete('/savings/$uuid');
+  Future<void> deleteSavingsGoal(String uuid) =>
+      _client.dio.delete('/savings/$uuid');
 
   /// [type] is deposit | withdraw; [amount] is always positive — the server
   /// applies the sign. A withdrawal past what is saved comes back as a 422.
@@ -233,13 +272,16 @@ class SpendLogRepository {
     String? note,
     String currency = 'USD',
   }) async {
-    await _client.dio.post('/savings/$goalUuid/entries', data: {
-      'type': type,
-      'amount': amount,
-      'saved_on': savedOn,
-      'note': note,
-      if (currency != 'USD') 'currency': currency,
-    });
+    await _client.dio.post(
+      '/savings/$goalUuid/entries',
+      data: {
+        'type': type,
+        'amount': amount,
+        'saved_on': savedOn,
+        'note': note,
+        if (currency != 'USD') 'currency': currency,
+      },
+    );
   }
 
   Future<void> deleteSavingsEntry(String goalUuid, String entryUuid) =>
@@ -250,10 +292,10 @@ class SpendLogRepository {
   /// [period] is week | month | year | all; [at] anchors it (`2026-08` for a
   /// month, `2026-08-17` for a week, `2026` for a year) and is ignored for all.
   Future<Report> report({String period = 'month', String? at}) async {
-    final response = await _client.dio.get('/reports', queryParameters: {
-      'period': period,
-      'at': ?at,
-    });
+    final response = await _client.dio.get(
+      '/reports',
+      queryParameters: {'period': period, 'at': ?at},
+    );
 
     return Report.fromJson(
       (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
@@ -278,11 +320,10 @@ class SpendLogRepository {
     required String color,
     required String icon,
   }) async {
-    await _client.dio.post('/categories', data: {
-      'name': name,
-      'color': color,
-      'icon': icon,
-    });
+    await _client.dio.post(
+      '/categories',
+      data: {'name': name, 'color': color, 'icon': icon},
+    );
   }
 
   Future<void> updateCategory(
@@ -291,22 +332,24 @@ class SpendLogRepository {
     required String color,
     required String icon,
   }) async {
-    await _client.dio.patch('/categories/$uuid', data: {
-      'name': name,
-      'color': color,
-      'icon': icon,
-    });
+    await _client.dio.patch(
+      '/categories/$uuid',
+      data: {'name': name, 'color': color, 'icon': icon},
+    );
   }
 
   /// `409` when expenses or budgets still reference it — the foreign keys
   /// restrict rather than cascade, so a busy category is a conflict.
-  Future<void> deleteCategory(String uuid) => _client.dio.delete('/categories/$uuid');
+  Future<void> deleteCategory(String uuid) =>
+      _client.dio.delete('/categories/$uuid');
 
   // -------------------------------------------------------------- budgets
 
   Future<BudgetSummary> budgetSummary(String month) async {
-    final response =
-        await _client.dio.get('/budgets/summary', queryParameters: {'month': month});
+    final response = await _client.dio.get(
+      '/budgets/summary',
+      queryParameters: {'month': month},
+    );
 
     return BudgetSummary.fromJson(
       (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
@@ -314,7 +357,10 @@ class SpendLogRepository {
   }
 
   Future<List<Budget>> budgets(String month) async {
-    final response = await _client.dio.get('/budgets', queryParameters: {'month': month});
+    final response = await _client.dio.get(
+      '/budgets',
+      queryParameters: {'month': month},
+    );
 
     return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>)
         .map((e) => Budget.fromJson(e as Map<String, dynamic>))
@@ -329,15 +375,19 @@ class SpendLogRepository {
     String? categoryUuid,
     String currency = 'USD',
   }) async {
-    await _client.dio.post('/budgets', data: {
-      'month': month,
-      'amount': amount,
-      'category_uuid': ?categoryUuid,
-      if (currency != 'USD') 'currency': currency,
-    });
+    await _client.dio.post(
+      '/budgets',
+      data: {
+        'month': month,
+        'amount': amount,
+        'category_uuid': ?categoryUuid,
+        if (currency != 'USD') 'currency': currency,
+      },
+    );
   }
 
-  Future<void> deleteBudget(String uuid) => _client.dio.delete('/budgets/$uuid');
+  Future<void> deleteBudget(String uuid) =>
+      _client.dio.delete('/budgets/$uuid');
 
   // ---------------------------------------------------------------- admin
 
@@ -345,7 +395,10 @@ class SpendLogRepository {
   /// the users:*/settings:write abilities (which only admin permissions can
   /// grant), and the policies rule again per row.
   Future<List<AdminUser>> adminUsers() async {
-    final response = await _client.dio.get('/admin/users', queryParameters: {'per_page': 100});
+    final response = await _client.dio.get(
+      '/admin/users',
+      queryParameters: {'per_page': 100},
+    );
 
     return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>)
         .map((e) => AdminUser.fromJson(e as Map<String, dynamic>))
@@ -379,7 +432,8 @@ class SpendLogRepository {
         : await _client.dio.patch('/admin/users/$uuid', data: payload);
   }
 
-  Future<void> deleteAdminUser(String uuid) => _client.dio.delete('/admin/users/$uuid');
+  Future<void> deleteAdminUser(String uuid) =>
+      _client.dio.delete('/admin/users/$uuid');
 
   /// Published entries for everyone; drafts included for admins.
   Future<List<FaqEntry>> faqs() async {
@@ -403,7 +457,8 @@ class SpendLogRepository {
         : await _client.dio.patch('/admin/faqs/$uuid', data: payload);
   }
 
-  Future<void> deleteFaq(String uuid) => _client.dio.delete('/admin/faqs/$uuid');
+  Future<void> deleteFaq(String uuid) =>
+      _client.dio.delete('/admin/faqs/$uuid');
 
   Future<SpendingSettings> spendingSettings() async {
     final response = await _client.dio.get('/admin/settings/spending');
@@ -420,13 +475,16 @@ class SpendLogRepository {
     double? khrPerUsd,
     String? defaultCurrency,
   }) async {
-    final response = await _client.dio.put('/admin/settings/spending', data: {
-      'enabled': enabled,
-      'warning': warning,
-      'advice': advice,
-      'khr_per_usd': ?khrPerUsd,
-      'default_currency': ?defaultCurrency,
-    });
+    final response = await _client.dio.put(
+      '/admin/settings/spending',
+      data: {
+        'enabled': enabled,
+        'warning': warning,
+        'advice': advice,
+        'khr_per_usd': ?khrPerUsd,
+        'default_currency': ?defaultCurrency,
+      },
+    );
 
     return SpendingSettings.fromJson(
       (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
@@ -435,16 +493,50 @@ class SpendLogRepository {
 
   // -------------------------------------------------------------- profile
 
+  /// The profile photo, as multipart. Bytes rather than a path so the same
+  /// call works wherever the picker runs, the web included. Open to every
+  /// signed-in account — no ability, no permission — so it never 403s.
+  Future<User> uploadAvatar({
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    final response = await _client.dio.post(
+      '/profile/avatar',
+      data: FormData.fromMap({
+        'avatar': MultipartFile.fromBytes(bytes, filename: filename),
+      }),
+    );
+
+    return User.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<User> removeAvatar() async {
+    final response = await _client.dio.delete('/profile/avatar');
+
+    return User.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
   Future<User> updateProfile({
     required String name,
     required String email,
     String? username,
+    String? phone,
   }) async {
-    final response = await _client.dio.patch('/profile', data: {
-      'name': name,
-      'email': email,
-      'username': username ?? '',
-    });
+    // Blank strings, not omitted keys: the server treats blank as "clear it",
+    // and an omitted username or phone would leave the old value in place.
+    final response = await _client.dio.patch(
+      '/profile',
+      data: {
+        'name': name,
+        'email': email,
+        'username': username ?? '',
+        'phone': phone ?? '',
+      },
+    );
 
     return User.fromJson(
       (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
@@ -455,9 +547,12 @@ class SpendLogRepository {
     required String password,
     required String passwordConfirmation,
   }) async {
-    await _client.dio.put('/password', data: {
-      'password': password,
-      'password_confirmation': passwordConfirmation,
-    });
+    await _client.dio.put(
+      '/password',
+      data: {
+        'password': password,
+        'password_confirmation': passwordConfirmation,
+      },
+    );
   }
 }
