@@ -22,29 +22,34 @@ class AdminUsersScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           'Users',
-          style:
-              Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          style: Theme.of(context).textTheme.titleLarge
+              ?.copyWith(fontWeight: FontWeight.w700),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: FloatingShelf(
-        child: AddPill(
-          label: 'Add',
-          icon: Icons.person_add_alt,
-          onPressed: () => _UserFormPage.open(context),
-        ),
+      floatingActionButton: AddPill(
+        label: 'Add',
+        icon: Icons.person_add_alt,
+        onPressed: () => _UserFormPage.open(context),
       ),
       body: users.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.green)),
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppTheme.green),
+        ),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
           onRetry: () => ref.invalidate(adminUsersProvider),
         ),
         data: (list) => RefreshIndicator(
           color: AppTheme.green,
-          onRefresh: () => refreshQuietly(ref.refresh(adminUsersProvider.future)),
+          onRefresh: () =>
+              refreshQuietly(ref.refresh(adminUsersProvider.future)),
           child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 8, AppTheme.pageInset, AppTheme.navBarClearance + 72),
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.pageInset,
+              8,
+              AppTheme.pageInset,
+              AppTheme.navBarClearance + 72,
+            ),
             itemCount: list.length,
             separatorBuilder: (context, index) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
@@ -56,7 +61,10 @@ class AdminUsersScreen extends ConsumerWidget {
                   onTap: () => _UserFormPage.open(context, user: user),
                   borderRadius: BorderRadius.circular(AppTheme.rowRadius),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 14,
+                    ),
                     child: Row(
                       children: [
                         Container(
@@ -68,7 +76,9 @@ class AdminUsersScreen extends ConsumerWidget {
                           ),
                           child: Center(
                             child: Text(
-                              user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                              user.name.isNotEmpty
+                                  ? user.name[0].toUpperCase()
+                                  : '?',
                               style: const TextStyle(
                                 color: AppTheme.green,
                                 fontWeight: FontWeight.w800,
@@ -81,8 +91,12 @@ class AdminUsersScreen extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(user.name,
-                                  style: const TextStyle(fontWeight: FontWeight.w600)),
+                              Text(
+                                user.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                               const SizedBox(height: 2),
                               Text(
                                 user.email,
@@ -96,11 +110,16 @@ class AdminUsersScreen extends ConsumerWidget {
                         ),
                         _Badge(
                           text: user.role,
-                          color: user.role == 'user' ? const Color(0xFF64748B) : AppTheme.green,
+                          color: user.role == 'user'
+                              ? const Color(0xFF64748B)
+                              : AppTheme.green,
                         ),
                         if (user.status != 'active') ...[
                           const SizedBox(width: 6),
-                          _Badge(text: user.status, color: const Color(0xFFDC2626)),
+                          _Badge(
+                            text: user.status,
+                            color: const Color(0xFFDC2626),
+                          ),
                         ],
                       ],
                     ),
@@ -131,7 +150,11 @@ class _Badge extends StatelessWidget {
       ),
       child: Text(
         text.toUpperCase(),
-        style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, color: color),
+        style: TextStyle(
+          fontSize: 9.5,
+          fontWeight: FontWeight.w800,
+          color: color,
+        ),
       ),
     );
   }
@@ -158,7 +181,9 @@ class _UserFormPage extends ConsumerStatefulWidget {
 class _UserFormPageState extends ConsumerState<_UserFormPage> {
   final _formKey = GlobalKey<FormState>();
   late final _name = TextEditingController(text: widget.user?.name ?? '');
-  late final _username = TextEditingController(text: widget.user?.username ?? '');
+  late final _username = TextEditingController(
+    text: widget.user?.username ?? '',
+  );
   late final _email = TextEditingController(text: widget.user?.email ?? '');
   final _password = TextEditingController();
 
@@ -187,7 +212,9 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
     });
 
     try {
-      await ref.read(repositoryProvider).saveAdminUser(
+      await ref
+          .read(repositoryProvider)
+          .saveAdminUser(
             uuid: widget.user?.uuid,
             name: _name.text.trim(),
             email: _email.text.trim(),
@@ -202,7 +229,9 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
         Navigator.of(context).pop();
       }
     } catch (e) {
-      setState(() => _error = apiErrorMessage(e, fallback: 'Could not save the user.'));
+      setState(
+        () => _error = apiErrorMessage(e, fallback: 'Could not save the user.'),
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -222,7 +251,9 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFDC2626),
+            ),
             child: const Text('Delete'),
           ),
         ],
@@ -252,8 +283,8 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
       appBar: AppBar(
         title: Text(
           _editing ? 'Edit user' : 'Add a user',
-          style:
-              Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          style: Theme.of(context).textTheme.titleLarge
+              ?.copyWith(fontWeight: FontWeight.w700),
         ),
         actions: [
           if (_editing)
@@ -267,11 +298,19 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 8, AppTheme.pageInset, 40),
+          padding: const EdgeInsets.fromLTRB(
+            AppTheme.pageInset,
+            8,
+            AppTheme.pageInset,
+            40,
+          ),
           children: [
             if (_error != null) ...[
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFDECEC),
                   borderRadius: BorderRadius.circular(20),
@@ -279,7 +318,10 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
                 child: Text(
                   _error!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Color(0xFFB3261E), fontSize: 13),
+                  style: const TextStyle(
+                    color: Color(0xFFB3261E),
+                    fontSize: 13,
+                  ),
                 ),
               ),
               const SizedBox(height: 14),
@@ -288,12 +330,15 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
               controller: _name,
               decoration: const InputDecoration(hintText: 'Name'),
               textCapitalization: TextCapitalization.words,
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter a name.' : null,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Enter a name.' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _username,
-              decoration: const InputDecoration(hintText: 'Username (optional)'),
+              decoration: const InputDecoration(
+                hintText: 'Username (optional)',
+              ),
               autocorrect: false,
             ),
             const SizedBox(height: 12),
@@ -302,14 +347,17 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
               decoration: const InputDecoration(hintText: 'Email'),
               keyboardType: TextInputType.emailAddress,
               autocorrect: false,
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter an email.' : null,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Enter an email.' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _password,
               obscureText: true,
               decoration: InputDecoration(
-                hintText: _editing ? 'New password (blank keeps it)' : 'Password',
+                hintText: _editing
+                    ? 'New password (blank keeps it)'
+                    : 'Password',
               ),
               validator: (v) {
                 if (!_editing && (v == null || v.length < 8)) {
@@ -331,7 +379,8 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
                 ButtonSegment(value: 'admin', label: Text('Admin')),
               ],
               selected: {_role},
-              onSelectionChanged: (selection) => setState(() => _role = selection.first),
+              onSelectionChanged: (selection) =>
+                  setState(() => _role = selection.first),
               showSelectedIcon: false,
             ),
             const SizedBox(height: 16),
@@ -344,7 +393,8 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
                 ButtonSegment(value: 'archived', label: Text('Archived')),
               ],
               selected: {_status},
-              onSelectionChanged: (selection) => setState(() => _status = selection.first),
+              onSelectionChanged: (selection) =>
+                  setState(() => _status = selection.first),
               showSelectedIcon: false,
             ),
             const SizedBox(height: 24),
@@ -354,7 +404,10 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : Text(_editing ? 'Save changes' : 'Create user'),
             ),

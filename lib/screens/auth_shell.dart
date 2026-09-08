@@ -55,7 +55,9 @@ class AuthShell extends StatelessWidget {
                   Text(
                     heading,
                     textAlign: TextAlign.center,
-                    style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+                    style: textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Text(

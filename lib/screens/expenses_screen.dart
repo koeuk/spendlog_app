@@ -137,12 +137,9 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
               ?.copyWith(fontWeight: FontWeight.w700),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: FloatingShelf(
-        child: AddPill(
-          label: 'Add',
-          onPressed: () => showExpenseForm(context),
-        ),
+      floatingActionButton: AddPill(
+        label: 'Add',
+        onPressed: () => showExpenseForm(context),
       ),
       body: Column(
         children: [
@@ -258,7 +255,12 @@ class _FilterBar extends ConsumerWidget {
     final notifier = ref.read(expenseFiltersProvider.notifier);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 4, AppTheme.pageInset, 8),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.pageInset,
+        4,
+        AppTheme.pageInset,
+        8,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -317,9 +319,7 @@ class _FilterBar extends ConsumerWidget {
                             ? AppTheme.green
                             : AppTheme.glassFill(context),
                         shape: const StadiumBorder(),
-                        side: BorderSide(
-                          color: AppTheme.faint(context, 0.10),
-                        ),
+                        side: BorderSide(color: AppTheme.faint(context, 0.10)),
                         onPressed: onPickDates,
                       ),
                       const SizedBox(width: 8),
@@ -378,9 +378,7 @@ class _FilterBar extends ConsumerWidget {
                     ),
                     backgroundColor: AppTheme.glassFill(context),
                     shape: const StadiumBorder(),
-                    side: BorderSide(
-                      color: AppTheme.faint(context, 0.10),
-                    ),
+                    side: BorderSide(color: AppTheme.faint(context, 0.10)),
                     onPressed: () {
                       search.clear();
                       notifier.state = const ExpenseFilters();

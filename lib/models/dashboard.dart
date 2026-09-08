@@ -17,12 +17,12 @@ class BreakdownSlice {
   final num share;
 
   factory BreakdownSlice.fromJson(Map<String, dynamic> json) => BreakdownSlice(
-        uuid: json['uuid'] as String,
-        name: json['name'] as String? ?? '',
-        color: json['color'] as String? ?? 'slate',
-        spent: json['spent'] as String? ?? '0.00',
-        share: json['share'] as num? ?? 0,
-      );
+    uuid: json['uuid'] as String,
+    name: json['name'] as String? ?? '',
+    color: json['color'] as String? ?? 'slate',
+    spent: json['spent'] as String? ?? '0.00',
+    share: json['share'] as num? ?? 0,
+  );
 }
 
 /// The savings block on GET /dashboard — the totals across every goal, so
@@ -40,7 +40,8 @@ class DashboardSavings {
   final num percent;
   final int goalsCount;
 
-  factory DashboardSavings.fromJson(Map<String, dynamic> json) => DashboardSavings(
+  factory DashboardSavings.fromJson(Map<String, dynamic> json) =>
+      DashboardSavings(
         totalSaved: json['total_saved'] as String? ?? '0.00',
         totalTarget: json['total_target'] as String? ?? '0.00',
         percent: json['percent'] as num? ?? 0,
@@ -102,9 +103,13 @@ class Dashboard {
       recent: (json['recent'] as List<dynamic>? ?? [])
           .map((e) => Expense.fromJson(e as Map<String, dynamic>))
           .toList(),
-      incomeTotal: income is Map<String, dynamic> ? income['total'] as String? : null,
+      incomeTotal: income is Map<String, dynamic>
+          ? income['total'] as String?
+          : null,
       balance: json['balance'] as String?,
-      savings: savings is Map<String, dynamic> ? DashboardSavings.fromJson(savings) : null,
+      savings: savings is Map<String, dynamic>
+          ? DashboardSavings.fromJson(savings)
+          : null,
     );
   }
 }

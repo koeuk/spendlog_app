@@ -28,29 +28,32 @@ class CategoriesScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           'Categories',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          style: Theme.of(context).textTheme.titleLarge
+              ?.copyWith(fontWeight: FontWeight.w700),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: canWrite
-          ? FloatingShelf(
-              child: AddPill(
-                label: 'New',
-                onPressed: () => showCategoryForm(context),
-              ),
-            )
+          ? AddPill(label: 'New', onPressed: () => showCategoryForm(context))
           : null,
       body: categories.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.green)),
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppTheme.green),
+        ),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
           onRetry: () => ref.invalidate(categoriesProvider),
         ),
         data: (list) => RefreshIndicator(
           color: AppTheme.green,
-          onRefresh: () => refreshQuietly(ref.refresh(categoriesProvider.future)),
+          onRefresh: () =>
+              refreshQuietly(ref.refresh(categoriesProvider.future)),
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 8, AppTheme.pageInset, AppTheme.navBarClearance + 72),
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.pageInset,
+              8,
+              AppTheme.pageInset,
+              AppTheme.navBarClearance + 72,
+            ),
             children: [
               if (list.isEmpty)
                 Padding(
@@ -65,7 +68,9 @@ class CategoriesScreen extends ConsumerWidget {
               for (final category in list) ...[
                 _CategoryTile(
                   category: category,
-                  onTap: canWrite ? () => showCategoryForm(context, category: category) : null,
+                  onTap: canWrite
+                      ? () => showCategoryForm(context, category: category)
+                      : null,
                 ),
                 const SizedBox(height: 10),
               ],
@@ -104,7 +109,11 @@ class _CategoryTile extends StatelessWidget {
                   color: color.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(CategoryStyle.icon(category.icon), size: 20, color: color),
+                child: Icon(
+                  CategoryStyle.icon(category.icon),
+                  size: 20,
+                  color: color,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -145,7 +154,9 @@ Future<void> showCategoryForm(BuildContext context, {Category? category}) {
     context: context,
     isScrollControlled: true,
     builder: (context) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: _CategoryForm(category: category),
     ),
   );
@@ -202,7 +213,11 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
           icon: _icon,
         );
       } else {
-        await repo.createCategory(name: _name.text.trim(), color: _color, icon: _icon);
+        await repo.createCategory(
+          name: _name.text.trim(),
+          color: _color,
+          icon: _icon,
+        );
       }
 
       _refresh();
@@ -231,7 +246,9 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFDC2626),
+            ),
             child: const Text('Delete'),
           ),
         ],
@@ -252,7 +269,10 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
         // with a message naming it — worth showing verbatim.
         setState(() {
           _busy = false;
-          _error = apiErrorMessage(e, fallback: 'Could not delete the category.');
+          _error = apiErrorMessage(
+            e,
+            fallback: 'Could not delete the category.',
+          );
         });
       }
     }
@@ -272,15 +292,16 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
               Text(
                 _editing ? 'Edit category' : 'New category',
                 textAlign: TextAlign.center,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
+                style: Theme.of(context).textTheme.titleMedium
                     ?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 18),
               if (_error != null) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFDECEC),
                     borderRadius: BorderRadius.circular(20),
@@ -288,7 +309,10 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
                   child: Text(
                     _error!,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Color(0xFFB3261E), fontSize: 13),
+                    style: const TextStyle(
+                      color: Color(0xFFB3261E),
+                      fontSize: 13,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -298,8 +322,9 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
                 decoration: const InputDecoration(hintText: 'Name'),
                 textCapitalization: TextCapitalization.words,
                 autofocus: !_editing,
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Name the category.' : null,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Name the category.'
+                    : null,
               ),
               const SizedBox(height: 18),
               const Eyebrow('Colour'),
@@ -323,7 +348,10 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : Text(_editing ? 'Save changes' : 'Create category'),
               ),
@@ -331,7 +359,9 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: _busy ? null : _delete,
-                  style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFFDC2626),
+                  ),
                   child: const Text('Delete category'),
                 ),
               ],
@@ -383,7 +413,9 @@ class _IconPicker extends StatelessWidget {
                 child: Icon(
                   CategoryStyle.icon(name),
                   size: 19,
-                  color: name == selected ? color : AppTheme.faint(context, 0.55),
+                  color: name == selected
+                      ? color
+                      : AppTheme.faint(context, 0.55),
                 ),
               ),
             ),

@@ -151,7 +151,11 @@ Future<T?> _showSheet<T>(BuildContext context, Widget child) {
 /// The account's photo, or its initial on green while it has none (or while
 /// the photo fails to load — a dead URL should not leave a blank square).
 class _AvatarBox extends StatelessWidget {
-  const _AvatarBox({required this.user, required this.size, this.circle = false});
+  const _AvatarBox({
+    required this.user,
+    required this.size,
+    this.circle = false,
+  });
 
   final User? user;
   final double size;
@@ -299,7 +303,9 @@ class _HeaderState extends ConsumerState<_Header> {
                 bottom: 0,
                 child: Material(
                   color: AppTheme.green,
-                  shape: CircleBorder(side: BorderSide(color: surface, width: 3)),
+                  shape: CircleBorder(
+                    side: BorderSide(color: surface, width: 3),
+                  ),
                   child: InkWell(
                     onTap: _busy ? null : _photoMenu,
                     customBorder: const CircleBorder(),
@@ -380,8 +386,11 @@ Future<void> _pickAndUploadPhoto(BuildContext context, WidgetRef ref) async {
   );
 }
 
-Future<void> _removePhoto(BuildContext context, WidgetRef ref) =>
-    _applyPhoto(context, ref, () => ref.read(repositoryProvider).removeAvatar());
+Future<void> _removePhoto(BuildContext context, WidgetRef ref) => _applyPhoto(
+  context,
+  ref,
+  () => ref.read(repositoryProvider).removeAvatar(),
+);
 
 Future<void> _applyPhoto(
   BuildContext context,
@@ -394,7 +403,9 @@ Future<void> _applyPhoto(
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(apiErrorMessage(e, fallback: 'Could not update the photo.')),
+        content: Text(
+          apiErrorMessage(e, fallback: 'Could not update the photo.'),
+        ),
       ),
     );
   }
@@ -658,9 +669,11 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
     super.dispose();
   }
 
-  Future<void> _changePhoto() => _withPhotoBusy(() => _pickAndUploadPhoto(context, ref));
+  Future<void> _changePhoto() =>
+      _withPhotoBusy(() => _pickAndUploadPhoto(context, ref));
 
-  Future<void> _removePhotoFromSheet() => _withPhotoBusy(() => _removePhoto(context, ref));
+  Future<void> _removePhotoFromSheet() =>
+      _withPhotoBusy(() => _removePhoto(context, ref));
 
   Future<void> _withPhotoBusy(Future<void> Function() call) async {
     setState(() => _photoBusy = true);

@@ -29,13 +29,16 @@ class ReportPeriod {
   /// Null means "the current one", which is what the server defaults to.
   final String? anchor;
 
-  ReportPeriod withGranularity(String value) => ReportPeriod(granularity: value);
+  ReportPeriod withGranularity(String value) =>
+      ReportPeriod(granularity: value);
 
   ReportPeriod withAnchor(String value) =>
       ReportPeriod(granularity: granularity, anchor: value);
 }
 
-final reportPeriodProvider = StateProvider<ReportPeriod>((ref) => const ReportPeriod());
+final reportPeriodProvider = StateProvider<ReportPeriod>(
+  (ref) => const ReportPeriod(),
+);
 
 final reportProvider = FutureProvider.autoDispose<Report>((ref) {
   final period = ref.watch(reportPeriodProvider);
@@ -87,21 +90,30 @@ final categoriesProvider = FutureProvider.autoDispose<List<Category>>(
 final budgetsMonthProvider = StateProvider<String>((ref) => currentYm());
 
 final budgetSummaryProvider = FutureProvider.autoDispose(
-  (ref) => ref.watch(repositoryProvider).budgetSummary(ref.watch(budgetsMonthProvider)),
+  (ref) => ref
+      .watch(repositoryProvider)
+      .budgetSummary(ref.watch(budgetsMonthProvider)),
 );
 
 /// The stored rows for the month — the summary renders the screen, but only
 /// these carry the uuid a delete needs.
 final budgetRowsProvider = FutureProvider.autoDispose(
-  (ref) => ref.watch(repositoryProvider).budgets(ref.watch(budgetsMonthProvider)),
+  (ref) =>
+      ref.watch(repositoryProvider).budgets(ref.watch(budgetsMonthProvider)),
 );
 
 // ----------------------------------------------------------------- expenses
 
-final expenseFiltersProvider = StateProvider<ExpenseFilters>((ref) => const ExpenseFilters());
+final expenseFiltersProvider = StateProvider<ExpenseFilters>(
+  (ref) => const ExpenseFilters(),
+);
 
 class ExpensesState {
-  const ExpensesState({required this.items, required this.hasMore, required this.page});
+  const ExpensesState({
+    required this.items,
+    required this.hasMore,
+    required this.page,
+  });
 
   final List<Expense> items;
   final bool hasMore;
@@ -119,7 +131,9 @@ class ExpensesNotifier extends AutoDisposeAsyncNotifier<ExpensesState> {
     _loadingMore = false;
     // Watched, so changing any filter rebuilds the list from page one.
     final filters = ref.watch(expenseFiltersProvider);
-    final first = await ref.watch(repositoryProvider).expenses(filters: filters);
+    final first = await ref
+        .watch(repositoryProvider)
+        .expenses(filters: filters);
 
     return ExpensesState(items: first.items, hasMore: first.hasMore, page: 1);
   }
@@ -133,16 +147,20 @@ class ExpensesNotifier extends AutoDisposeAsyncNotifier<ExpensesState> {
     _loadingMore = true;
 
     try {
-      final next = await ref.read(repositoryProvider).expenses(
+      final next = await ref
+          .read(repositoryProvider)
+          .expenses(
             page: current.page + 1,
             filters: ref.read(expenseFiltersProvider),
           );
 
-      state = AsyncData(ExpensesState(
-        items: [...current.items, ...next.items],
-        hasMore: next.hasMore,
-        page: current.page + 1,
-      ));
+      state = AsyncData(
+        ExpensesState(
+          items: [...current.items, ...next.items],
+          hasMore: next.hasMore,
+          page: current.page + 1,
+        ),
+      );
     } catch (_) {
       // Callers are scroll callbacks that cannot await this, so an escaping
       // error would surface as an unhandled exception. Swallowing keeps the
@@ -155,14 +173,18 @@ class ExpensesNotifier extends AutoDisposeAsyncNotifier<ExpensesState> {
 }
 
 final expensesProvider =
-    AsyncNotifierProvider.autoDispose<ExpensesNotifier, ExpensesState>(ExpensesNotifier.new);
+    AsyncNotifierProvider.autoDispose<ExpensesNotifier, ExpensesState>(
+      ExpensesNotifier.new,
+    );
 
 // ------------------------------------------------------------------ incomes
 
 final incomeMonthProvider = StateProvider<String>((ref) => currentYm());
 
 final incomeSummaryProvider = FutureProvider.autoDispose<IncomeSummary>(
-  (ref) => ref.watch(repositoryProvider).incomeSummary(ref.watch(incomeMonthProvider)),
+  (ref) => ref
+      .watch(repositoryProvider)
+      .incomeSummary(ref.watch(incomeMonthProvider)),
 );
 
 /// The month's rows. One page of 100 — the API's maximum — rather than a
@@ -182,7 +204,9 @@ final incomesProvider = FutureProvider.autoDispose<List<Income>>((ref) async {
 final savingsMonthProvider = StateProvider<String>((ref) => currentYm());
 
 final savingsSummaryProvider = FutureProvider.autoDispose<SavingsSummary>(
-  (ref) => ref.watch(repositoryProvider).savingsSummary(ref.watch(savingsMonthProvider)),
+  (ref) => ref
+      .watch(repositoryProvider)
+      .savingsSummary(ref.watch(savingsMonthProvider)),
 );
 
 final savingsGoalsProvider = FutureProvider.autoDispose<List<SavingsGoal>>(
@@ -190,9 +214,10 @@ final savingsGoalsProvider = FutureProvider.autoDispose<List<SavingsGoal>>(
 );
 
 /// One goal with its entries, for the detail screen.
-final savingsGoalProvider = FutureProvider.autoDispose.family<SavingsGoal, String>(
-  (ref, uuid) => ref.watch(repositoryProvider).savingsGoal(uuid),
-);
+final savingsGoalProvider = FutureProvider.autoDispose
+    .family<SavingsGoal, String>(
+      (ref, uuid) => ref.watch(repositoryProvider).savingsGoal(uuid),
+    );
 
 /// Drops every savings figure a goal or entry write can move. The dashboard
 /// carries the savings totals too, so it goes with them.

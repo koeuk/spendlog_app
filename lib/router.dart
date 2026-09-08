@@ -46,7 +46,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Read rather than watch: the listenable above drives re-evaluation.
       final auth = ref.read(authProvider);
 
-      final onAuthPages = state.matchedLocation == '/login' ||
+      final onAuthPages =
+          state.matchedLocation == '/login' ||
           state.matchedLocation.startsWith('/forgot-password') ||
           state.matchedLocation.startsWith('/reset-password');
 
@@ -60,7 +61,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/splash', builder: (context, state) => const SplashScreen()),
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
         path: '/forgot-password',
@@ -68,8 +72,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/reset-password',
-        builder: (context, state) =>
-            ResetPasswordScreen(email: state.uri.queryParameters['email'] ?? ''),
+        builder: (context, state) => ResetPasswordScreen(
+          email: state.uri.queryParameters['email'] ?? '',
+        ),
       ),
       // The signed-in app: five tabs behind one bottom bar, each branch
       // keeping its own state when you switch away and back.
@@ -77,64 +82,84 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, navigationShell) =>
             ShellScreen(navigationShell: navigationShell),
         branches: [
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: '/',
-              builder: (context, state) => const DashboardScreen(),
-              // Income and savings are reached from the dashboard's cards (and
-              // Profile), not from a tab of their own. Nested here so the bar
-              // stays put and back returns to the dashboard.
-              routes: [
-                GoRoute(
-                  path: 'income',
-                  builder: (context, state) => const IncomeScreen(),
-                ),
-                GoRoute(
-                  path: 'savings',
-                  builder: (context, state) => const SavingsScreen(),
-                  routes: [
-                    GoRoute(
-                      path: ':uuid',
-                      builder: (context, state) =>
-                          SavingsGoalScreen(uuid: state.pathParameters['uuid']!),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/expenses', builder: (context, state) => const ExpensesScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/budgets', builder: (context, state) => const BudgetsScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: '/reports', builder: (context, state) => const ReportsScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: '/profile',
-              builder: (context, state) => const ProfileScreen(),
-              // Managing categories is occasional and admin-gated, so it sits
-              // under Profile rather than spending a tab. Nested, so the bar
-              // stays put and back returns to Profile.
-              routes: [
-                GoRoute(
-                  path: 'categories',
-                  builder: (context, state) => const CategoriesScreen(),
-                ),
-                GoRoute(
-                  path: 'admin-users',
-                  builder: (context, state) => const AdminUsersScreen(),
-                ),
-                GoRoute(
-                  path: 'admin-settings',
-                  builder: (context, state) => const AdminSettingsScreen(),
-                ),
-              ],
-            ),
-          ]),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (context, state) => const DashboardScreen(),
+                // Income and savings are reached from the dashboard's cards (and
+                // Profile), not from a tab of their own. Nested here so the bar
+                // stays put and back returns to the dashboard.
+                routes: [
+                  GoRoute(
+                    path: 'income',
+                    builder: (context, state) => const IncomeScreen(),
+                  ),
+                  GoRoute(
+                    path: 'savings',
+                    builder: (context, state) => const SavingsScreen(),
+                    routes: [
+                      GoRoute(
+                        path: ':uuid',
+                        builder: (context, state) => SavingsGoalScreen(
+                          uuid: state.pathParameters['uuid']!,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/expenses',
+                builder: (context, state) => const ExpensesScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/budgets',
+                builder: (context, state) => const BudgetsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/reports',
+                builder: (context, state) => const ReportsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/profile',
+                builder: (context, state) => const ProfileScreen(),
+                // Managing categories is occasional and admin-gated, so it sits
+                // under Profile rather than spending a tab. Nested, so the bar
+                // stays put and back returns to Profile.
+                routes: [
+                  GoRoute(
+                    path: 'categories',
+                    builder: (context, state) => const CategoriesScreen(),
+                  ),
+                  GoRoute(
+                    path: 'admin-users',
+                    builder: (context, state) => const AdminUsersScreen(),
+                  ),
+                  GoRoute(
+                    path: 'admin-settings',
+                    builder: (context, state) => const AdminSettingsScreen(),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ],
       ),
     ],

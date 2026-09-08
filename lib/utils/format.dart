@@ -1,8 +1,18 @@
 /// Small formatting helpers — the API speaks `YYYY-MM` months, `YYYY-MM-DD`
 /// days, and money as `"12.50"` strings that are displayed verbatim.
 const _months = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
 
 String money(String value) => '\$$value';

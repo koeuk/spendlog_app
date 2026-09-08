@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../theme.dart';
-import '../widgets/common.dart';
 import 'menu_sheet.dart';
 
 /// The signed-in frame: one bottom bar, five tabs, each tab keeping its own
@@ -74,10 +73,7 @@ const _motion = Duration(milliseconds: 200);
 
 /// A flat white bar holding the five tabs, each an icon over its label.
 /// Nothing sits behind the active tab — it is simply drawn in ink while the
-/// rest fall back to grey, so the bar stays calm and reads at a glance. The
-/// frosted shelf the reference shows above the bar belongs to the tab's
-/// floating button ([FloatingShelf]), which has to paint over the content but
-/// under the button — an order this bar, drawn last, cannot achieve.
+/// rest fall back to grey, so the bar stays calm and reads at a glance.
 class _FloatingNavBar extends StatelessWidget {
   const _FloatingNavBar({required this.currentIndex, required this.onSelected});
 
