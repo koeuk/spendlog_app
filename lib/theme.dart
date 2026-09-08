@@ -57,14 +57,18 @@ abstract final class AppTheme {
   static Color glassBorder(BuildContext context) =>
       _edge(Theme.of(context).brightness == Brightness.dark);
 
+  /// Cards, inputs and chips are solid — white by day, the dark surface at
+  /// night — over the flat ground. Only the `strong` panes that carry a
+  /// backdrop blur (nav bar, sheets) keep a hint of translucency, so what
+  /// scrolls beneath them still shows through the frost.
   static Color _fill(bool isDark, {bool strong = false}) {
     final base = isDark ? darkSurface : Colors.white;
-    final alpha = strong ? (isDark ? 0.94 : 0.92) : (isDark ? 0.55 : 0.62);
-    return base.withValues(alpha: alpha);
+    if (!strong) return base;
+    return base.withValues(alpha: isDark ? 0.94 : 0.92);
   }
 
   static Color _edge(bool isDark) =>
-      Colors.white.withValues(alpha: isDark ? 0.08 : 0.80);
+      isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE3E7EC);
 
   /// The card theme's shape at the tighter [rowRadius], hairline border kept.
   static ShapeBorder rowShape(BuildContext context) {
