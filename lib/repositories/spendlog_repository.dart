@@ -7,6 +7,7 @@ import '../models/category.dart';
 import '../models/dashboard.dart';
 import '../models/expense.dart';
 import '../models/expense_filters.dart';
+import '../models/activity.dart';
 import '../models/admin.dart';
 import '../models/income.dart';
 import '../models/report.dart';
@@ -388,6 +389,33 @@ class SpendLogRepository {
 
   Future<void> deleteBudget(String uuid) =>
       _client.dio.delete('/budgets/$uuid');
+
+  // ------------------------------------------------------------- activity
+
+  /// The caller's own log, or everyone's when [everyone] (admins only —
+  /// the server refuses it otherwise).
+  Future<({List<ActivityEntry> items, bool hasMore})> activity({
+    int page = 1,
+    bool everyone = false,
+  }) async {
+    final response = await _client.dio.get(
+      '/activity',
+      queryParameters: {
+        'page': page,
+        'per_page': 50,
+        if (everyone) 'scope': 'all',
+      },
+    );
+
+    final data = response.data as Map<String, dynamic>;
+
+    return (
+      items: (data['data'] as List<dynamic>)
+          .map((e) => ActivityEntry.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      hasMore: (data['links'] as Map<String, dynamic>?)?['next'] != null,
+    );
+  }
 
   // ---------------------------------------------------------------- admin
 

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
+import '../models/activity.dart';
 import '../models/admin.dart';
 import '../models/category.dart';
 import '../models/dashboard.dart';
@@ -263,6 +264,61 @@ void invalidateMoney(WidgetRef ref) {
     // expense write can change this list.
     ..invalidate(categoriesProvider);
 }
+
+// ----------------------------------------------------------------- activity
+
+/// Whether an admin is looking at everyone's log rather than their own.
+final activityEveryoneProvider = StateProvider<bool>((ref) => false);
+
+class ActivityState {
+  const ActivityState({required this.items, required this.hasMore, required this.page});
+
+  final List<ActivityEntry> items;
+  final bool hasMore;
+  final int page;
+}
+
+class ActivityNotifier extends AutoDisposeAsyncNotifier<ActivityState> {
+  bool _loadingMore = false;
+
+  @override
+  Future<ActivityState> build() async {
+    _loadingMore = false;
+    // Watched, so flipping the scope rebuilds from page one.
+    final everyone = ref.watch(activityEveryoneProvider);
+    final first = await ref.watch(repositoryProvider).activity(everyone: everyone);
+
+    return ActivityState(items: first.items, hasMore: first.hasMore, page: 1);
+  }
+
+  Future<void> loadMore() async {
+    final current = state.valueOrNull;
+    if (_loadingMore || current == null || !current.hasMore) return;
+
+    _loadingMore = true;
+
+    try {
+      final next = await ref.read(repositoryProvider).activity(
+            page: current.page + 1,
+            everyone: ref.read(activityEveryoneProvider),
+          );
+
+      state = AsyncData(ActivityState(
+        items: [...current.items, ...next.items],
+        hasMore: next.hasMore,
+        page: current.page + 1,
+      ));
+    } catch (_) {
+      // Same reasoning as ExpensesNotifier.loadMore: scroll callbacks cannot
+      // await, so failures keep the loaded pages and the next scroll retries.
+    } finally {
+      _loadingMore = false;
+    }
+  }
+}
+
+final activityProvider =
+    AsyncNotifierProvider.autoDispose<ActivityNotifier, ActivityState>(ActivityNotifier.new);
 
 // -------------------------------------------------------------------- admin
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'providers/auth_provider.dart';
+import 'screens/activity_screen.dart';
 import 'screens/admin_settings_screen.dart';
 import 'screens/admin_users_screen.dart';
 import 'screens/budgets_screen.dart';
@@ -147,6 +148,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'categories',
                     builder: (context, state) => const CategoriesScreen(),
+                  ),
+                  GoRoute(
+                    path: 'activity',
+                    builder: (context, state) => const ActivityScreen(),
                   ),
                   GoRoute(
                     path: 'admin-users',

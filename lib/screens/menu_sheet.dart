@@ -38,6 +38,12 @@ const _entries = <_Entry>[
     path: '/profile/categories',
     admin: false,
   ),
+  (
+    icon: Icons.history,
+    label: 'Activity log',
+    path: '/profile/activity',
+    admin: false,
+  ),
   // The account page: photo, details, appearance, password — and, for
   // admins, the door to the app-wide settings.
   (
