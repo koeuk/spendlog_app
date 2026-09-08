@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../api/api_client.dart';
 import '../models/dashboard.dart';
 import '../models/report.dart';
+import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../providers/data_providers.dart';
 import '../theme.dart';
@@ -24,11 +25,8 @@ class DashboardScreen extends ConsumerWidget {
     final dashboard = ref.watch(dashboardProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Hi, ${user?.name.split(' ').first ?? ''} 👋',
-        ),
-      ),
+      // No app bar: the greeting row below is the header, and it needs the
+      // avatar and two lines of text that a title slot cannot hold.
       body: dashboard.when(
         loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.green)),
         error: (e, _) => LoadFailed(
@@ -46,18 +44,22 @@ class DashboardScreen extends ConsumerWidget {
             return refreshQuietly(ref.refresh(dashboardProvider.future));
           },
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 0, AppTheme.pageInset, AppTheme.navBarClearance),
+            padding: EdgeInsets.fromLTRB(
+              AppTheme.pageInset,
+              MediaQuery.paddingOf(context).top + 12,
+              AppTheme.pageInset,
+              AppTheme.navBarClearance,
+            ),
             children: [
+              _GreetingHeader(user: user),
+              const SizedBox(height: 8),
               // The month being viewed sits with the card it governs rather
-              // than in the app bar, where it squeezed the greeting.
+              // than in the header, where it would squeeze the greeting.
               Align(
                 alignment: Alignment.centerRight,
                 child: MonthStepper(
-                  label: monthLabel(month),
-                  onPrevious: () => ref.read(dashboardMonthProvider.notifier).state =
-                      shiftMonth(month, -1),
-                  onNext: () => ref.read(dashboardMonthProvider.notifier).state =
-                      shiftMonth(month, 1),
+                  month: month,
+                  onChanged: (ym) => ref.read(dashboardMonthProvider.notifier).state = ym,
                 ),
               ),
               const SizedBox(height: 4),
@@ -82,6 +84,57 @@ class DashboardScreen extends ConsumerWidget {
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Who is signed in, the way the reference app opens: photo on the left, a
+/// time-of-day greeting in small grey over the name in bold. Tapping it goes
+/// to Settings, where the photo and name are changed.
+class _GreetingHeader extends StatelessWidget {
+  const _GreetingHeader({required this.user});
+
+  final User? user;
+
+  static String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning!';
+    if (hour < 17) return 'Good afternoon!';
+    return 'Good evening!';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => context.go('/profile'),
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        child: Row(
+          children: [
+            UserAvatar(user: user, size: 46, circle: true),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _greeting(),
+                    style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.55)),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    user?.name ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

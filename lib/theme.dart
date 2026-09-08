@@ -112,7 +112,7 @@ abstract final class AppTheme {
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        centerTitle: false,
+        centerTitle: true,
         foregroundColor: text,
         // Every screen's title, set once: a step under titleLarge so the bar
         // reads as a label over the content rather than a headline of its own.

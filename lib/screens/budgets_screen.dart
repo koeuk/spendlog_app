@@ -21,14 +21,15 @@ class BudgetsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        // A tab root with no back arrow: the title starts the line, the way
+        // a list heading does. Pushed pages centre theirs between the arrow
+        // and the actions.
+        centerTitle: false,
         title: const Text('Budgets'),
         actions: [
           MonthStepper(
-            label: monthLabel(month),
-            onPrevious: () =>
-                ref.read(budgetsMonthProvider.notifier).state = shiftMonth(month, -1),
-            onNext: () =>
-                ref.read(budgetsMonthProvider.notifier).state = shiftMonth(month, 1),
+            month: month,
+            onChanged: (ym) => ref.read(budgetsMonthProvider.notifier).state = ym,
           ),
           const SizedBox(width: 8),
         ],

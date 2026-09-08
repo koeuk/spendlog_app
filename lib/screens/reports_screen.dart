@@ -22,6 +22,10 @@ class ReportsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        // A tab root with no back arrow: the title starts the line, the way
+        // a list heading does. Pushed pages centre theirs between the arrow
+        // and the actions.
+        centerTitle: false,
         title: const Text('Reports'),
         actions: [
           if (canExportReports)

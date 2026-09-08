@@ -63,12 +63,8 @@ class SavingsScreen extends ConsumerWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: MonthStepper(
-                  label: monthLabel(month),
-                  onPrevious: () =>
-                      ref.read(savingsMonthProvider.notifier).state =
-                          shiftMonth(month, -1),
-                  onNext: () => ref.read(savingsMonthProvider.notifier).state =
-                      shiftMonth(month, 1),
+                  month: month,
+                  onChanged: (ym) => ref.read(savingsMonthProvider.notifier).state = ym,
                 ),
               ),
               const SizedBox(height: 4),

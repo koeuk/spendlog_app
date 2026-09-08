@@ -9,6 +9,7 @@ import '../providers/auth_provider.dart';
 import '../providers/data_providers.dart';
 import '../providers/theme_provider.dart';
 import '../theme.dart';
+import '../widgets/common.dart';
 import '../widgets/glass.dart';
 
 /// The Profile tab, laid out as a settings list: a header with who is signed
@@ -28,6 +29,14 @@ class ProfileScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        // A tab root, so nothing is beneath it to pop to — yet it is reached
+        // from the Menu sheet like a pushed page, and reads as one. Back goes
+        // home, which is where the sheet was most likely opened from.
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Back',
+          onPressed: () => context.go('/'),
+        ),
         title: const Text('Settings'),
       ),
       body: ListView(
@@ -120,58 +129,6 @@ Future<T?> _showSheet<T>(BuildContext context, Widget child) {
 // ---------------------------------------------------------------------------
 // List pieces
 // ---------------------------------------------------------------------------
-
-/// The account's photo, or its initial on green while it has none (or while
-/// the photo fails to load — a dead URL should not leave a blank square).
-class _AvatarBox extends StatelessWidget {
-  const _AvatarBox({
-    required this.user,
-    required this.size,
-    this.circle = false,
-  });
-
-  final User? user;
-  final double size;
-
-  /// A circle for the big profile portrait; rounded square elsewhere.
-  final bool circle;
-
-  @override
-  Widget build(BuildContext context) {
-    final initial = (user?.name.isNotEmpty ?? false)
-        ? user!.name[0].toUpperCase()
-        : '?';
-    final url = user?.avatarUrl;
-
-    final fallback = Center(
-      child: Text(
-        initial,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: size * 0.41,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-
-    return Container(
-      width: size,
-      height: size,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: AppTheme.green,
-        borderRadius: BorderRadius.circular(circle ? size : size * 0.32),
-      ),
-      child: url == null
-          ? fallback
-          : Image.network(
-              url,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => fallback,
-            ),
-    );
-  }
-}
 
 /// The portrait: photo (or initial) with a camera badge that changes it,
 /// the name beneath, and an ADMIN chip where it applies. Details live in the
@@ -267,7 +224,7 @@ class _HeaderState extends ConsumerState<_Header> {
                   color: AppTheme.glassFill(context),
                   border: Border.all(color: AppTheme.glassBorder(context)),
                 ),
-                child: _AvatarBox(user: user, size: 96, circle: true),
+                child: UserAvatar(user: user, size: 96, circle: true),
               ),
               // The camera badge sits on the rim, the way every profile
               // screen's does, so it reads as "edit the picture".
@@ -742,7 +699,7 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
           children: [
             Row(
               children: [
-                _AvatarBox(user: user, size: 64),
+                UserAvatar(user: user, size: 64),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Wrap(
