@@ -201,9 +201,9 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
             controller: _scroll,
             // Clears the floating nav bar and the FAB stacked above it.
             padding: const EdgeInsets.fromLTRB(
-              20,
+              AppTheme.pageInset,
               8,
-              20,
+              AppTheme.pageInset,
               AppTheme.navBarClearance + 72,
             ),
             itemCount: state.items.length + (state.hasMore ? 1 : 0),
@@ -261,7 +261,7 @@ class _FilterBar extends ConsumerWidget {
     final notifier = ref.read(expenseFiltersProvider.notifier);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+      padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 4, AppTheme.pageInset, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -415,10 +415,11 @@ class _ExpenseTile extends StatelessWidget {
     final color = CategoryStyle.color(expense.category?.color);
 
     return Card(
+      shape: AppTheme.rowShape(context),
       child: InkWell(
         onTap: onTap,
         onLongPress: onDelete,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius: BorderRadius.circular(AppTheme.rowRadius),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           child: Row(

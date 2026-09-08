@@ -45,7 +45,7 @@ class ReportsScreen extends ConsumerWidget {
           color: AppTheme.green,
           onRefresh: () => refreshQuietly(ref.refresh(reportProvider.future)),
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, AppTheme.navBarClearance),
+            padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 4, AppTheme.pageInset, AppTheme.navBarClearance),
             children: [
               _PeriodBar(data: data),
               const SizedBox(height: 16),

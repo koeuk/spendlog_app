@@ -18,6 +18,15 @@ abstract final class AppTheme {
   static const cardRadius = 28.0;
   static const pillRadius = 28.0;
 
+  /// Rows in a list — expenses, categories, users, workouts — are short and
+  /// stack tightly, so the panel radius reads as lumpy on them. They round a
+  /// step less than the big cards.
+  static const rowRadius = 16.0;
+
+  /// Horizontal breathing room between a tab's content and the window edge.
+  /// Matches the floating nav bar's inset so cards and bar share an edge.
+  static const pageInset = 16.0;
+
   /// Room a scrollable must leave at its bottom so its last row clears the
   /// floating nav bar, which the tabs' content now runs underneath.
   static const navBarClearance = 104.0;
@@ -33,6 +42,15 @@ abstract final class AppTheme {
   /// free.
   static Color faint(BuildContext context, double alpha) =>
       Theme.of(context).colorScheme.onSurface.withValues(alpha: alpha);
+
+  /// The card theme's shape at the tighter [rowRadius], hairline border kept.
+  static ShapeBorder rowShape(BuildContext context) {
+    final shape = Theme.of(context).cardTheme.shape;
+    return RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(rowRadius),
+      side: shape is RoundedRectangleBorder ? shape.side : BorderSide.none,
+    );
+  }
 
   /// The card/sheet background for the active palette.
   static Color surface(BuildContext context) => Theme.of(context).colorScheme.surface;

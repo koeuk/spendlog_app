@@ -113,7 +113,7 @@ class _WorkoutsScreenState extends ConsumerState<WorkoutsScreen> {
         },
         child: ListView(
           controller: _scroll,
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, AppTheme.navBarClearance + 72),
+          padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 8, AppTheme.pageInset, AppTheme.navBarClearance + 72),
           children: [
             summary.when(
               loading: () => const SizedBox(
@@ -346,10 +346,11 @@ class _WorkoutTile extends StatelessWidget {
     final minutes = (workout.durationSeconds ?? 0) ~/ 60;
 
     return Card(
+      shape: AppTheme.rowShape(context),
       child: InkWell(
         onTap: onTap,
         onLongPress: onDelete,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius: BorderRadius.circular(AppTheme.rowRadius),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           child: Row(

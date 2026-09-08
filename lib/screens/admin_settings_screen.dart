@@ -32,7 +32,7 @@ class AdminSettingsScreen extends ConsumerWidget {
           await refreshQuietly(ref.refresh(faqsProvider.future));
         },
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, AppTheme.navBarClearance),
+          padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 8, AppTheme.pageInset, AppTheme.navBarClearance),
           children: [
             settings.when(
               loading: () => const SizedBox(

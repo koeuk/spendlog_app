@@ -127,7 +127,7 @@ class _WorkoutFormPageState extends ConsumerState<WorkoutFormPage> {
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+        padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 8, AppTheme.pageInset, 120),
         children: [
           if (_error != null) ...[
             Container(

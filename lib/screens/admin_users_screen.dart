@@ -43,16 +43,17 @@ class AdminUsersScreen extends ConsumerWidget {
           color: AppTheme.green,
           onRefresh: () => refreshQuietly(ref.refresh(adminUsersProvider.future)),
           child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, AppTheme.navBarClearance + 72),
+            padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 8, AppTheme.pageInset, AppTheme.navBarClearance + 72),
             itemCount: list.length,
             separatorBuilder: (context, index) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               final user = list[index];
 
               return Card(
+                shape: AppTheme.rowShape(context),
                 child: InkWell(
                   onTap: () => _UserFormPage.open(context, user: user),
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                  borderRadius: BorderRadius.circular(AppTheme.rowRadius),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                     child: Row(
@@ -265,7 +266,7 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+          padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 8, AppTheme.pageInset, 40),
           children: [
             if (_error != null) ...[
               Container(

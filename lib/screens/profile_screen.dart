@@ -8,90 +8,21 @@ import '../providers/auth_provider.dart';
 import '../providers/data_providers.dart';
 import '../providers/theme_provider.dart';
 import '../theme.dart';
-import '../widgets/common.dart';
 
-class ProfileScreen extends ConsumerStatefulWidget {
+/// The Profile tab, laid out as a settings list: a header with who is signed
+/// in, then labelled groups of rows. Anything that needs a form — editing the
+/// account, changing the password — opens in a sheet so the list itself stays
+/// a list you can scan.
+class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
-  @override
-  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
-}
-
-class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  final _profileKey = GlobalKey<FormState>();
-  final _passwordKey = GlobalKey<FormState>();
-
-  late final _name = TextEditingController(text: _user?.name ?? '');
-  late final _username = TextEditingController(text: _user?.username ?? '');
-  late final _email = TextEditingController(text: _user?.email ?? '');
-  final _password = TextEditingController();
-  final _confirm = TextEditingController();
-
-  bool _savingProfile = false;
-  bool _savingPassword = false;
-  bool _showPassword = false;
-
-  User? get _user => ref.read(authProvider).user;
+  static const _danger = Color(0xFFDC2626);
 
   @override
-  void dispose() {
-    _name.dispose();
-    _username.dispose();
-    _email.dispose();
-    _password.dispose();
-    _confirm.dispose();
-    super.dispose();
-  }
-
-  void _toast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  Future<void> _saveProfile() async {
-    if (!_profileKey.currentState!.validate()) return;
-
-    setState(() => _savingProfile = true);
-
-    try {
-      final user = await ref.read(repositoryProvider).updateProfile(
-            name: _name.text.trim(),
-            email: _email.text.trim(),
-            username: _username.text.trim(),
-          );
-
-      ref.read(authProvider.notifier).setUser(user);
-      _toast('Profile saved.');
-    } catch (e) {
-      _toast(apiErrorMessage(e, fallback: 'Could not save the profile.'));
-    } finally {
-      if (mounted) setState(() => _savingProfile = false);
-    }
-  }
-
-  Future<void> _savePassword() async {
-    if (!_passwordKey.currentState!.validate()) return;
-
-    setState(() => _savingPassword = true);
-
-    try {
-      await ref.read(repositoryProvider).changePassword(
-            password: _password.text,
-            passwordConfirmation: _confirm.text,
-          );
-
-      _password.clear();
-      _confirm.clear();
-      _toast('Password changed.');
-    } catch (e) {
-      _toast(apiErrorMessage(e, fallback: 'Could not change the password.'));
-    } finally {
-      if (mounted) setState(() => _savingPassword = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider).user;
+    final isAdmin = user?.isAdmin ?? false;
+    final themeMode = ref.watch(themeModeProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -102,319 +33,583 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, AppTheme.navBarClearance),
+        padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 8, AppTheme.pageInset, AppTheme.navBarClearance),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Row(
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: AppTheme.green,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Center(
-                      child: Text(
-                        (user?.name.isNotEmpty ?? false)
-                            ? user!.name[0].toUpperCase()
-                            : '?',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(user?.name ?? '',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w700, fontSize: 16)),
-                        const SizedBox(height: 2),
-                        Text(
-                          user?.email ?? '',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppTheme.faint(context, 0.5),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (user?.isAdmin ?? false)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                      child: const Text(
-                        'ADMIN',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                    ),
-                ],
+          _Header(user: user, onTap: () => _showSheet(context, const _ProfileSheet())),
+          _Section(
+            title: 'General',
+            rows: [
+              _SettingsRow(
+                icon: Icons.brightness_6_outlined,
+                label: 'Appearance',
+                value: _themeLabel(themeMode),
+                onTap: () => _chooseTheme(context, ref, themeMode),
               ),
-            ),
+              _SettingsRow(
+                icon: Icons.category_outlined,
+                label: 'Categories',
+                onTap: () => context.go('/profile/categories'),
+              ),
+              _SettingsRow(
+                icon: Icons.fitness_center_outlined,
+                label: 'Workouts',
+                onTap: () => context.go('/profile/workouts'),
+              ),
+            ],
           ),
-          if (user?.isAdmin ?? false) ...[
-            const SizedBox(height: 16),
-            Card(
-              child: InkWell(
-                onTap: () => context.go('/profile/admin-users'),
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                  child: Row(
-                    children: [
-                      Icon(Icons.group_outlined,
-                          size: 20, color: AppTheme.faint(context, 0.55)),
-                      const SizedBox(width: 14),
-                      const Expanded(
-                        child: Text('Users',
-                            style: TextStyle(fontWeight: FontWeight.w600)),
-                      ),
-                      Icon(Icons.chevron_right,
-                          color: AppTheme.faint(context, 0.25)),
-                    ],
+          _Section(
+            title: 'Account',
+            rows: [
+              _SettingsRow(
+                icon: Icons.person_outline,
+                label: 'Edit profile',
+                onTap: () => _showSheet(context, const _ProfileSheet()),
+              ),
+              _SettingsRow(
+                icon: Icons.key_outlined,
+                label: 'Change password',
+                onTap: () => _showSheet(context, const _PasswordSheet()),
+              ),
+            ],
+          ),
+          if (isAdmin)
+            _Section(
+              title: 'Admin',
+              rows: [
+                _SettingsRow(
+                  icon: Icons.group_outlined,
+                  label: 'Users',
+                  onTap: () => context.go('/profile/admin-users'),
+                ),
+                _SettingsRow(
+                  icon: Icons.tune,
+                  label: 'App settings',
+                  onTap: () => context.go('/profile/admin-settings'),
+                ),
+              ],
+            ),
+          _Section(
+            rows: [
+              _SettingsRow(
+                icon: Icons.logout,
+                label: 'Sign out',
+                color: _danger,
+                chevron: false,
+                onTap: () => ref.read(authProvider.notifier).signOut(),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _themeLabel(ThemeMode mode) => switch (mode) {
+        ThemeMode.system => 'Auto',
+        ThemeMode.light => 'Light',
+        ThemeMode.dark => 'Dark',
+      };
+
+  Future<void> _chooseTheme(BuildContext context, WidgetRef ref, ThemeMode current) async {
+    final chosen = await _showSheet<ThemeMode>(context, _AppearanceSheet(current: current));
+
+    if (chosen != null) ref.read(themeModeProvider.notifier).set(chosen);
+  }
+}
+
+Future<T?> _showSheet<T>(BuildContext context, Widget child) {
+  return showModalBottomSheet<T>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: AppTheme.surface(context),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
+    builder: (context) => Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: child,
+    ),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// List pieces
+// ---------------------------------------------------------------------------
+
+class _Header extends StatelessWidget {
+  const _Header({required this.user, required this.onTap});
+
+  final User? user;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final initial =
+        (user?.name.isNotEmpty ?? false) ? user!.name[0].toUpperCase() : '?';
+
+    return Card(
+      shape: AppTheme.rowShape(context),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppTheme.green,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Center(
+                  child: Text(
+                    initial,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Card(
-              child: InkWell(
-                onTap: () => context.go('/profile/admin-settings'),
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                  child: Row(
-                    children: [
-                      Icon(Icons.tune,
-                          size: 20, color: AppTheme.faint(context, 0.55)),
-                      const SizedBox(width: 14),
-                      const Expanded(
-                        child: Text('App settings',
-                            style: TextStyle(fontWeight: FontWeight.w600)),
-                      ),
-                      Icon(Icons.chevron_right,
-                          color: AppTheme.faint(context, 0.25)),
-                    ],
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user?.name ?? '',
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      user?.email ?? '',
+                      style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.5)),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              if (user?.isAdmin ?? false) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    borderRadius: BorderRadius.circular(99),
                   ),
+                  child: Text(
+                    'ADMIN',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.surface,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(width: 6),
+              Icon(Icons.chevron_right, size: 20, color: AppTheme.faint(context, 0.3)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A titled group: label above, one card with the rows stacked inside and a
+/// hairline between each pair.
+class _Section extends StatelessWidget {
+  const _Section({this.title, required this.rows});
+
+  final String? title;
+  final List<_SettingsRow> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final hairline = AppTheme.faint(context, 0.06);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (title != null) ...[
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 8),
+              child: Text(
+                title!,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.faint(context, 0.5),
                 ),
               ),
             ),
           ],
-          const SizedBox(height: 16),
           Card(
-            child: InkWell(
-              onTap: () => context.go('/profile/workouts'),
-              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                child: Row(
-                  children: [
-                    Icon(Icons.fitness_center_outlined,
-                        size: 20, color: AppTheme.faint(context, 0.55)),
-                    const SizedBox(width: 14),
-                    const Expanded(
-                      child: Text('Workouts',
-                          style: TextStyle(fontWeight: FontWeight.w600)),
-                    ),
-                    Icon(Icons.chevron_right, color: AppTheme.faint(context, 0.25)),
-                  ],
-                ),
-              ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(22),
+              side: BorderSide(color: hairline),
             ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: InkWell(
-              onTap: () => context.go('/profile/categories'),
-              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                child: Row(
-                  children: [
-                    Icon(Icons.category_outlined,
-                        size: 20, color: AppTheme.faint(context, 0.55)),
-                    const SizedBox(width: 14),
-                    const Expanded(
-                      child: Text('Manage categories',
-                          style: TextStyle(fontWeight: FontWeight.w600)),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                for (var i = 0; i < rows.length; i++) ...[
+                  if (i > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 56),
+                      child: Divider(height: 1, thickness: 1, color: hairline),
                     ),
-                    Icon(Icons.chevron_right, color: AppTheme.faint(context, 0.25)),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Form(
-                key: _profileKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Eyebrow('Account details'),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _name,
-                      decoration: const InputDecoration(hintText: 'Name'),
-                      textCapitalization: TextCapitalization.words,
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Enter your name.' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _username,
-                      decoration:
-                          const InputDecoration(hintText: 'Username (optional)'),
-                      autocorrect: false,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _email,
-                      decoration: const InputDecoration(hintText: 'Email'),
-                      keyboardType: TextInputType.emailAddress,
-                      autocorrect: false,
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Enter your email.' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: _savingProfile ? null : _saveProfile,
-                      child: _savingProfile
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
-                            )
-                          : const Text('Save changes'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Form(
-                key: _passwordKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Eyebrow('Change password'),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _password,
-                      obscureText: !_showPassword,
-                      decoration: InputDecoration(
-                        hintText: 'New password',
-                        suffixIcon: IconButton(
-                          onPressed: () =>
-                              setState(() => _showPassword = !_showPassword),
-                          icon: Icon(
-                            _showPassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                      validator: (v) =>
-                          (v == null || v.length < 8) ? 'At least 8 characters.' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _confirm,
-                      obscureText: !_showPassword,
-                      decoration:
-                          const InputDecoration(hintText: 'Confirm new password'),
-                      validator: (v) =>
-                          v != _password.text ? 'Passwords do not match.' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: _savingPassword ? null : _savePassword,
-                      child: _savingPassword
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
-                            )
-                          : const Text('Change password'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Eyebrow('Appearance'),
-                  const SizedBox(height: 12),
-                  SegmentedButton<ThemeMode>(
-                    segments: const [
-                      ButtonSegment(
-                          value: ThemeMode.system,
-                          icon: Icon(Icons.brightness_auto_outlined, size: 18),
-                          label: Text('Auto')),
-                      ButtonSegment(
-                          value: ThemeMode.light,
-                          icon: Icon(Icons.light_mode_outlined, size: 18),
-                          label: Text('Light')),
-                      ButtonSegment(
-                          value: ThemeMode.dark,
-                          icon: Icon(Icons.dark_mode_outlined, size: 18),
-                          label: Text('Dark')),
-                    ],
-                    selected: {ref.watch(themeModeProvider)},
-                    onSelectionChanged: (selection) =>
-                        ref.read(themeModeProvider.notifier).set(selection.first),
-                    showSelectedIcon: false,
-                  ),
+                  rows[i],
                 ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: () => ref.read(authProvider.notifier).signOut(),
-            icon: const Icon(Icons.logout, size: 18),
-            label: const Text('Sign out'),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(52),
-              shape: const StadiumBorder(),
-              foregroundColor: const Color(0xFFDC2626),
-              side: BorderSide(color: const Color(0xFFDC2626).withValues(alpha: 0.3)),
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SettingsRow extends StatelessWidget {
+  const _SettingsRow({
+    required this.icon,
+    required this.label,
+    this.value,
+    this.onTap,
+    this.color,
+    this.chevron = true,
+  });
+
+  final IconData icon;
+  final String label;
+
+  /// Short current-state text shown before the chevron, e.g. "Dark".
+  final String? value;
+  final VoidCallback? onTap;
+
+  /// Tints icon and label; used for destructive rows.
+  final Color? color;
+  final bool chevron;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = color ?? Theme.of(context).colorScheme.onSurface;
+
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: color ?? AppTheme.faint(context, 0.6)),
+            const SizedBox(width: 18),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: fg),
+              ),
+            ),
+            if (value != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Text(
+                  value!,
+                  style: TextStyle(fontSize: 14, color: AppTheme.faint(context, 0.45)),
+                ),
+              ),
+            if (chevron)
+              Icon(Icons.chevron_right, size: 20, color: AppTheme.faint(context, 0.3)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Sheets
+// ---------------------------------------------------------------------------
+
+class _SheetFrame extends StatelessWidget {
+  const _SheetFrame({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.faint(context, 0.15),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              title,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 20),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AppearanceSheet extends StatelessWidget {
+  const _AppearanceSheet({required this.current});
+
+  final ThemeMode current;
+
+  static const _options = [
+    (ThemeMode.system, Icons.brightness_auto_outlined, 'Auto', 'Follow the system setting'),
+    (ThemeMode.light, Icons.light_mode_outlined, 'Light', 'Always light'),
+    (ThemeMode.dark, Icons.dark_mode_outlined, 'Dark', 'Always dark'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return _SheetFrame(
+      title: 'Appearance',
+      child: Column(
+        children: [
+          for (final (mode, icon, label, hint) in _options)
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              leading: Icon(icon, size: 22, color: AppTheme.faint(context, 0.6)),
+              title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Text(hint,
+                  style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.45))),
+              trailing: mode == current
+                  ? Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary)
+                  : null,
+              onTap: () => Navigator.of(context).pop(mode),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Owns its controllers and `ref` so it survives the list rebuilding under it.
+class _ProfileSheet extends ConsumerStatefulWidget {
+  const _ProfileSheet();
+
+  @override
+  ConsumerState<_ProfileSheet> createState() => _ProfileSheetState();
+}
+
+class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
+  final _formKey = GlobalKey<FormState>();
+
+  User? get _user => ref.read(authProvider).user;
+
+  late final _name = TextEditingController(text: _user?.name ?? '');
+  late final _username = TextEditingController(text: _user?.username ?? '');
+  late final _email = TextEditingController(text: _user?.email ?? '');
+
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _username.dispose();
+    _email.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _saving = true);
+
+    try {
+      final user = await ref.read(repositoryProvider).updateProfile(
+            name: _name.text.trim(),
+            email: _email.text.trim(),
+            username: _username.text.trim(),
+          );
+
+      ref.read(authProvider.notifier).setUser(user);
+
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Profile saved.')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(apiErrorMessage(e, fallback: 'Could not save the profile.'))),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _SheetFrame(
+      title: 'Edit profile',
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextFormField(
+              controller: _name,
+              decoration: const InputDecoration(hintText: 'Name'),
+              textCapitalization: TextCapitalization.words,
+              validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter your name.' : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _username,
+              decoration: const InputDecoration(hintText: 'Username (optional)'),
+              autocorrect: false,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _email,
+              decoration: const InputDecoration(hintText: 'Email'),
+              keyboardType: TextInputType.emailAddress,
+              autocorrect: false,
+              validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter your email.' : null,
+            ),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: _saving ? null : _save,
+              child: _saving ? const _Spinner() : const Text('Save changes'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PasswordSheet extends ConsumerStatefulWidget {
+  const _PasswordSheet();
+
+  @override
+  ConsumerState<_PasswordSheet> createState() => _PasswordSheetState();
+}
+
+class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
+  final _formKey = GlobalKey<FormState>();
+  final _password = TextEditingController();
+  final _confirm = TextEditingController();
+
+  bool _saving = false;
+  bool _show = false;
+
+  @override
+  void dispose() {
+    _password.dispose();
+    _confirm.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _saving = true);
+
+    try {
+      await ref.read(repositoryProvider).changePassword(
+            password: _password.text,
+            passwordConfirmation: _confirm.text,
+          );
+
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Password changed.')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(apiErrorMessage(e, fallback: 'Could not change the password.'))),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _SheetFrame(
+      title: 'Change password',
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextFormField(
+              controller: _password,
+              obscureText: !_show,
+              decoration: InputDecoration(
+                hintText: 'New password',
+                suffixIcon: IconButton(
+                  onPressed: () => setState(() => _show = !_show),
+                  icon: Icon(
+                    _show ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    size: 20,
+                  ),
+                ),
+              ),
+              validator: (v) => (v == null || v.length < 8) ? 'At least 8 characters.' : null,
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _confirm,
+              obscureText: !_show,
+              decoration: const InputDecoration(hintText: 'Confirm new password'),
+              validator: (v) => v != _password.text ? 'Passwords do not match.' : null,
+            ),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: _saving ? null : _save,
+              child: _saving ? const _Spinner() : const Text('Change password'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Spinner extends StatelessWidget {
+  const _Spinner();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 20,
+      height: 20,
+      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
     );
   }
 }

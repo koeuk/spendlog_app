@@ -52,7 +52,7 @@ class CategoriesScreen extends ConsumerWidget {
           color: AppTheme.green,
           onRefresh: () => refreshQuietly(ref.refresh(categoriesProvider.future)),
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, AppTheme.navBarClearance + 72),
+            padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 8, AppTheme.pageInset, AppTheme.navBarClearance + 72),
             children: [
               if (list.isEmpty)
                 Padding(
@@ -91,9 +91,10 @@ class _CategoryTile extends StatelessWidget {
     final count = category.expensesCount;
 
     return Card(
+      shape: AppTheme.rowShape(context),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius: BorderRadius.circular(AppTheme.rowRadius),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           child: Row(
