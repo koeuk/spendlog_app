@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
 import '../theme.dart';
 import '../widgets/glass.dart';
 
@@ -115,6 +116,13 @@ class _MenuSheet extends ConsumerWidget {
                 },
               ),
             ],
+            // A quick theme flip lives here as well as in Settings, so it is
+            // one tap from anywhere; the sheet stays open to show the change.
+            Padding(
+              padding: const EdgeInsets.only(left: 42),
+              child: Divider(height: 1, thickness: 1, color: hairline),
+            ),
+            const _ThemeRow(),
           ],
         ),
       ),
@@ -158,6 +166,51 @@ class _MenuRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Dark mode on or off. "Auto" counts as whatever the system currently
+/// shows, and flipping the switch pins the choice; Settings still offers
+/// Auto for anyone who wants it back.
+class _ThemeRow extends ConsumerWidget {
+  const _ThemeRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ink = Theme.of(context).colorScheme.onSurface;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 9),
+      child: Row(
+        children: [
+          Icon(
+            isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+            size: 22,
+            color: ink.withValues(alpha: 0.75),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              'Dark mode',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: ink,
+              ),
+            ),
+          ),
+          Switch.adaptive(
+            value: isDark,
+            activeThumbColor: Colors.white,
+            activeTrackColor: AppTheme.green,
+            onChanged: (on) => ref
+                .read(themeModeProvider.notifier)
+                .set(on ? ThemeMode.dark : ThemeMode.light),
+          ),
+        ],
       ),
     );
   }
