@@ -247,14 +247,14 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
               ),
               const SizedBox(height: 14),
               categories.when(
-                loading: () => const Padding(
+                loading: () => Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
                   child: Center(
                     child: SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: AppTheme.green),
+                          strokeWidth: 2, color: AppTheme.accent(context)),
                     ),
                   ),
                 ),
@@ -279,11 +279,11 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                         ),
                       ),
                     if (!_editing)
-                      const DropdownMenuItem(
+                      DropdownMenuItem(
                         value: _newCategoryMarker,
                         child: Row(
                           children: [
-                            Icon(Icons.add, size: 18, color: AppTheme.green),
+                            Icon(Icons.add, size: 18, color: AppTheme.accent(context)),
                             SizedBox(width: 10),
                             Text('New category…'),
                           ],

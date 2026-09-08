@@ -232,7 +232,7 @@ class _HeaderState extends ConsumerState<_Header> {
                 right: 0,
                 bottom: 0,
                 child: Material(
-                  color: AppTheme.green,
+                  color: AppTheme.accent(context),
                   shape: CircleBorder(
                     side: BorderSide(color: surface, width: 3),
                   ),
@@ -330,22 +330,37 @@ class _HeaderState extends ConsumerState<_Header> {
 /// and would hold a perfectly good photo hostage to a blank name. Shared by
 /// the portrait's badge and the edit sheet.
 Future<void> _pickAndUploadPhoto(BuildContext context, WidgetRef ref) async {
-  final picked = await ImagePicker().pickImage(
-    source: ImageSource.gallery,
-    // Downscaled on the device: the server caps uploads at 4 MB and shows
-    // the photo at 96px at most, so a full camera frame is waste on both ends.
-    maxWidth: 1024,
-    maxHeight: 1024,
-    imageQuality: 85,
-  );
+  final XFile? picked;
+  try {
+    picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      // Downscaled on the device: the server caps uploads at 4 MB and shows
+      // the photo at 96px at most, so a full camera frame is waste on both ends.
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+  } catch (_) {
+    // No picker on this platform build (a desktop run that predates the
+    // plugin, say): a message beats an uncaught exception.
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the photo picker.')),
+      );
+    }
+    return;
+  }
   if (picked == null || !context.mounted) return;
+
+  // A non-null copy: the closure below cannot see the null check's promotion.
+  final file = picked;
 
   await _applyPhoto(
     context,
     ref,
     () async => ref
         .read(repositoryProvider)
-        .uploadAvatar(bytes: await picked.readAsBytes(), filename: picked.name),
+        .uploadAvatar(bytes: await file.readAsBytes(), filename: file.name),
   );
 }
 

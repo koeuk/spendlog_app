@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
+import '../widgets/brand_mark.dart';
 
 /// The shared frame for every signed-out screen: the logo, a heading, a
 /// one-line description, then the form — centered, narrow, calm.
@@ -37,19 +38,7 @@ class AuthShell extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Center(
-                    child: Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: AppTheme.green,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Icon(
-                        Icons.savings_outlined,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                    ),
+                    child: const BrandMark(size: 64),
                   ),
                   const SizedBox(height: 22),
                   Text(

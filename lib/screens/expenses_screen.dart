@@ -161,7 +161,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
   ) {
     return expenses.when(
       loading: () =>
-          const Center(child: CircularProgressIndicator(color: AppTheme.green)),
+          Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
       error: (e, _) => LoadFailed(
         message: apiErrorMessage(e),
         onRetry: () => ref.invalidate(expensesProvider),
@@ -189,7 +189,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
         }
 
         return RefreshIndicator(
-          color: AppTheme.green,
+          color: AppTheme.accent(context),
           onRefresh: () => refreshQuietly(ref.refresh(expensesProvider.future)),
           child: ListView.separated(
             controller: _scroll,
@@ -204,7 +204,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
             separatorBuilder: (context, index) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               if (index >= state.items.length) {
-                return const Padding(
+                return Padding(
                   padding: EdgeInsets.symmetric(vertical: 16),
                   child: Center(
                     child: SizedBox(
@@ -212,7 +212,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                       height: 22,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: AppTheme.green,
+                        color: AppTheme.accent(context),
                       ),
                     ),
                   ),
@@ -316,7 +316,7 @@ class _FilterBar extends ConsumerWidget {
                               : Theme.of(context).colorScheme.onSurface,
                         ),
                         backgroundColor: filters.from != null
-                            ? AppTheme.green
+                            ? AppTheme.accent(context)
                             : AppTheme.glassFill(context),
                         shape: const StadiumBorder(),
                         side: BorderSide(color: AppTheme.faint(context, 0.10)),

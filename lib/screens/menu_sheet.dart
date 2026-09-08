@@ -221,7 +221,7 @@ class _ThemeRow extends ConsumerWidget {
           Switch.adaptive(
             value: isDark,
             activeThumbColor: Colors.white,
-            activeTrackColor: AppTheme.green,
+            activeTrackColor: AppTheme.accent(context),
             onChanged: (on) => ref
                 .read(themeModeProvider.notifier)
                 .set(on ? ThemeMode.dark : ThemeMode.light),

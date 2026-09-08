@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
+import '../widgets/brand_mark.dart';
 
 /// Shown only while the stored token is being confirmed against /me.
 class SplashScreen extends StatelessWidget {
@@ -13,20 +14,12 @@ class SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: AppTheme.green,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(Icons.savings_outlined, color: Colors.white, size: 32),
-            ),
+            const BrandMark(size: 64),
             const SizedBox(height: 24),
-            const SizedBox(
+            SizedBox(
               width: 22,
               height: 22,
-              child: CircularProgressIndicator(strokeWidth: 2.4, color: AppTheme.green),
+              child: CircularProgressIndicator(strokeWidth: 2.4, color: AppTheme.accent(context)),
             ),
           ],
         ),

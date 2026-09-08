@@ -50,10 +50,10 @@ class AddPill extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppTheme.fabNavBarOffset),
       child: Material(
-        color: AppTheme.green,
+        color: AppTheme.accent(context),
         shape: const StadiumBorder(),
         elevation: 6,
-        shadowColor: AppTheme.green.withValues(alpha: 0.35),
+        shadowColor: AppTheme.accent(context).withValues(alpha: 0.35),
         child: InkWell(
           onTap: onPressed,
           customBorder: const StadiumBorder(),
@@ -153,7 +153,7 @@ class LoadFailed extends StatelessWidget {
               onPressed: onRetry,
               style: FilledButton.styleFrom(
                 minimumSize: const Size(140, 44),
-                backgroundColor: AppTheme.green,
+                backgroundColor: AppTheme.accent(context),
               ),
               child: const Text('Try again'),
             ),
@@ -188,7 +188,7 @@ class PillSegment extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? AppTheme.green : AppTheme.glassFill(context),
+      color: selected ? AppTheme.accent(context) : AppTheme.glassFill(context),
       borderRadius: BorderRadius.circular(99),
       child: InkWell(
         onTap: onTap,
@@ -199,7 +199,7 @@ class PillSegment extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(99),
             border: Border.all(
-              color: selected ? AppTheme.green : AppTheme.faint(context, 0.10),
+              color: selected ? AppTheme.accent(context) : AppTheme.faint(context, 0.10),
             ),
           ),
           child: Text(
@@ -257,7 +257,7 @@ class UserAvatar extends StatelessWidget {
       height: size,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: AppTheme.green,
+        color: AppTheme.accent(context),
         borderRadius: BorderRadius.circular(circle ? size : size * 0.32),
       ),
       child: url == null

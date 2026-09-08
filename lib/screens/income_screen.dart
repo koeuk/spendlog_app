@@ -29,9 +29,7 @@ class IncomeScreen extends ConsumerWidget {
         onPressed: () => showIncomeForm(context),
       ),
       body: summary.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppTheme.green),
-        ),
+        loading: () => Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
           onRetry: () {
@@ -40,7 +38,7 @@ class IncomeScreen extends ConsumerWidget {
           },
         ),
         data: (data) => RefreshIndicator(
-          color: AppTheme.green,
+          color: AppTheme.accent(context),
           onRefresh: () {
             ref.invalidate(incomesProvider);
 
@@ -82,7 +80,7 @@ class IncomeScreen extends ConsumerWidget {
     AsyncValue<List<Income>> incomes,
   ) {
     return incomes.when(
-      loading: () => const [
+      loading: () => [
         Padding(
           padding: EdgeInsets.only(top: 32),
           child: Center(
@@ -91,7 +89,7 @@ class IncomeScreen extends ConsumerWidget {
               height: 22,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: AppTheme.green,
+                color: AppTheme.accent(context),
               ),
             ),
           ),
@@ -176,7 +174,7 @@ class _SummaryCard extends StatelessWidget {
     final top = summary.bySource.take(3).toList();
 
     return Card(
-      color: AppTheme.green,
+      color: AppTheme.accent(context),
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -266,13 +264,13 @@ class _IncomeTile extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: AppTheme.greenBright.withValues(alpha: 0.14),
+                  color: AppTheme.accent(context).withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.arrow_downward_rounded,
                   size: 20,
-                  color: AppTheme.greenBright,
+                  color: AppTheme.accent(context),
                 ),
               ),
               const SizedBox(width: 14),
@@ -302,10 +300,10 @@ class _IncomeTile extends StatelessWidget {
               const SizedBox(width: 10),
               Text(
                 '+${money(income.amount)}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 15,
-                  color: AppTheme.greenBright,
+                  color: AppTheme.accent(context),
                 ),
               ),
             ],

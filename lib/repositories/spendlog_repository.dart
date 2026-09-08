@@ -9,6 +9,7 @@ import '../models/expense.dart';
 import '../models/expense_filters.dart';
 import '../models/activity.dart';
 import '../models/admin.dart';
+import '../models/branding.dart';
 import '../models/income.dart';
 import '../models/report.dart';
 import '../models/savings.dart';
@@ -390,6 +391,17 @@ class SpendLogRepository {
   Future<void> deleteBudget(String uuid) =>
       _client.dio.delete('/budgets/$uuid');
 
+  // ------------------------------------------------------------- branding
+
+  /// Public: no token needed, so the sign-in screen can wear it too.
+  Future<Branding> branding() async {
+    final response = await _client.dio.get('/branding');
+
+    return Branding.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
   // ------------------------------------------------------------- activity
 
   /// The caller's own log, or everyone's when [everyone] (admins only —
@@ -513,6 +525,64 @@ class SpendLogRepository {
 
   Future<void> deleteFaq(String uuid) =>
       _client.dio.delete('/admin/faqs/$uuid');
+
+  Future<BrandingSettings> brandingSettings() async {
+    final response = await _client.dio.get('/admin/settings/branding');
+
+    return BrandingSettings.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
+  /// Multipart on POST, since it can carry the marks. Each image is replaced
+  /// when bytes are given, cleared with its remove flag, or left alone.
+  Future<BrandingSettings> updateBranding({
+    required String appName,
+    String? copyrightHolder,
+    ({List<int> bytes, String filename})? logo,
+    ({List<int> bytes, String filename})? favicon,
+    bool removeLogo = false,
+    bool removeFavicon = false,
+  }) async {
+    final response = await _client.dio.post(
+      '/admin/settings/branding',
+      data: FormData.fromMap({
+        'app_name': appName,
+        'copyright_holder': copyrightHolder ?? '',
+        if (logo != null) 'logo': MultipartFile.fromBytes(logo.bytes, filename: logo.filename),
+        if (favicon != null)
+          'favicon': MultipartFile.fromBytes(favicon.bytes, filename: favicon.filename),
+        if (removeLogo) 'remove_logo': '1',
+        if (removeFavicon) 'remove_favicon': '1',
+      }),
+    );
+
+    return BrandingSettings.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<ColorSettings> colorSettings() async {
+    final response = await _client.dio.get('/admin/settings/colors');
+
+    return ColorSettings.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
+  Future<ColorSettings> updateColors({
+    required String buttonColor,
+    required String bodyColor,
+  }) async {
+    final response = await _client.dio.put(
+      '/admin/settings/colors',
+      data: {'button_color': buttonColor, 'body_color': bodyColor},
+    );
+
+    return ColorSettings.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
 
   Future<SpendingSettings> spendingSettings() async {
     final response = await _client.dio.get('/admin/settings/spending');

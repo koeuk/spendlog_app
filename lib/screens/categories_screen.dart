@@ -32,15 +32,13 @@ class CategoriesScreen extends ConsumerWidget {
           ? AddPill(label: 'New', onPressed: () => showCategoryForm(context))
           : null,
       body: categories.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppTheme.green),
-        ),
+        loading: () => Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
           onRetry: () => ref.invalidate(categoriesProvider),
         ),
         data: (list) => RefreshIndicator(
-          color: AppTheme.green,
+          color: AppTheme.accent(context),
           onRefresh: () =>
               refreshQuietly(ref.refresh(categoriesProvider.future)),
           child: ListView(

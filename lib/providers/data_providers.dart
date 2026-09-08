@@ -333,3 +333,11 @@ final faqsProvider = FutureProvider.autoDispose<List<FaqEntry>>(
 final spendingSettingsProvider = FutureProvider.autoDispose<SpendingSettings>(
   (ref) => ref.watch(repositoryProvider).spendingSettings(),
 );
+
+final brandingSettingsProvider = FutureProvider.autoDispose<BrandingSettings>(
+  (ref) => ref.watch(repositoryProvider).brandingSettings(),
+);
+
+final colorSettingsProvider = FutureProvider.autoDispose<ColorSettings>(
+  (ref) => ref.watch(repositoryProvider).colorSettings(),
+);

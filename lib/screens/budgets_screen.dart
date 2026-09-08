@@ -35,13 +35,13 @@ class BudgetsScreen extends ConsumerWidget {
         ],
       ),
       body: summary.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.green)),
+        loading: () => Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
           onRetry: () => ref.invalidate(budgetSummaryProvider),
         ),
         data: (data) => RefreshIndicator(
-          color: AppTheme.green,
+          color: AppTheme.accent(context),
           onRefresh: () => refreshQuietly(ref.refresh(budgetSummaryProvider.future)),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 8, AppTheme.pageInset, AppTheme.navBarClearance),
@@ -92,7 +92,7 @@ class _OverallCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Card(
-      color: AppTheme.green,
+      color: AppTheme.accent(context),
       child: InkWell(
         onTap: () => showBudgetSheet(context, month: month, line: line, overall: true),
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),

@@ -29,15 +29,13 @@ class AdminUsersScreen extends ConsumerWidget {
         onPressed: () => _UserFormPage.open(context),
       ),
       body: users.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppTheme.green),
-        ),
+        loading: () => Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
           onRetry: () => ref.invalidate(adminUsersProvider),
         ),
         data: (list) => RefreshIndicator(
-          color: AppTheme.green,
+          color: AppTheme.accent(context),
           onRefresh: () =>
               refreshQuietly(ref.refresh(adminUsersProvider.future)),
           child: ListView.separated(
@@ -91,7 +89,7 @@ class AdminUsersScreen extends ConsumerWidget {
                           text: user.role,
                           color: user.role == 'user'
                               ? const Color(0xFF64748B)
-                              : AppTheme.green,
+                              : AppTheme.accent(context),
                         ),
                         if (user.status != 'active') ...[
                           const SizedBox(width: 6),
@@ -474,7 +472,7 @@ class _UserAvatar extends StatelessWidget {
       child: Text(
         name.isNotEmpty ? name[0].toUpperCase() : '?',
         style: TextStyle(
-          color: AppTheme.green,
+          color: AppTheme.accent(context),
           fontSize: size * 0.4,
           fontWeight: FontWeight.w800,
         ),
@@ -486,7 +484,7 @@ class _UserAvatar extends StatelessWidget {
       height: size,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: AppTheme.green.withValues(alpha: 0.12),
+        color: AppTheme.accent(context).withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(size * 0.33),
       ),
       child: url == null

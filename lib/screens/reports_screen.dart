@@ -38,13 +38,13 @@ class ReportsScreen extends ConsumerWidget {
         ],
       ),
       body: report.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.green)),
+        loading: () => Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
           onRetry: () => ref.invalidate(reportProvider),
         ),
         data: (data) => RefreshIndicator(
-          color: AppTheme.green,
+          color: AppTheme.accent(context),
           onRefresh: () => refreshQuietly(ref.refresh(reportProvider.future)),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 4, AppTheme.pageInset, AppTheme.navBarClearance),
@@ -223,7 +223,7 @@ class _PeriodSheet extends StatelessWidget {
                       borderRadius: BorderRadius.circular(14),
                     ),
                     selected: isCurrent,
-                    selectedTileColor: AppTheme.green.withValues(alpha: 0.10),
+                    selectedTileColor: AppTheme.accent(context).withValues(alpha: 0.10),
                     title: Text(
                       option.label,
                       style: TextStyle(
@@ -231,7 +231,7 @@ class _PeriodSheet extends StatelessWidget {
                       ),
                     ),
                     trailing: isCurrent
-                        ? const Icon(Icons.check, size: 20, color: AppTheme.green)
+                        ? Icon(Icons.check, size: 20, color: AppTheme.accent(context))
                         : null,
                     onTap: () => Navigator.of(context).pop(option.value),
                   );
@@ -257,7 +257,7 @@ class _TotalCard extends StatelessWidget {
     final up = (change ?? 0) > 0;
 
     return Card(
-      color: AppTheme.green,
+      color: AppTheme.accent(context),
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -550,7 +550,7 @@ Future<void> _pickExportFormat(BuildContext context, WidgetRef ref) async {
             ('csv', 'CSV file', Icons.description_outlined),
           ])
             ListTile(
-              leading: Icon(icon, color: AppTheme.green),
+              leading: Icon(icon, color: AppTheme.accent(context)),
               title: Text(label),
               onTap: () => Navigator.of(context).pop(format),
             ),

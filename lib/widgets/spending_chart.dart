@@ -95,6 +95,7 @@ class _SpendingChartState extends State<SpendingChart> {
                 buckets: widget.buckets,
                 selected: _selected,
                 onSurface: Theme.of(context).colorScheme.onSurface,
+                accent: AppTheme.accent(context),
                 labelStyle: TextStyle(
                   fontSize: 10,
                   color: AppTheme.faint(context, 0.4),
@@ -114,6 +115,7 @@ class _ChartPainter extends CustomPainter {
     required this.selected,
     required this.labelStyle,
     required this.onSurface,
+    required this.accent,
   });
 
   final List<ReportBucket> buckets;
@@ -123,6 +125,7 @@ class _ChartPainter extends CustomPainter {
   /// The active palette's text colour — a painter has no BuildContext, so the
   /// widget resolves it and hands it down.
   final Color onSurface;
+  final Color accent;
 
   static const _axisHeight = 18.0;
 
@@ -170,8 +173,8 @@ class _ChartPainter extends CustomPainter {
         Paint()
           ..color = switch ((isSelected, bucket.isCurrent, bucket.amount > 0)) {
             (true, _, _) => onSurface,
-            (_, true, _) => AppTheme.greenBright,
-            (_, _, true) => AppTheme.green,
+            (_, true, _) => accent,
+            (_, _, true) => accent,
             _ => onSurface.withValues(alpha: 0.10),
           },
       );

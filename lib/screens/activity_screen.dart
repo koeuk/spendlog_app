@@ -70,13 +70,13 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
             ),
           Expanded(
             child: activity.when(
-              loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.green)),
+              loading: () => Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
               error: (e, _) => LoadFailed(
                 message: apiErrorMessage(e),
                 onRetry: () => ref.invalidate(activityProvider),
               ),
               data: (data) => RefreshIndicator(
-                color: AppTheme.green,
+                color: AppTheme.accent(context),
                 onRefresh: () => refreshQuietly(ref.refresh(activityProvider.future)),
                 child: data.items.isEmpty
                     ? ListView(
@@ -99,13 +99,13 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                         separatorBuilder: (_, _) => const SizedBox(height: 10),
                         itemBuilder: (context, index) {
                           if (index == data.items.length) {
-                            return const Padding(
+                            return Padding(
                               padding: EdgeInsets.symmetric(vertical: 20),
                               child: Center(
                                 child: SizedBox(
                                   width: 22,
                                   height: 22,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.green),
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.accent(context)),
                                 ),
                               ),
                             );
@@ -132,10 +132,10 @@ class _ActivityTile extends StatelessWidget {
   static const _amber = Color(0xFFB45309);
   static const _red = Color(0xFFDC2626);
 
-  Color get _tint => switch (entry.action) {
+  Color _tint(BuildContext context) => switch (entry.action) {
         'deleted' => _red,
         'updated' => _amber,
-        _ => AppTheme.greenBright,
+        _ => AppTheme.accent(context),
       };
 
   IconData get _icon => switch (entry.subject) {
@@ -193,10 +193,10 @@ class _ActivityTile extends StatelessWidget {
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: _tint.withValues(alpha: 0.14),
+                    color: _tint(context).withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(_icon, size: 20, color: _tint),
+                  child: Icon(_icon, size: 20, color: _tint(context)),
                 ),
                 const SizedBox(width: 14),
                 Expanded(

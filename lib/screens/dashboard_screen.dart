@@ -28,13 +28,13 @@ class DashboardScreen extends ConsumerWidget {
       // No app bar: the greeting row below is the header, and it needs the
       // avatar and two lines of text that a title slot cannot hold.
       body: dashboard.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.green)),
+        loading: () => Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
           onRetry: () => ref.invalidate(dashboardProvider),
         ),
         data: (data) => RefreshIndicator(
-          color: AppTheme.green,
+          color: AppTheme.accent(context),
           onRefresh: () {
             // The chart loads on its own provider, so a pull that only
             // refreshed the dashboard call would leave it showing stale money
@@ -152,7 +152,7 @@ class _MonthCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Card(
-      color: AppTheme.green,
+      color: AppTheme.accent(context),
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -403,9 +403,7 @@ class _SpendingCard extends ConsumerWidget {
             SizedBox(
               height: 170,
               child: report.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppTheme.green),
-                ),
+                loading: () => Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
                 error: (e, _) => Center(
                   child: Text(
                     apiErrorMessage(e, fallback: 'Could not load spending.'),

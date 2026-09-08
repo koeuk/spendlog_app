@@ -62,7 +62,7 @@ class SavingsGoalScreen extends ConsumerWidget {
               ],
             ),
       body: goal.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.green)),
+        loading: () => Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
           onRetry: () => ref.invalidate(savingsGoalProvider(uuid)),
@@ -71,7 +71,7 @@ class SavingsGoalScreen extends ConsumerWidget {
           final entries = data.entries ?? const <SavingsEntry>[];
 
           return RefreshIndicator(
-            color: AppTheme.green,
+            color: AppTheme.accent(context),
             onRefresh: () => refreshQuietly(ref.refresh(savingsGoalProvider(uuid).future)),
             child: ListView(
               padding: const EdgeInsets.fromLTRB(
@@ -244,7 +244,7 @@ class _EntryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final deposit = entry.isDeposit;
-    final color = deposit ? AppTheme.greenBright : _red;
+    final color = deposit ? AppTheme.accent(context) : _red;
     final subtitle = [
       if (entry.savedOn.isNotEmpty) dayLabel(entry.savedOn),
       if (entry.note != null && entry.note!.isNotEmpty) entry.note!,

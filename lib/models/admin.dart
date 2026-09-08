@@ -75,3 +75,69 @@ class SpendingSettings {
         advice: json['spending_advice'] as String? ?? '',
       );
 }
+
+/// GET /admin/settings/branding — the name and marks shown across the app.
+class BrandingSettings {
+  const BrandingSettings({
+    required this.appName,
+    this.copyrightHolder,
+    this.logoUrl,
+    this.faviconUrl,
+  });
+
+  final String appName;
+  final String? copyrightHolder;
+  final String? logoUrl;
+  final String? faviconUrl;
+
+  factory BrandingSettings.fromJson(Map<String, dynamic> json) => BrandingSettings(
+        appName: json['app_name'] as String? ?? '',
+        copyrightHolder: json['copyright_holder'] as String?,
+        logoUrl: json['logo'] as String?,
+        faviconUrl: json['favicon'] as String?,
+      );
+}
+
+/// One swatch the server offers — the same list the web page draws.
+class ColorPreset {
+  const ColorPreset({required this.value, required this.label, this.isDefault = false});
+
+  /// '#rrggbb'
+  final String value;
+  final String label;
+  final bool isDefault;
+
+  factory ColorPreset.fromJson(Map<String, dynamic> json) => ColorPreset(
+        value: json['value'] as String? ?? '',
+        label: json['label'] as String? ?? '',
+        isDefault: json['is_default'] as bool? ?? false,
+      );
+}
+
+/// GET /admin/settings/colors — the palette plus its presets.
+class ColorSettings {
+  const ColorSettings({
+    required this.buttonColor,
+    required this.bodyColor,
+    required this.buttonPresets,
+    required this.bodyPresets,
+  });
+
+  final String buttonColor;
+  final String bodyColor;
+  final List<ColorPreset> buttonPresets;
+  final List<ColorPreset> bodyPresets;
+
+  factory ColorSettings.fromJson(Map<String, dynamic> json) => ColorSettings(
+        buttonColor: json['button_color'] as String? ?? '#171717',
+        bodyColor: json['body_color'] as String? ?? '#ffffff',
+        buttonPresets: [
+          for (final p in json['button_presets'] as List<dynamic>? ?? const [])
+            ColorPreset.fromJson(p as Map<String, dynamic>),
+        ],
+        bodyPresets: [
+          for (final p in json['body_presets'] as List<dynamic>? ?? const [])
+            ColorPreset.fromJson(p as Map<String, dynamic>),
+        ],
+      );
+}

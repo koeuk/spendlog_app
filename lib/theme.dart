@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'models/branding.dart';
+
 /// SpendLog's look: glass. Every surface is a translucent pane over a soft
 /// gradient ground ([GlassBackdrop]), with a light hairline where it catches
 /// the edge, one confident green for anything you can act on, and pill-shaped
@@ -95,18 +97,38 @@ abstract final class AppTheme {
   static Color surface(BuildContext context) =>
       Theme.of(context).colorScheme.surface;
 
-  static ThemeData light() => _build(Brightness.light);
+  /// The accent for anything you can act on — the admin's button colour when
+  /// one is chosen, the house green otherwise. Read from the theme so every
+  /// widget follows a change without a restart.
+  static Color accent(BuildContext context) => Theme.of(context).colorScheme.primary;
 
-  static ThemeData dark() => _build(Brightness.dark);
+  /// Text and icons laid on [accent]: white on a deep colour, ink on a pale one.
+  static Color onAccent(BuildContext context) => Theme.of(context).colorScheme.onPrimary;
 
-  static ThemeData _build(Brightness brightness) {
+  static ThemeData light([Branding branding = Branding.stock]) =>
+      _build(Brightness.light, branding);
+
+  static ThemeData dark([Branding branding = Branding.stock]) =>
+      _build(Brightness.dark, branding);
+
+  static ThemeData _build(Brightness brightness, Branding branding) {
     final isDark = brightness == Brightness.dark;
 
+    final chosen = branding.branded ? Branding.parseHex(branding.buttonColor) : null;
+    final accent = chosen ?? green;
+    // A chosen colour is lifted for dark mode the way the house green is:
+    // the deep one reads on cream, the bright one on near-black.
+    final accentBright = chosen == null ? greenBright : Color.lerp(chosen, Colors.white, 0.22)!;
+    final primary = isDark ? accentBright : accent;
+    // Computed, never chosen: the label has to survive whichever fill is
+    // picked, and only the fill knows which end reads on it.
+    final onPrimary = primary.computeLuminance() > 0.45 ? ink : Colors.white;
+
     final scheme = ColorScheme.fromSeed(
-      seedColor: green,
+      seedColor: accent,
       brightness: brightness,
-      // The bright variant reads better on near-black; the deep one on cream.
-      primary: isDark ? greenBright : green,
+      primary: primary,
+      onPrimary: onPrimary,
       surface: isDark ? darkSurface : Colors.white,
     );
 
@@ -116,7 +138,9 @@ abstract final class AppTheme {
     final inputBorder = scheme.onSurface.withValues(
       alpha: isDark ? 0.14 : 0.10,
     );
-    final fill = _fill(isDark);
+    // On a chosen background the cards go solid white, as on the web: glass
+    // over a tinted ground would frost the tint into every card.
+    final fill = !isDark && branding.plainBackground ? Colors.white : _fill(isDark);
     final opaque = isDark ? darkSurface : Colors.white;
 
     return base.copyWith(
@@ -153,11 +177,11 @@ abstract final class AppTheme {
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.resolveWith(
-            (states) => states.contains(WidgetState.selected) ? green : fill,
+            (states) => states.contains(WidgetState.selected) ? primary : fill,
           ),
           foregroundColor: WidgetStateProperty.resolveWith(
             (states) =>
-                states.contains(WidgetState.selected) ? Colors.white : text,
+                states.contains(WidgetState.selected) ? onPrimary : text,
           ),
           side: WidgetStatePropertyAll(BorderSide(color: inputBorder)),
         ),
@@ -197,7 +221,7 @@ abstract final class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(pillRadius),
-          borderSide: const BorderSide(color: greenBright, width: 1.6),
+          borderSide: BorderSide(color: primary, width: 1.6),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(pillRadius),
@@ -210,8 +234,8 @@ abstract final class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: green,
-          foregroundColor: Colors.white,
+          backgroundColor: primary,
+          foregroundColor: onPrimary,
           minimumSize: const Size.fromHeight(52),
           shape: const StadiumBorder(),
           textStyle: GoogleFonts.inter(
@@ -222,7 +246,7 @@ abstract final class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: isDark ? greenBright : green,
+          foregroundColor: primary,
         ),
       ),
       snackBarTheme: SnackBarThemeData(

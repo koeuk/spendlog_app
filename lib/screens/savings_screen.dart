@@ -31,9 +31,7 @@ class SavingsScreen extends ConsumerWidget {
         onPressed: () => showSavingsGoalSheet(context),
       ),
       body: summary.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppTheme.green),
-        ),
+        loading: () => Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
           onRetry: () {
@@ -42,7 +40,7 @@ class SavingsScreen extends ConsumerWidget {
           },
         ),
         data: (data) => RefreshIndicator(
-          color: AppTheme.green,
+          color: AppTheme.accent(context),
           onRefresh: () {
             ref.invalidate(savingsGoalsProvider);
 
@@ -84,7 +82,7 @@ class SavingsScreen extends ConsumerWidget {
     AsyncValue<List<SavingsGoal>> goals,
   ) {
     return goals.when(
-      loading: () => const [
+      loading: () => [
         Padding(
           padding: EdgeInsets.only(top: 32),
           child: Center(
@@ -93,7 +91,7 @@ class SavingsScreen extends ConsumerWidget {
               height: 22,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: AppTheme.green,
+                color: AppTheme.accent(context),
               ),
             ),
           ),
@@ -156,7 +154,7 @@ class _SummaryCard extends StatelessWidget {
     final muted = Colors.white.withValues(alpha: 0.8);
 
     return Card(
-      color: AppTheme.green,
+      color: AppTheme.accent(context),
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -314,20 +312,20 @@ class ReachedBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
       decoration: BoxDecoration(
-        color: AppTheme.greenBright.withValues(alpha: 0.16),
+        color: AppTheme.accent(context).withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(99),
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.check_rounded, size: 13, color: AppTheme.greenBright),
+          Icon(Icons.check_rounded, size: 13, color: AppTheme.accent(context)),
           SizedBox(width: 3),
           Text(
             'Reached',
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
-              color: AppTheme.greenBright,
+              color: AppTheme.accent(context),
             ),
           ),
         ],

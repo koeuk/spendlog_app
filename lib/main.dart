@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'providers/branding_provider.dart';
 import 'providers/theme_provider.dart';
 import 'router.dart';
 import 'theme.dart';
@@ -15,11 +16,14 @@ class SpendLogApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // The admin's look, restored from the last run and refreshed on launch.
+    final branding = ref.watch(brandingProvider);
+
     return MaterialApp.router(
-      title: 'SpendLog',
+      title: branding.name,
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
+      theme: AppTheme.light(branding),
+      darkTheme: AppTheme.dark(branding),
       themeMode: ref.watch(themeModeProvider),
       routerConfig: ref.watch(routerProvider),
       // One gradient ground beneath every route; scaffolds are transparent.
