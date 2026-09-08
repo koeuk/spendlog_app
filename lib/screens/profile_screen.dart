@@ -332,10 +332,43 @@ class _HeaderState extends ConsumerState<_Header> {
             ],
           ),
           const SizedBox(height: 14),
-          Text(
-            user?.name ?? '',
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
+          // The pencil is the one obvious way in to the edit sheet; the rows
+          // below open it too, but a name with nothing beside it reads as
+          // fixed.
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: Text(
+                  user?.name ?? '',
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Material(
+                color: AppTheme.glassFill(context),
+                shape: CircleBorder(
+                  side: BorderSide(color: AppTheme.glassBorder(context)),
+                ),
+                child: InkWell(
+                  onTap: () => _showSheet(context, const _ProfileSheet()),
+                  customBorder: const CircleBorder(),
+                  child: Padding(
+                    padding: const EdgeInsets.all(7),
+                    child: Icon(
+                      Icons.edit_outlined,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
           if (user?.isAdmin ?? false) ...[
             const SizedBox(height: 8),
