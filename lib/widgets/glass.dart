@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 
 /// The ground every screen sits on: flat and neutral, the way Telegram's
-/// settings and chat list are — light grey by day, a deep blue-grey at night.
+/// settings and chat list are — light grey by day, near-black at night.
 /// Cards and inputs are translucent panes over it, so the tone here is what
 /// gives them their slight tint.
 ///
@@ -17,9 +17,9 @@ class GlassBackdrop extends StatelessWidget {
 
   final Widget child;
 
-  /// Telegram's light background and its "night" theme, respectively.
+  /// Telegram's light background by day; the app's own near-black at night.
   static const lightGround = Color(0xFFEFF2F5);
-  static const darkGround = Color(0xFF17212B);
+  static const darkGround = AppTheme.darkGround;
 
   @override
   Widget build(BuildContext context) {
