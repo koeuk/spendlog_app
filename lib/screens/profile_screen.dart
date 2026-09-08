@@ -452,6 +452,9 @@ class _Section extends StatelessWidget {
             ),
           ],
           Card(
+            // Solid, not glass: rows of small text read better on an opaque
+            // pane, and the portrait above already shows the ground.
+            color: AppTheme.surface(context),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(22),
               side: BorderSide(color: hairline),
