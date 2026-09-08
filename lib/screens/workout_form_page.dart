@@ -188,19 +188,7 @@ class _WorkoutFormPageState extends ConsumerState<WorkoutFormPage> {
                 selected: {_unit},
                 onSelectionChanged: (selection) => setState(() => _unit = selection.first),
                 showSelectedIcon: false,
-                style: ButtonStyle(
-                  visualDensity: VisualDensity.compact,
-                  backgroundColor: WidgetStateProperty.resolveWith(
-                    (states) => states.contains(WidgetState.selected)
-                        ? AppTheme.green
-                        : Colors.white,
-                  ),
-                  foregroundColor: WidgetStateProperty.resolveWith(
-                    (states) => states.contains(WidgetState.selected)
-                        ? Colors.white
-                        : Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
+                style: const ButtonStyle(visualDensity: VisualDensity.compact),
               ),
             ],
           ),

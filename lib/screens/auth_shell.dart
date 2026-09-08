@@ -67,7 +67,12 @@ class AuthShell extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 28),
-                  child,
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: child,
+                    ),
+                  ),
                   if (footer != null) ...[
                     const SizedBox(height: 24),
                     Center(child: footer),

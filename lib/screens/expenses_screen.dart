@@ -312,7 +312,7 @@ class _FilterBar extends ConsumerWidget {
                         ),
                         backgroundColor: filters.from != null
                             ? AppTheme.green
-                            : Colors.white,
+                            : AppTheme.glassFill(context),
                         shape: const StadiumBorder(),
                         side: BorderSide(
                           color: AppTheme.faint(context, 0.10),
@@ -339,7 +339,7 @@ class _FilterBar extends ConsumerWidget {
                                 : Theme.of(context).colorScheme.onSurface,
                           ),
                           selectedColor: CategoryStyle.color(category.color),
-                          backgroundColor: AppTheme.surface(context),
+                          backgroundColor: AppTheme.glassFill(context),
                           shape: const StadiumBorder(),
                           side: BorderSide(
                             color: AppTheme.faint(context, 0.10),
@@ -373,7 +373,7 @@ class _FilterBar extends ConsumerWidget {
                       fontSize: 12.5,
                       color: Color(0xFFDC2626),
                     ),
-                    backgroundColor: AppTheme.surface(context),
+                    backgroundColor: AppTheme.glassFill(context),
                     shape: const StadiumBorder(),
                     side: BorderSide(
                       color: AppTheme.faint(context, 0.10),

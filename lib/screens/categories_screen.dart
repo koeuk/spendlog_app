@@ -6,6 +6,7 @@ import '../models/category.dart';
 import '../providers/auth_provider.dart';
 import '../providers/data_providers.dart';
 import '../theme.dart';
+import '../widgets/glass.dart';
 import '../utils/async.dart';
 import '../utils/category_style.dart';
 import '../widgets/common.dart';
@@ -137,13 +138,9 @@ class _CategoryTile extends StatelessWidget {
 
 /// Create or edit one category.
 Future<void> showCategoryForm(BuildContext context, {Category? category}) {
-  return showModalBottomSheet(
+  return showGlassSheet(
     context: context,
     isScrollControlled: true,
-    backgroundColor: AppTheme.surface(context),
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-    ),
     builder: (context) => Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: _CategoryForm(category: category),

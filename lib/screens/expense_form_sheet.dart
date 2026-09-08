@@ -5,6 +5,7 @@ import '../api/api_client.dart';
 import '../models/expense.dart';
 import '../providers/data_providers.dart';
 import '../theme.dart';
+import '../widgets/glass.dart';
 import '../utils/format.dart';
 import '../utils/category_style.dart';
 
@@ -12,13 +13,9 @@ import '../utils/category_style.dart';
 /// every money figure on screen is invalidated — expenses, dashboard,
 /// budgets all shift with one write.
 Future<void> showExpenseForm(BuildContext context, {Expense? expense}) {
-  return showModalBottomSheet(
+  return showGlassSheet(
     context: context,
     isScrollControlled: true,
-    backgroundColor: AppTheme.surface(context),
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-    ),
     builder: (context) => Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: _ExpenseForm(expense: expense),
@@ -244,19 +241,7 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                     onSelectionChanged: (selection) =>
                         setState(() => _currency = selection.first),
                     showSelectedIcon: false,
-                    style: ButtonStyle(
-                      visualDensity: VisualDensity.compact,
-                      backgroundColor: WidgetStateProperty.resolveWith(
-                        (states) => states.contains(WidgetState.selected)
-                            ? AppTheme.green
-                            : Colors.white,
-                      ),
-                      foregroundColor: WidgetStateProperty.resolveWith(
-                        (states) => states.contains(WidgetState.selected)
-                            ? Colors.white
-                            : Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
+                    style: const ButtonStyle(visualDensity: VisualDensity.compact),
                   ),
                 ],
               ),

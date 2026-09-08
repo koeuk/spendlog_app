@@ -174,7 +174,7 @@ class PillSegment extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? AppTheme.green : Colors.white,
+      color: selected ? AppTheme.green : AppTheme.glassFill(context),
       borderRadius: BorderRadius.circular(99),
       child: InkWell(
         onTap: onTap,

@@ -5,6 +5,7 @@ import '../api/api_client.dart';
 import '../models/admin.dart';
 import '../providers/data_providers.dart';
 import '../theme.dart';
+import '../widgets/glass.dart';
 import '../utils/async.dart';
 import '../widgets/common.dart';
 
@@ -269,13 +270,9 @@ Future<void> _showFaqSheet(BuildContext context, WidgetRef ref, {FaqEntry? faq})
   final answer = TextEditingController(text: faq?.answer ?? '');
   var published = faq == null || faq.status == 'published';
 
-  return showModalBottomSheet(
+  return showGlassSheet(
     context: context,
     isScrollControlled: true,
-    backgroundColor: AppTheme.surface(context),
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-    ),
     builder: (sheetContext) => Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(sheetContext).viewInsets.bottom),
       child: StatefulBuilder(

@@ -5,6 +5,7 @@ import '../api/api_client.dart';
 import '../models/report.dart';
 import '../providers/data_providers.dart';
 import '../theme.dart';
+import '../widgets/glass.dart';
 import '../utils/async.dart';
 import '../utils/category_style.dart';
 import '../utils/format.dart';
@@ -158,13 +159,9 @@ class _PeriodPicker extends ConsumerWidget {
   }
 
   Future<void> _choose(BuildContext context, WidgetRef ref, String current) async {
-    final chosen = await showModalBottomSheet<String>(
+    final chosen = await showGlassSheet<String>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
       builder: (context) => _PeriodSheet(options: data.options, current: current),
     );
 
@@ -539,12 +536,8 @@ class _SliceRow extends StatelessWidget {
 Future<void> _pickExportFormat(BuildContext context, WidgetRef ref) async {
   final period = ref.read(reportPeriodProvider);
 
-  final format = await showModalBottomSheet<String>(
+  final format = await showGlassSheet<String>(
     context: context,
-    backgroundColor: AppTheme.surface(context),
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-    ),
     builder: (context) => SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,

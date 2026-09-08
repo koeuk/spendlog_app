@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// SpendLog's look, matching the web app: calm surfaces, one confident green,
-/// generously rounded cards (28) and pill-shaped controls. Both palettes come
-/// off one builder, so light and dark can only drift where they mean to.
+/// SpendLog's look: glass. Every surface is a translucent pane over a soft
+/// gradient ground ([GlassBackdrop]), with a light hairline where it catches
+/// the edge, one confident green for anything you can act on, and pill-shaped
+/// controls. Both palettes come off one builder, so light and dark can only
+/// drift where they mean to.
 abstract final class AppTheme {
   static const green = Color(0xFF2F6B3D);
   static const greenBright = Color(0xFF4B9D5F);
@@ -15,13 +17,13 @@ abstract final class AppTheme {
   static const darkSurface = Color(0xFF1D201D);
   static const paper = Color(0xFFECECEA);
 
-  static const cardRadius = 28.0;
+  static const cardRadius = 24.0;
   static const pillRadius = 28.0;
 
   /// Rows in a list — expenses, categories, users, workouts — are short and
   /// stack tightly, so the panel radius reads as lumpy on them. They round a
   /// step less than the big cards.
-  static const rowRadius = 16.0;
+  static const rowRadius = 18.0;
 
   /// Horizontal breathing room between a tab's content and the window edge.
   /// Matches the floating nav bar's inset so cards and bar share an edge.
@@ -42,6 +44,25 @@ abstract final class AppTheme {
   /// free.
   static Color faint(BuildContext context, double alpha) =>
       Theme.of(context).colorScheme.onSurface.withValues(alpha: alpha);
+
+  /// The translucent pane colour. `strong` is more opaque, for panels that
+  /// carry forms (sheets, dialogs) and must stay legible over busy content.
+  static Color glassFill(BuildContext context, {bool strong = false}) =>
+      _fill(Theme.of(context).brightness == Brightness.dark, strong: strong);
+
+  /// The light edge a pane catches — bright in light mode, barely there in
+  /// dark, where a bright rim would read as a hard outline.
+  static Color glassBorder(BuildContext context) =>
+      _edge(Theme.of(context).brightness == Brightness.dark);
+
+  static Color _fill(bool isDark, {bool strong = false}) {
+    final base = isDark ? const Color(0xFF232823) : Colors.white;
+    final alpha = strong ? (isDark ? 0.94 : 0.92) : (isDark ? 0.55 : 0.62);
+    return base.withValues(alpha: alpha);
+  }
+
+  static Color _edge(bool isDark) =>
+      Colors.white.withValues(alpha: isDark ? 0.08 : 0.80);
 
   /// The card theme's shape at the tighter [rowRadius], hairline border kept.
   static ShapeBorder rowShape(BuildContext context) {
@@ -73,10 +94,15 @@ abstract final class AppTheme {
     final base = ThemeData(useMaterial3: true, colorScheme: scheme);
     final text = isDark ? paper : ink;
     final hairline = scheme.onSurface.withValues(alpha: isDark ? 0.10 : 0.06);
-    final inputBorder = scheme.onSurface.withValues(alpha: 0.12);
+    final inputBorder = scheme.onSurface.withValues(alpha: isDark ? 0.14 : 0.10);
+    final fill = _fill(isDark);
+    final edge = _edge(isDark);
+    final opaque = isDark ? darkSurface : Colors.white;
 
     return base.copyWith(
-      scaffoldBackgroundColor: isDark ? darkGround : cream,
+      // Transparent on purpose: the gradient ground is painted once, beneath
+      // the navigator, by GlassBackdrop.
+      scaffoldBackgroundColor: Colors.transparent,
       textTheme: GoogleFonts.interTextTheme(base.textTheme).apply(
         bodyColor: text,
         displayColor: text,
@@ -89,16 +115,49 @@ abstract final class AppTheme {
       ),
       cardTheme: CardThemeData(
         elevation: 0,
-        color: scheme.surface,
+        color: fill,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(cardRadius),
-          side: BorderSide(color: hairline),
+          side: BorderSide(color: edge),
         ),
         margin: EdgeInsets.zero,
       ),
+      dividerTheme: DividerThemeData(color: hairline, thickness: 1, space: 1),
+      chipTheme: ChipThemeData(
+        backgroundColor: fill,
+        side: BorderSide(color: inputBorder),
+        shape: const StadiumBorder(),
+        labelStyle: TextStyle(color: text),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected) ? green : fill,
+          ),
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected) ? Colors.white : text,
+          ),
+          side: WidgetStatePropertyAll(BorderSide(color: inputBorder)),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: opaque,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(cardRadius)),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: opaque,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: scheme.surface,
+        fillColor: fill,
         contentPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
         hintStyle: TextStyle(color: scheme.onSurface.withValues(alpha: 0.35)),
         border: OutlineInputBorder(

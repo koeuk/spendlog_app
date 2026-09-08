@@ -5,6 +5,7 @@ import '../api/api_client.dart';
 import '../models/budget_summary.dart';
 import '../providers/data_providers.dart';
 import '../theme.dart';
+import '../widgets/glass.dart';
 import '../utils/async.dart';
 import '../utils/category_style.dart';
 import '../utils/format.dart';
@@ -197,13 +198,9 @@ Future<void> showBudgetSheet(
   required BudgetLine line,
   bool overall = false,
 }) {
-  return showModalBottomSheet(
+  return showGlassSheet(
     context: context,
     isScrollControlled: true,
-    backgroundColor: AppTheme.surface(context),
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-    ),
     builder: (context) => Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: _BudgetForm(month: month, line: line, overall: overall),
@@ -378,19 +375,7 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
                       });
                     },
                     showSelectedIcon: false,
-                    style: ButtonStyle(
-                      visualDensity: VisualDensity.compact,
-                      backgroundColor: WidgetStateProperty.resolveWith(
-                        (states) => states.contains(WidgetState.selected)
-                            ? AppTheme.green
-                            : Colors.white,
-                      ),
-                      foregroundColor: WidgetStateProperty.resolveWith(
-                        (states) => states.contains(WidgetState.selected)
-                            ? Colors.white
-                            : Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
+                    style: const ButtonStyle(visualDensity: VisualDensity.compact),
                   ),
                 ],
               ),

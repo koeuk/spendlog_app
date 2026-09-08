@@ -43,7 +43,7 @@ const _destinations = <_Destination>[
   (icon: Icons.person_outline, active: Icons.person_rounded, label: 'Profile'),
 ];
 
-const _radius = 30.0;
+const _radius = 28.0;
 
 /// The gap between the active pill and the bar around it, on every side.
 const _inset = 8.0;
@@ -82,9 +82,9 @@ class _FloatingNavBar extends StatelessWidget {
               filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: AppTheme.surface(context).withValues(alpha: 0.85),
+                  color: AppTheme.glassFill(context, strong: true).withValues(alpha: 0.72),
                   borderRadius: BorderRadius.circular(_radius),
-                  border: Border.all(color: AppTheme.surface(context).withValues(alpha: 0.7)),
+                  border: Border.all(color: AppTheme.glassBorder(context)),
                 ),
                 child: Padding(
                   // Uniform, so the active pill sits the same distance from the

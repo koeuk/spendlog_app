@@ -8,6 +8,7 @@ import '../providers/auth_provider.dart';
 import '../providers/data_providers.dart';
 import '../providers/theme_provider.dart';
 import '../theme.dart';
+import '../widgets/glass.dart';
 
 /// The Profile tab, laid out as a settings list: a header with who is signed
 /// in, then labelled groups of rows. Anything that needs a form — editing the
@@ -118,13 +119,9 @@ class ProfileScreen extends ConsumerWidget {
 }
 
 Future<T?> _showSheet<T>(BuildContext context, Widget child) {
-  return showModalBottomSheet<T>(
+  return showGlassSheet<T>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: AppTheme.surface(context),
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-    ),
     builder: (context) => Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: child,
