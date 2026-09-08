@@ -16,8 +16,14 @@ abstract final class L10n {
   static Map<String, String> _km = const {};
 
   static Future<void> load() async {
-    final raw = await rootBundle.loadString('assets/lang/km.json');
-    _km = (jsonDecode(raw) as Map<String, dynamic>).map((k, v) => MapEntry(k, v as String));
+    try {
+      final raw = await rootBundle.loadString('assets/lang/km.json');
+      _km = (jsonDecode(raw) as Map<String, dynamic>).map((k, v) => MapEntry(k, v as String));
+    } catch (_) {
+      // A build that predates the asset (a hot restart after pubspec changed)
+      // or a corrupt file: English keys are still readable, so start anyway.
+      _km = const {};
+    }
   }
 
   static String tr(String key) => locale == 'km' ? (_km[key] ?? key) : key;
