@@ -67,7 +67,7 @@ const _destinations = <_Destination>[
 /// sheet leads there.
 const _menuIndex = 4;
 
-const _iconSize = 26.0;
+const _iconSize = 24.0;
 
 const _motion = Duration(milliseconds: 200);
 
@@ -96,7 +96,7 @@ class _FloatingNavBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
           child: Row(
             children: [
               for (var i = 0; i < _destinations.length; i++)
@@ -139,7 +139,7 @@ class _NavItem extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          padding: const EdgeInsets.symmetric(vertical: 4),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -157,12 +157,12 @@ class _NavItem extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 3),
               AnimatedDefaultTextStyle(
                 duration: _motion,
                 style: TextStyle(
                   color: color,
-                  fontSize: 12.5,
+                  fontSize: 12,
                   height: 1,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                 ),
