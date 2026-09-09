@@ -203,6 +203,32 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
     }
   }
 
+
+  /// Rewrite the typed amount for the new currency rather than dropping it.
+  /// Falls back to clearing only when the rate has not arrived, which is the
+  /// one case where keeping the number would be a lie about how much money it
+  /// is.
+  void _switchCurrency(String next) {
+    final rate = ref.read(moneySettingsProvider).valueOrNull?.khrPerUsd;
+    final converted = rate == null
+        ? null
+        : convertAmount(
+            _amount.text,
+            from: _currency,
+            to: next,
+            khrPerUsd: rate,
+          );
+
+    setState(() {
+      if (converted != null) {
+        _amount.text = converted;
+      } else if (rate == null) {
+        _amount.clear();
+      }
+      _currency = next;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final withdrawing = _type == 'withdraw';
@@ -289,12 +315,7 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
                     ],
                     selected: {_currency},
                     onSelectionChanged: (selection) {
-                      setState(() {
-                        _currency = selection.first;
-                        // The prefilled amount is the stored USD figure;
-                        // keeping it under a ៛ prefix would store it as riel.
-                        if (_editing) _amount.clear();
-                      });
+                      _switchCurrency(selection.first);
                     },
                     showSelectedIcon: false,
                     style: const ButtonStyle(visualDensity: VisualDensity.compact),

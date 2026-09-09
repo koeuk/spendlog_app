@@ -11,6 +11,7 @@ import '../models/activity.dart';
 import '../models/admin.dart';
 import '../models/branding.dart';
 import '../models/income.dart';
+import '../models/money_settings.dart';
 import '../models/recurring.dart';
 import '../models/report.dart';
 import '../models/savings.dart';
@@ -108,6 +109,16 @@ class SpendLogRepository {
 
   Future<void> deleteExpense(String uuid) =>
       _client.dio.delete('/expenses/$uuid');
+
+  /// The rate and default currency, for entering money. Any signed-in
+  /// account may read them; only an admin may change them.
+  Future<MoneySettings> moneySettings() async {
+    final response = await _client.dio.get('/settings/money');
+
+    return MoneySettings.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
 
   // -------------------------------------------------------------- incomes
 

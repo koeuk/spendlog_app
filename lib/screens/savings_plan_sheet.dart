@@ -112,6 +112,32 @@ class _PlanFormState extends ConsumerState<_PlanForm> {
     }
   }
 
+
+  /// Rewrite the typed amount for the new currency rather than dropping it.
+  /// Falls back to clearing only when the rate has not arrived, which is the
+  /// one case where keeping the number would be a lie about how much money it
+  /// is.
+  void _switchCurrency(String next) {
+    final rate = ref.read(moneySettingsProvider).valueOrNull?.khrPerUsd;
+    final converted = rate == null
+        ? null
+        : convertAmount(
+            _amount.text,
+            from: _currency,
+            to: next,
+            khrPerUsd: rate,
+          );
+
+    setState(() {
+      if (converted != null) {
+        _amount.text = converted;
+      } else if (rate == null) {
+        _amount.clear();
+      }
+      _currency = next;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     // Only the stored row carries a uuid, and only a stored row can be cleared.
@@ -194,13 +220,7 @@ class _PlanFormState extends ConsumerState<_PlanForm> {
                     selected: {_currency},
                     onSelectionChanged: (selection) {
                       setState(() {
-                        _currency = selection.first;
-                        // The field is prefilled with the *stored* plan, which
-                        // is USD. Keeping that figure while the prefix says ៛
-                        // would label $200.00 as ៛200 and store it back as five
-                        // cents; no endpoint exposes the rate, so clearing is
-                        // the only honest option.
-                        _amount.clear();
+                        _switchCurrency(selection.first);
                       });
                     },
                     showSelectedIcon: false,

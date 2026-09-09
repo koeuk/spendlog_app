@@ -80,3 +80,34 @@ String dateParam(DateTime date) =>
 
   return (from: '$ym-01', to: dateParam(last));
 }
+
+/// Rewrite what is typed in an amount field when the currency toggle moves.
+///
+/// The alternative — clearing the field — was what every form did while no
+/// endpoint exposed the rate, and it threw away a figure the person had just
+/// typed. Converting keeps it, and keeps it *true*: the prefix and the number
+/// always mean the same amount of money.
+///
+/// Riel is returned whole. There is no subunit in circulation, and a field
+/// reading `៛615000.00` is noise. Dollars keep their cents.
+///
+/// Returns null when there is nothing to convert — an empty or unparseable
+/// field — so the caller can leave it exactly as the person left it.
+String? convertAmount(String text, {
+  required String from,
+  required String to,
+  required double khrPerUsd,
+}) {
+  if (from == to) return null;
+
+  final value = double.tryParse(text.trim());
+  if (value == null || value <= 0 || khrPerUsd <= 0) return null;
+
+  if (to == 'KHR') return (value * khrPerUsd).round().toString();
+
+  final usd = value / khrPerUsd;
+
+  // Two places, and trailing zeros trimmed: "12.50" but "12" rather than
+  // "12.00", which reads as a figure someone typed rather than a conversion.
+  return usd.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+}

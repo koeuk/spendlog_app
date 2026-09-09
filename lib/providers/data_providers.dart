@@ -8,6 +8,7 @@ import '../models/dashboard.dart';
 import '../models/expense.dart';
 import '../models/expense_filters.dart';
 import '../models/income.dart';
+import '../models/money_settings.dart';
 import '../models/recurring.dart';
 import '../models/report.dart';
 import '../models/savings.dart';
@@ -185,6 +186,12 @@ final expensesProvider =
     );
 
 // ------------------------------------------------------------------ incomes
+
+/// The exchange rate and default currency. Long-lived on purpose — every
+/// amount field reads it, and it changes about never.
+final moneySettingsProvider = FutureProvider<MoneySettings>(
+  (ref) => ref.watch(repositoryProvider).moneySettings(),
+);
 
 final incomeMonthProvider = StateProvider<String>((ref) => currentYm());
 

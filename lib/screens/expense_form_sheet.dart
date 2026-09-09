@@ -185,6 +185,32 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
     }
   }
 
+
+  /// Rewrite the typed amount for the new currency rather than leaving the
+  /// number and swapping the prefix — "12.50" under a ៛ is three tenths of a
+  /// cent, not twelve dollars fifty. Clears only when the rate is unknown,
+  /// the one case where keeping the figure would be a lie.
+  void _switchCurrency(String next) {
+    final rate = ref.read(moneySettingsProvider).valueOrNull?.khrPerUsd;
+    final converted = rate == null
+        ? null
+        : convertAmount(
+            _price.text,
+            from: _currency,
+            to: next,
+            khrPerUsd: rate,
+          );
+
+    setState(() {
+      if (converted != null) {
+        _price.text = converted;
+      } else if (rate == null) {
+        _price.clear();
+      }
+      _currency = next;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(categoriesProvider);
@@ -260,7 +286,7 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                     ],
                     selected: {_currency},
                     onSelectionChanged: (selection) =>
-                        setState(() => _currency = selection.first),
+                        _switchCurrency(selection.first),
                     showSelectedIcon: false,
                     style: const ButtonStyle(visualDensity: VisualDensity.compact),
                   ),
