@@ -232,9 +232,9 @@ class _MoneyRow extends StatelessWidget {
               value: money(savings?.totalSaved ?? '0.00'),
               detail: savings == null
                   ? ''
-                  : savings.goalsCount == 0
-                      ? 'No goals yet'
-                      : '${savings.percent}% of ${money(savings.totalTarget)}',
+                  : savings.hasPlan
+                      ? '${moneySigned(savings.savedThisMonth)} of ${money(savings.planned)} ${tr('this month')}'
+                      : tr('No plan'),
               onTap: () => context.go('/savings'),
             ),
           ),

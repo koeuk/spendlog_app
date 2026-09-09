@@ -214,29 +214,31 @@ final incomesProvider = FutureProvider.autoDispose<List<Income>>((ref) async {
 
 final savingsMonthProvider = StateProvider<String>((ref) => currentYm());
 
-final savingsSummaryProvider = FutureProvider.autoDispose<SavingsSummary>(
-  (ref) => ref
-      .watch(repositoryProvider)
-      .savingsSummary(ref.watch(savingsMonthProvider)),
-);
-
-final savingsGoalsProvider = FutureProvider.autoDispose<List<SavingsGoal>>(
-  (ref) => ref.watch(repositoryProvider).savingsGoals(),
-);
-
-/// One goal with its entries, for the detail screen.
-final savingsGoalProvider = FutureProvider.autoDispose
-    .family<SavingsGoal, String>(
-      (ref, uuid) => ref.watch(repositoryProvider).savingsGoal(uuid),
+/// Keyed by month rather than reading [savingsMonthProvider] itself, so the
+/// sheets can ask for a month without the screen's state getting in the way.
+final savingsSummaryProvider = FutureProvider.autoDispose
+    .family<SavingsSummary, String>(
+      (ref, month) => ref.watch(repositoryProvider).savingsSummary(month),
     );
 
-/// Drops every savings figure a goal or entry write can move. The dashboard
+final savingsEntriesProvider = FutureProvider.autoDispose
+    .family<List<SavingsEntry>, String>(
+      (ref, month) => ref.watch(repositoryProvider).savingsEntries(month),
+    );
+
+/// The stored plan row, for its uuid — Clear needs one to delete.
+final savingsPlanProvider = FutureProvider.autoDispose
+    .family<SavingsPlan?, String>(
+      (ref, month) => ref.watch(repositoryProvider).savingsPlan(month),
+    );
+
+/// Drops every savings figure a plan or entry write can move. The dashboard
 /// carries the savings totals too, so it goes with them.
 void invalidateSavings(WidgetRef ref) {
   ref
-    ..invalidate(savingsGoalsProvider)
     ..invalidate(savingsSummaryProvider)
-    ..invalidate(savingsGoalProvider)
+    ..invalidate(savingsEntriesProvider)
+    ..invalidate(savingsPlanProvider)
     ..invalidate(dashboardProvider);
 }
 

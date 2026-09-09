@@ -1,75 +1,81 @@
 import 'package:flutter/material.dart';
-import '../l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../api/api_client.dart';
+import '../l10n/l10n.dart';
 import '../models/savings.dart';
 import '../providers/data_providers.dart';
 import '../theme.dart';
 import '../utils/async.dart';
-import '../utils/category_style.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
-import 'savings_goal_sheet.dart';
+import 'savings_entry_sheet.dart';
+import 'savings_plan_sheet.dart';
 
-/// Every savings goal, with the totals across them up top.
+/// The month's savings plan and what has actually gone aside against it —
+/// budgets' twin on the other side of the ledger.
 class SavingsScreen extends ConsumerWidget {
   const SavingsScreen({super.key});
+
+  static const _danger = Color(0xFFDC2626);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final month = ref.watch(savingsMonthProvider);
-    final summary = ref.watch(savingsSummaryProvider);
-    final goals = ref.watch(savingsGoalsProvider);
+    final summary = ref.watch(savingsSummaryProvider(month));
+    final entries = ref.watch(savingsEntriesProvider(month));
 
     return Scaffold(
       appBar: AppBar(
+        // A tab-like root: the title starts the line and the stepper takes the
+        // actions slot, exactly as Budgets does.
+        centerTitle: false,
         title: Text(tr('Savings')),
+        actions: [
+          MonthStepper(
+            month: month,
+            onChanged: (ym) => ref.read(savingsMonthProvider.notifier).state = ym,
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       floatingActionButton: AddPill(
-        label: tr('New goal'),
-        onPressed: () => showSavingsGoalSheet(context),
+        label: tr('Add'),
+        onPressed: () => showSavingsEntrySheet(context, month: month),
       ),
       body: summary.when(
-        loading: () => Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
+        loading: () =>
+            Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
           onRetry: () {
-            ref.invalidate(savingsSummaryProvider);
-            ref.invalidate(savingsGoalsProvider);
+            ref.invalidate(savingsSummaryProvider(month));
+            ref.invalidate(savingsEntriesProvider(month));
           },
         ),
         data: (data) => RefreshIndicator(
           color: AppTheme.accent(context),
           onRefresh: () {
-            ref.invalidate(savingsGoalsProvider);
+            ref.invalidate(savingsEntriesProvider(month));
 
-            return refreshQuietly(ref.refresh(savingsSummaryProvider.future));
+            return refreshQuietly(ref.refresh(savingsSummaryProvider(month).future));
           },
           child: ListView(
             padding: const EdgeInsets.fromLTRB(
               AppTheme.pageInset,
-              0,
+              8,
               AppTheme.pageInset,
               AppTheme.navBarClearance + 72,
             ),
             children: [
-              // The month being viewed sits with the card it governs rather
-              // than in the app bar, where it squeezed the title.
-              // Only the "saved this month" line is month-bound; the goals
-              // and their totals are all-time. The stepper is for that line.
-              Align(
-                alignment: Alignment.centerRight,
-                child: MonthStepper(
-                  month: month,
-                  onChanged: (ym) => ref.read(savingsMonthProvider.notifier).state = ym,
-                ),
+              _PlanCard(summary: data, month: month),
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Eyebrow(tr('This month')),
               ),
-              const SizedBox(height: 4),
-              _SummaryCard(summary: data, month: month),
-              const SizedBox(height: 16),
-              ..._goalCards(context, ref, goals),
+              const SizedBox(height: 10),
+              ..._entryRows(context, ref, month, entries),
             ],
           ),
         ),
@@ -77,15 +83,16 @@ class SavingsScreen extends ConsumerWidget {
     );
   }
 
-  List<Widget> _goalCards(
+  List<Widget> _entryRows(
     BuildContext context,
     WidgetRef ref,
-    AsyncValue<List<SavingsGoal>> goals,
+    String month,
+    AsyncValue<List<SavingsEntry>> entries,
   ) {
-    return goals.when(
+    return entries.when(
       loading: () => [
         Padding(
-          padding: EdgeInsets.only(top: 32),
+          padding: const EdgeInsets.only(top: 32),
           child: Center(
             child: SizedBox(
               width: 22,
@@ -101,14 +108,14 @@ class SavingsScreen extends ConsumerWidget {
       error: (e, _) => [
         LoadFailed(
           message: apiErrorMessage(e),
-          onRetry: () => ref.invalidate(savingsGoalsProvider),
+          onRetry: () => ref.invalidate(savingsEntriesProvider(month)),
         ),
       ],
       data: (list) {
         if (list.isEmpty) {
           return [
             Padding(
-              padding: const EdgeInsets.only(top: 40),
+              padding: const EdgeInsets.only(top: 32),
               child: Column(
                 children: [
                   Icon(
@@ -118,7 +125,7 @@ class SavingsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    tr('No goals yet — start one.'),
+                    tr('Nothing put aside this month yet.'),
                     style: TextStyle(color: AppTheme.faint(context, 0.5)),
                   ),
                 ],
@@ -128,26 +135,77 @@ class SavingsScreen extends ConsumerWidget {
         }
 
         return [
-          for (final goal in list) ...[
-            GoalCard(
-              goal: goal,
-              onTap: () => context.go('/savings/${goal.uuid}'),
+          for (final entry in list) ...[
+            _EntryRow(
+              entry: entry,
+              onTap: () => showSavingsEntrySheet(context, entry: entry, month: month),
+              onDelete: () => _deleteEntry(context, ref, entry),
             ),
-            if (goal != list.last) const SizedBox(height: 12),
+            if (entry != list.last) const SizedBox(height: 10),
           ],
         ];
       },
     );
   }
+
+  Future<void> _deleteEntry(
+    BuildContext context,
+    WidgetRef ref,
+    SavingsEntry entry,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(entry.isDeposit
+            ? tr('Delete this deposit?')
+            : tr('Delete this withdrawal?')),
+        content: Text('${money(entry.amount)} · ${dayLabel(entry.savedOn)}'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(tr('Cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: _danger),
+            child: Text(tr('Delete')),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await ref.read(repositoryProvider).deleteSavingsEntry(entry.uuid);
+      invalidateSavings(ref);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
+      }
+    }
+  }
 }
 
-/// The totals across every goal, in the same green as the other headline
-/// cards, with the one month-bound line beneath the bar.
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.summary, required this.month});
+/// The one headline card: the all-time balance up top, then the month against
+/// its plan. Tapping it — or its pencil — sets the plan, the way the Budgets
+/// overall card does.
+class _PlanCard extends StatelessWidget {
+  const _PlanCard({required this.summary, required this.month});
 
   final SavingsSummary summary;
   final String month;
+
+  /// The status read on a green card: pale green once met, pale amber while
+  /// close, plain white otherwise. `CategoryStyle.statusColor` is the budget
+  /// scale, where the colours mean the opposite thing.
+  static Color _statusInk(String status) => switch (status) {
+        'met' => const Color(0xFFDCFCE7),
+        'close' => const Color(0xFFFEF9C3),
+        _ => Colors.white,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -156,146 +214,63 @@ class _SummaryCard extends StatelessWidget {
 
     return Card(
       color: AppTheme.accent(context),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Eyebrow(tr('Total saved'), onBrand: true),
-            const SizedBox(height: 8),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(
-                  money(summary.totalSaved),
-                  style: textTheme.headlineMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    'of ${money(summary.totalTarget)}',
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: muted, fontSize: 14),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            ProgressTrack(percent: summary.percent, onBrand: true),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '${summary.percent}% · ${summary.goalsCount == 1 ? '1 goal' : '${summary.goalsCount} goals'}',
-                    style: TextStyle(color: muted, fontSize: 13),
-                  ),
-                ),
-                Text(
-                  '${moneySigned(summary.savedThisMonth)} in ${monthLabel(month)}',
-                  style: TextStyle(color: muted, fontSize: 13),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// One goal in the list: name, its own coloured bar, and where it stands.
-/// Public so the detail screen can head with the same card, bigger.
-class GoalCard extends StatelessWidget {
-  const GoalCard({super.key, required this.goal, this.onTap});
-
-  final SavingsGoal goal;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = CategoryStyle.color(goal.color);
-
-    return Card(
       child: InkWell(
-        onTap: onTap,
+        onTap: () => showSavingsPlanSheet(
+          context,
+          month: month,
+          planned: summary.planned,
+        ),
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+          padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      goal.name,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ),
-                  if (goal.reached) ...[
-                    const SizedBox(width: 8),
-                    const ReachedBadge(),
-                  ] else
+                  Expanded(child: Eyebrow(tr('Total saved'), onBrand: true)),
+                  Icon(Icons.edit_outlined, size: 18, color: muted),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                money(summary.totalSaved),
+                style: textTheme.headlineMedium
+                    ?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 14),
+              if (summary.hasPlan) ...[
+                ProgressTrack(
+                  percent: summary.percent,
+                  status: summary.status,
+                  onBrand: true,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
                     Text(
-                      '${goal.percent}%',
+                      '${summary.percent}%',
                       style: TextStyle(
+                        color: _statusInk(summary.status),
                         fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.faint(context, 0.55),
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                  if (onTap != null) ...[
-                    const SizedBox(width: 6),
-                    Icon(
-                      Icons.chevron_right,
-                      size: 20,
-                      color: AppTheme.faint(context, 0.25),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${moneySigned(summary.savedThisMonth)} of ${money(summary.planned)} ${tr('this month')}',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: muted, fontSize: 13),
+                      ),
                     ),
                   ],
-                ],
-              ),
-              const SizedBox(height: 12),
-              ProgressTrack(percent: goal.percent, color: color),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${money(goal.saved)} of ${money(goal.targetAmount)}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppTheme.faint(context, 0.55),
-                      ),
-                    ),
-                  ),
-                  if (goal.deadline != null)
-                    Text(
-                      'By ${dayLabel(goal.deadline!)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.faint(context, 0.45),
-                      ),
-                    ),
-                ],
-              ),
+                ),
+              ] else
+                Text(
+                  '${tr('No savings planned for')} ${monthLabel(month)}',
+                  style: TextStyle(color: muted, fontSize: 13),
+                ),
             ],
           ),
         ),
@@ -304,32 +279,85 @@ class GoalCard extends StatelessWidget {
   }
 }
 
-/// The small green pill a goal wears once its saved total meets the target.
-class ReachedBadge extends StatelessWidget {
-  const ReachedBadge({super.key});
+/// One deposit or withdrawal: green with a +, red with a −.
+class _EntryRow extends StatelessWidget {
+  const _EntryRow({
+    required this.entry,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  final SavingsEntry entry;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  static const _red = Color(0xFFDC2626);
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-      decoration: BoxDecoration(
-        color: AppTheme.accent(context).withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(99),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.check_rounded, size: 13, color: AppTheme.accent(context)),
-          SizedBox(width: 3),
-          Text(
-            tr('Reached'),
-            style: TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.accent(context),
-            ),
+    final deposit = entry.isDeposit;
+    final color = deposit ? AppTheme.accent(context) : _red;
+    final note = entry.note;
+
+    return Card(
+      shape: AppTheme.rowShape(context),
+      child: InkWell(
+        onTap: onTap,
+        onLongPress: onDelete,
+        borderRadius: BorderRadius.circular(AppTheme.rowRadius),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  deposit ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                  size: 20,
+                  color: color,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      deposit ? tr('Deposit') : tr('Withdrawal'),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      [
+                        if (entry.savedOn.isNotEmpty) dayLabel(entry.savedOn),
+                        if (note != null && note.isNotEmpty) note,
+                      ].join(' · '),
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.faint(context, 0.45),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '${deposit ? '+' : '−'}${money(entry.amount)}',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: color,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

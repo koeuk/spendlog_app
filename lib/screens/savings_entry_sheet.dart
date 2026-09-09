@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../l10n/l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
+import '../l10n/l10n.dart';
 import '../models/savings.dart';
 import '../providers/data_providers.dart';
 import '../theme.dart';
@@ -10,29 +10,32 @@ import '../utils/format.dart';
 import '../widgets/common.dart';
 import '../widgets/glass.dart';
 
-/// Put money into, or take it out of, one goal. [type] preselects the toggle
-/// — deposit | withdraw — so the two buttons on the goal screen open the same
-/// sheet already set the right way.
+/// Put money aside, or take it back out. Pass [entry] to edit an existing
+/// movement; [type] preselects the toggle on a new one. [month] only seeds the
+/// date, so adding from a month being browsed lands in that month rather than
+/// today — the entry itself belongs to whatever date is chosen.
 Future<void> showSavingsEntrySheet(
   BuildContext context, {
-  required SavingsGoal goal,
+  SavingsEntry? entry,
   String type = 'deposit',
+  String? month,
 }) {
   return showGlassSheet(
     context: context,
     isScrollControlled: true,
     builder: (context) => Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: _EntryForm(goal: goal, initialType: type),
+      child: _EntryForm(entry: entry, initialType: type, month: month),
     ),
   );
 }
 
 class _EntryForm extends ConsumerStatefulWidget {
-  const _EntryForm({required this.goal, required this.initialType});
+  const _EntryForm({this.entry, required this.initialType, this.month});
 
-  final SavingsGoal goal;
+  final SavingsEntry? entry;
   final String initialType;
+  final String? month;
 
   @override
   ConsumerState<_EntryForm> createState() => _EntryFormState();
@@ -40,15 +43,40 @@ class _EntryForm extends ConsumerStatefulWidget {
 
 class _EntryFormState extends ConsumerState<_EntryForm> {
   final _formKey = GlobalKey<FormState>();
-  final _amount = TextEditingController();
-  final _note = TextEditingController();
+  late final _amount = TextEditingController(text: widget.entry?.amount ?? '');
+  late final _note = TextEditingController(text: widget.entry?.note ?? '');
 
-  late String _type = widget.initialType;
-  DateTime _savedOn = DateTime.now();
+  late String _type = widget.entry?.type ?? widget.initialType;
+  late DateTime _savedOn = _initialDate();
+
+  /// What the *entered* amount is denominated in; storage is always USD.
   String _currency = 'USD';
 
   bool _busy = false;
   String? _error;
+
+  bool get _editing => widget.entry != null;
+
+  /// The entry's own date when editing; otherwise today, or — while a past
+  /// month is on screen — that month's first day, so the row lands where the
+  /// list that opened the sheet can show it.
+  DateTime _initialDate() {
+    final saved = widget.entry?.savedOn;
+    if (saved != null && saved.isNotEmpty) {
+      final parsed = DateTime.tryParse(saved);
+      if (parsed != null) return parsed;
+    }
+
+    final today = DateTime.now();
+    final month = widget.month;
+    if (month != null && month != currentYm()) {
+      final first = DateTime.tryParse('$month-01');
+      // A future month has no valid day; the API rejects those, so stay today.
+      if (first != null && first.isBefore(today)) return first;
+    }
+
+    return today;
+  }
 
   @override
   void dispose() {
@@ -78,16 +106,27 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
     });
 
     final note = _note.text.trim();
+    final repo = ref.read(repositoryProvider);
 
     try {
-      await ref.read(repositoryProvider).addSavingsEntry(
-            widget.goal.uuid,
-            type: _type,
-            amount: _amount.text.trim(),
-            savedOn: dateParam(_savedOn),
-            note: note.isEmpty ? null : note,
-            currency: _currency,
-          );
+      if (_editing) {
+        await repo.updateSavingsEntry(
+          widget.entry!.uuid,
+          type: _type,
+          amount: _amount.text.trim(),
+          savedOn: dateParam(_savedOn),
+          note: note.isEmpty ? null : note,
+          currency: _currency,
+        );
+      } else {
+        await repo.addSavingsEntry(
+          type: _type,
+          amount: _amount.text.trim(),
+          savedOn: dateParam(_savedOn),
+          note: note.isEmpty ? null : note,
+          currency: _currency,
+        );
+      }
 
       if (mounted) {
         invalidateSavings(ref);
@@ -96,9 +135,12 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
     } catch (e) {
       // An over-withdrawal is a 422 whose errors.amount says exactly why;
       // apiErrorMessage surfaces that line verbatim.
-      setState(() => _error = apiErrorMessage(e, fallback: 'Could not save the entry.'));
-    } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _error = apiErrorMessage(e, fallback: 'Could not save the entry.');
+        });
+      }
     }
   }
 
@@ -116,19 +158,12 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                widget.goal.name,
+                _editing ? tr('Edit entry') : tr('New savings entry'),
                 textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
                 style: Theme.of(context)
                     .textTheme
                     .titleMedium
                     ?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${money(widget.goal.saved)} saved of ${money(widget.goal.targetAmount)}',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12.5, color: AppTheme.faint(context, 0.5)),
               ),
               const SizedBox(height: 18),
               if (_error != null) ...[
@@ -177,7 +212,7 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
                       ),
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
-                      autofocus: true,
+                      autofocus: !_editing,
                       validator: (v) {
                         final parsed = double.tryParse(v?.trim() ?? '');
                         if (parsed == null || parsed <= 0) return 'Enter an amount.';
@@ -194,8 +229,14 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
                       ButtonSegment(value: 'KHR', label: Text('៛')),
                     ],
                     selected: {_currency},
-                    onSelectionChanged: (selection) =>
-                        setState(() => _currency = selection.first),
+                    onSelectionChanged: (selection) {
+                      setState(() {
+                        _currency = selection.first;
+                        // The prefilled amount is the stored USD figure;
+                        // keeping it under a ៛ prefix would store it as riel.
+                        if (_editing) _amount.clear();
+                      });
+                    },
                     showSelectedIcon: false,
                     style: const ButtonStyle(visualDensity: VisualDensity.compact),
                   ),
@@ -241,7 +282,9 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
-                    : Text(withdrawing ? 'Withdraw' : 'Deposit'),
+                    : Text(_editing
+                        ? tr('Save changes')
+                        : (withdrawing ? tr('Withdraw') : tr('Deposit'))),
               ),
             ],
           ),

@@ -414,5 +414,17 @@
   "Search or type a new source…": "ស្វែងរក ឬវាយប្រភពថ្មី…",
   "No sources yet — type one above.": "មិនទាន់មានប្រភពទេ — វាយមួយនៅខាងលើ។",
   "Use": "ប្រើ",
-  "Where did it come from?": "វាមកពីណា?"
+  "Where did it come from?": "វាមកពីណា?",
+  "Total saved": "សន្សំសរុប",
+  "Savings plan": "ផែនការសន្សំ",
+  "No savings planned for": "មិនមានផែនការសន្សំសម្រាប់",
+  "this month": "ខែនេះ",
+  "No plan": "គ្មានផែនការ",
+  "How much do you mean to put aside this month?": "តើអ្នកចង់សន្សំប៉ុន្មានក្នុងខែនេះ?",
+  "Save plan": "រក្សាទុកផែនការ",
+  "Clear plan": "លុបផែនការ",
+  "New savings entry": "ធាតុសន្សំថ្មី",
+  "Nothing put aside this month yet.": "មិនទាន់មានការសន្សំក្នុងខែនេះទេ។",
+  "Delete this deposit?": "លុបការដាក់ប្រាក់នេះ?",
+  "Delete this withdrawal?": "លុបការដកប្រាក់នេះ?"
 }

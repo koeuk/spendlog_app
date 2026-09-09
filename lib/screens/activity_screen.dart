@@ -144,7 +144,7 @@ class _ActivityTile extends StatelessWidget {
         'income' => Icons.payments_outlined,
         'budget' => Icons.savings_outlined,
         'category' => Icons.category_outlined,
-        'savings_goal' => Icons.flag_outlined,
+        'savings_plan' => Icons.flag_outlined,
         'savings_entry' => Icons.swap_vert_rounded,
         _ => Icons.circle_outlined,
       };

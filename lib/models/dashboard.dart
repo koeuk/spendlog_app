@@ -25,27 +25,44 @@ class BreakdownSlice {
   );
 }
 
-/// The savings block on GET /dashboard — the totals across every goal, so
-/// the home screen can show "$320 of $1,500" without a second call.
+/// The savings block on GET /dashboard — the all-time balance and the month
+/// against its plan, so the home screen can show "$60.00 of $100.00 this
+/// month" without a second call. Every key is optional: an older server, or
+/// one that has yet to be migrated, simply reads as nothing planned.
 class DashboardSavings {
   const DashboardSavings({
-    required this.totalSaved,
-    required this.totalTarget,
+    required this.month,
+    required this.planned,
+    required this.savedThisMonth,
     required this.percent,
-    required this.goalsCount,
+    required this.totalSaved,
   });
 
-  final String totalSaved;
-  final String totalTarget;
+  /// `YYYY-MM`, following the request's `budget_month`.
+  final String month;
+
+  /// The month's plan, or "0.00" when none is set.
+  final String planned;
+
+  /// Deposits minus withdrawals dated within the month; may be negative.
+  final String savedThisMonth;
+
+  /// 0..100, already capped.
   final num percent;
-  final int goalsCount;
+
+  /// Every entry ever, all time.
+  final String totalSaved;
+
+  /// True once the month has a plan to measure against.
+  bool get hasPlan => (double.tryParse(planned) ?? 0) > 0;
 
   factory DashboardSavings.fromJson(Map<String, dynamic> json) =>
       DashboardSavings(
-        totalSaved: json['total_saved'] as String? ?? '0.00',
-        totalTarget: json['total_target'] as String? ?? '0.00',
+        month: json['month'] as String? ?? '',
+        planned: json['planned'] as String? ?? '0.00',
+        savedThisMonth: json['saved_this_month'] as String? ?? '0.00',
         percent: json['percent'] as num? ?? 0,
-        goalsCount: (json['goals_count'] as num?)?.toInt() ?? 0,
+        totalSaved: json['total_saved'] as String? ?? '0.00',
       );
 }
 

@@ -304,15 +304,7 @@ class SpendLogRepository {
 
   // -------------------------------------------------------------- savings
 
-  /// Every goal, newest first, without entries — those come with [savingsGoal].
-  Future<List<SavingsGoal>> savingsGoals() async {
-    final response = await _client.dio.get('/savings');
-
-    return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>)
-        .map((e) => SavingsGoal.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
-
+  /// The month against its plan, plus the all-time balance.
   Future<SavingsSummary> savingsSummary(String month) async {
     final response = await _client.dio.get(
       '/savings/summary',
@@ -324,62 +316,57 @@ class SpendLogRepository {
     );
   }
 
-  /// One goal with its latest entries loaded.
-  Future<SavingsGoal> savingsGoal(String uuid) async {
-    final response = await _client.dio.get('/savings/$uuid');
-
-    return SavingsGoal.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+  /// The month's deposits and withdrawals, newest first. No pagination — a
+  /// month's worth of entries is a short list by nature.
+  Future<List<SavingsEntry>> savingsEntries(String month) async {
+    final response = await _client.dio.get(
+      '/savings',
+      queryParameters: {'month': month},
     );
+
+    return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>)
+        .map((e) => SavingsEntry.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
-  Future<void> createSavingsGoal({
-    required String name,
-    required String targetAmount,
-    String? deadline,
-    String? color,
+  /// The stored plan row for the month, or null when none is set. Only the
+  /// uuid is worth the call — the amount is already in the summary — but that
+  /// uuid is what DELETE needs.
+  Future<SavingsPlan?> savingsPlan(String month) async {
+    final response = await _client.dio.get(
+      '/savings/plan',
+      queryParameters: {'month': month},
+    );
+
+    final data = (response.data as Map<String, dynamic>)['data'];
+
+    return data is Map<String, dynamic> ? SavingsPlan.fromJson(data) : null;
+  }
+
+  /// Upserts the month's plan, the way POST /budgets does its slot. There is
+  /// no separate update call, by design.
+  Future<void> setSavingsPlan({
+    required String month,
+    required String amount,
     String currency = 'USD',
   }) async {
     await _client.dio.post(
-      '/savings',
+      '/savings/plan',
       data: {
-        'name': name,
-        'target_amount': targetAmount,
-        'deadline': deadline,
-        'color': ?color,
+        'month': month,
+        'amount': amount,
         if (currency != 'USD') 'currency': currency,
       },
     );
   }
 
-  Future<void> updateSavingsGoal(
-    String uuid, {
-    required String name,
-    required String targetAmount,
-    String? deadline,
-    String? color,
-    String currency = 'USD',
-  }) async {
-    await _client.dio.patch(
-      '/savings/$uuid',
-      data: {
-        'name': name,
-        'target_amount': targetAmount,
-        // Sent even when null: that is how a deadline gets cleared on edit.
-        'deadline': deadline,
-        'color': ?color,
-        if (currency != 'USD') 'currency': currency,
-      },
-    );
-  }
-
-  Future<void> deleteSavingsGoal(String uuid) =>
-      _client.dio.delete('/savings/$uuid');
+  Future<void> deleteSavingsPlan(String uuid) =>
+      _client.dio.delete('/savings/plan/$uuid');
 
   /// [type] is deposit | withdraw; [amount] is always positive — the server
-  /// applies the sign. A withdrawal past what is saved comes back as a 422.
-  Future<void> addSavingsEntry(
-    String goalUuid, {
+  /// applies the sign. A withdrawal past the all-time balance comes back as a
+  /// 422 whose `errors.amount` says so.
+  Future<void> addSavingsEntry({
     required String type,
     required String amount,
     required String savedOn,
@@ -387,7 +374,7 @@ class SpendLogRepository {
     String currency = 'USD',
   }) async {
     await _client.dio.post(
-      '/savings/$goalUuid/entries',
+      '/savings/entries',
       data: {
         'type': type,
         'amount': amount,
@@ -398,8 +385,29 @@ class SpendLogRepository {
     );
   }
 
-  Future<void> deleteSavingsEntry(String goalUuid, String entryUuid) =>
-      _client.dio.delete('/savings/$goalUuid/entries/$entryUuid');
+  Future<void> updateSavingsEntry(
+    String uuid, {
+    required String type,
+    required String amount,
+    required String savedOn,
+    String? note,
+    String currency = 'USD',
+  }) async {
+    await _client.dio.patch(
+      '/savings/entries/$uuid',
+      data: {
+        'type': type,
+        'amount': amount,
+        'saved_on': savedOn,
+        // Sent even when null: that is how a note gets cleared on edit.
+        'note': note,
+        if (currency != 'USD') 'currency': currency,
+      },
+    );
+  }
+
+  Future<void> deleteSavingsEntry(String uuid) =>
+      _client.dio.delete('/savings/entries/$uuid');
 
   // -------------------------------------------------------------- reports
 

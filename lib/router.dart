@@ -17,7 +17,6 @@ import 'screens/profile_screen.dart';
 import 'screens/recurring_screen.dart';
 import 'screens/reports_screen.dart';
 import 'screens/reset_password_screen.dart';
-import 'screens/savings_goal_screen.dart';
 import 'screens/savings_screen.dart';
 import 'screens/shell_screen.dart';
 import 'screens/splash_screen.dart';
@@ -104,14 +103,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'savings',
                     builder: (context, state) => const SavingsScreen(),
-                    routes: [
-                      GoRoute(
-                        path: ':uuid',
-                        builder: (context, state) => SavingsGoalScreen(
-                          uuid: state.pathParameters['uuid']!,
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),

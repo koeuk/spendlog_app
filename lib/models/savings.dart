@@ -1,5 +1,5 @@
-/// One movement on a goal. `amount` is always the absolute figure; `type`
-/// says which way it went — the sign lives server-side only.
+/// One movement of money set aside. `amount` is always the absolute figure;
+/// `type` says which way it went — the sign lives server-side only.
 class SavingsEntry {
   const SavingsEntry({
     required this.uuid,
@@ -29,84 +29,80 @@ class SavingsEntry {
       );
 }
 
-class SavingsGoal {
-  const SavingsGoal({
+/// How much the month means to set aside — a budget's twin, on the other side
+/// of the ledger. One row per (user, month), upserted by POST /savings/plan.
+class SavingsPlan {
+  const SavingsPlan({
     required this.uuid,
-    required this.name,
-    required this.targetAmount,
-    required this.saved,
-    required this.remaining,
-    required this.percent,
-    required this.reached,
-    required this.color,
-    this.deadline,
-    this.entries,
+    required this.month,
+    required this.amount,
   });
 
   final String uuid;
-  final String name;
-  final String targetAmount;
-  final String saved;
 
-  /// Never below "0.00" — the server floors it.
+  /// `YYYY-MM`.
+  final String month;
+
+  final String amount;
+
+  factory SavingsPlan.fromJson(Map<String, dynamic> json) => SavingsPlan(
+        uuid: json['uuid'] as String,
+        month: json['month'] as String? ?? '',
+        amount: json['amount'] as String? ?? '0.00',
+      );
+}
+
+/// The month against its plan, plus the all-time balance the headline shows.
+class SavingsSummary {
+  const SavingsSummary({
+    required this.month,
+    required this.planned,
+    required this.savedThisMonth,
+    required this.remaining,
+    required this.percent,
+    required this.percentRaw,
+    required this.status,
+    required this.totalSaved,
+    required this.entriesCount,
+  });
+
+  final String month;
+
+  /// The month's plan, or "0.00" when none is set.
+  final String planned;
+
+  /// Deposits minus withdrawals dated within the month; may be negative.
+  final String savedThisMonth;
+
+  /// planned − saved, floored at "0.00".
   final String remaining;
 
   /// 0..100, already capped, so it can drive a bar directly.
   final num percent;
 
-  final bool reached;
+  /// The uncapped figure, which may exceed 100.
+  final num percentRaw;
 
-  /// A CategoryColor enum value; see CategoryStyle.color.
-  final String color;
+  /// ok | close (>=80) | met (>=100)
+  final String status;
 
-  final String? deadline;
-
-  /// Only present on GET /savings/{uuid}; null means "not loaded", not "none".
-  final List<SavingsEntry>? entries;
-
-  factory SavingsGoal.fromJson(Map<String, dynamic> json) => SavingsGoal(
-        uuid: json['uuid'] as String,
-        name: json['name'] as String? ?? '',
-        targetAmount: json['target_amount'] as String? ?? '0.00',
-        saved: json['saved'] as String? ?? '0.00',
-        remaining: json['remaining'] as String? ?? '0.00',
-        percent: json['percent'] as num? ?? 0,
-        reached: json['reached'] as bool? ?? false,
-        color: json['color'] as String? ?? 'slate',
-        deadline: json['deadline'] as String?,
-        entries: json['entries'] is List
-            ? (json['entries'] as List<dynamic>)
-                .map((e) => SavingsEntry.fromJson(e as Map<String, dynamic>))
-                .toList()
-            : null,
-      );
-}
-
-class SavingsSummary {
-  const SavingsSummary({
-    required this.month,
-    required this.totalSaved,
-    required this.totalTarget,
-    required this.percent,
-    required this.goalsCount,
-    required this.savedThisMonth,
-  });
-
-  final String month;
+  /// Every entry ever, all time — the running balance set aside.
   final String totalSaved;
-  final String totalTarget;
-  final num percent;
-  final int goalsCount;
 
-  /// Deposits minus withdrawals dated within the month; may be negative.
-  final String savedThisMonth;
+  final int entriesCount;
+
+  /// True once the month has a plan to measure against.
+  bool get hasPlan => (double.tryParse(planned) ?? 0) > 0;
 
   factory SavingsSummary.fromJson(Map<String, dynamic> json) => SavingsSummary(
         month: json['month'] as String? ?? '',
-        totalSaved: json['total_saved'] as String? ?? '0.00',
-        totalTarget: json['total_target'] as String? ?? '0.00',
-        percent: json['percent'] as num? ?? 0,
-        goalsCount: (json['goals_count'] as num?)?.toInt() ?? 0,
+        planned: json['planned'] as String? ?? '0.00',
         savedThisMonth: json['saved_this_month'] as String? ?? '0.00',
+        remaining: json['remaining'] as String? ?? '0.00',
+        percent: json['percent'] as num? ?? 0,
+        percentRaw: json['percent_raw'] as num? ?? json['percent'] as num? ?? 0,
+        status: json['status'] as String? ?? 'ok',
+        totalSaved: json['total_saved'] as String? ?? '0.00',
+        entriesCount: (json['entries_count'] as num?)?.toInt() ?? 0,
       );
 }
