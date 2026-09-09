@@ -7,9 +7,15 @@ import '../theme.dart';
 /// The app's mark: the uploaded logo when there is one, on a white tile so
 /// any logo reads; otherwise the stock piggy on the accent colour.
 class BrandMark extends ConsumerWidget {
-  const BrandMark({super.key, this.size = 64});
+  const BrandMark({super.key, this.size = 64, this.bare = false});
 
   final double size;
+
+  /// Draw the uploaded logo on its own — no tile, padding or border — for
+  /// places like the splash where it is the whole picture and a box around
+  /// it reads as a card. The stock fallback keeps its tile either way, since
+  /// the tile *is* that mark.
+  final bool bare;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -25,6 +31,18 @@ class BrandMark extends ConsumerWidget {
 
     if (logo == null) return fallback;
 
+    final image = Image.network(
+      logo,
+      fit: BoxFit.contain,
+      errorBuilder: (_, _, _) => Icon(
+        Icons.savings_outlined,
+        color: AppTheme.accent(context),
+        size: size / 2,
+      ),
+    );
+
+    if (bare) return SizedBox(width: size, height: size, child: image);
+
     return Container(
       width: size,
       height: size,
@@ -34,15 +52,7 @@ class BrandMark extends ConsumerWidget {
         borderRadius: radius,
         border: Border.all(color: AppTheme.faint(context, 0.08)),
       ),
-      child: Image.network(
-        logo,
-        fit: BoxFit.contain,
-        errorBuilder: (_, _, _) => Icon(
-          Icons.savings_outlined,
-          color: AppTheme.accent(context),
-          size: size / 2,
-        ),
-      ),
+      child: image,
     );
   }
 }

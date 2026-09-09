@@ -14,8 +14,10 @@ class SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const BrandMark(size: 64),
-            const SizedBox(height: 24),
+            // The logo alone, large: a splash is the one place it is the
+            // whole picture, so no tile around it and room to breathe.
+            const BrandMark(size: 120, bare: true),
+            const SizedBox(height: 32),
             SizedBox(
               width: 22,
               height: 22,
