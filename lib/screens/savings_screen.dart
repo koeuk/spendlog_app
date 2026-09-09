@@ -67,7 +67,7 @@ class SavingsScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              _PlanCard(summary: data, month: month),
+              _SummaryRow(summary: data, month: month),
               const SizedBox(height: 20),
               Padding(
                 padding: const EdgeInsets.only(left: 4),
@@ -191,28 +191,89 @@ class SavingsScreen extends ConsumerWidget {
 /// The one headline card: the all-time balance up top, then the month against
 /// its plan. Tapping it — or its pencil — sets the plan, the way the Budgets
 /// overall card does.
-class _PlanCard extends StatelessWidget {
-  const _PlanCard({required this.summary, required this.month});
+/// The two figures side by side: everything put aside across every month,
+/// and how this month is going against its plan. Two cards rather than one,
+/// because they answer different questions — the running balance never
+/// resets, the month always does.
+class _SummaryRow extends StatelessWidget {
+  const _SummaryRow({required this.summary, required this.month});
 
   final SavingsSummary summary;
   final String month;
 
-  /// The status read on a green card: pale green once met, pale amber while
-  /// close, plain white otherwise. `CategoryStyle.statusColor` is the budget
-  /// scale, where the colours mean the opposite thing.
-  static Color _statusInk(String status) => switch (status) {
-        'met' => const Color(0xFFDCFCE7),
-        'close' => const Color(0xFFFEF9C3),
-        _ => Colors.white,
-      };
+  @override
+  Widget build(BuildContext context) {
+    // IntrinsicHeight so the two stand equally tall when one carries a
+    // progress bar and the other does not.
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: _TotalCard(summary: summary)),
+          const SizedBox(width: 12),
+          Expanded(child: _MonthCard(summary: summary, month: month)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Every deposit less every withdrawal, all months. The running balance.
+class _TotalCard extends StatelessWidget {
+  const _TotalCard({required this.summary});
+
+  final SavingsSummary summary;
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
     final muted = Colors.white.withValues(alpha: 0.8);
 
     return Card(
       color: AppTheme.accent(context),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Eyebrow(tr('Total saved'), onBrand: true),
+            const SizedBox(height: 10),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                money(summary.totalSaved),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              tr('All months'),
+              style: TextStyle(color: muted, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// This month against its plan. The pencil sets the plan, since a plan is a
+/// property of the month and nothing else on the screen owns it.
+class _MonthCard extends StatelessWidget {
+  const _MonthCard({required this.summary, required this.month});
+
+  final SavingsSummary summary;
+  final String month;
+
+  @override
+  Widget build(BuildContext context) {
+    final faint = AppTheme.faint(context, 0.5);
+
+    return Card(
       child: InkWell(
         onTap: () => showSavingsPlanSheet(
           context,
@@ -221,54 +282,49 @@ class _PlanCard extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
-                  Expanded(child: Eyebrow(tr('Total saved'), onBrand: true)),
-                  Icon(Icons.edit_outlined, size: 18, color: muted),
+                  Expanded(child: Eyebrow(tr('This month'))),
+                  Icon(
+                    Icons.edit_outlined,
+                    size: 16,
+                    color: AppTheme.faint(context, 0.4),
+                  ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                money(summary.totalSaved),
-                style: textTheme.headlineMedium
-                    ?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
+              const SizedBox(height: 10),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  moneySigned(summary.savedThisMonth),
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.w800),
+                ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 6),
               if (summary.hasPlan) ...[
                 ProgressTrack(
                   percent: summary.percent,
                   status: summary.status,
-                  onBrand: true,
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Text(
-                      '${summary.percent}%',
-                      style: TextStyle(
-                        color: _statusInk(summary.status),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '${moneySigned(summary.savedThisMonth)} of ${money(summary.planned)} ${tr('this month')}',
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: muted, fontSize: 13),
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 6),
+                Text(
+                  '${summary.percent}% ${tr('of')} ${money(summary.planned)}',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: faint, fontSize: 12),
                 ),
               ] else
                 Text(
-                  '${tr('No savings planned for')} ${monthLabel(month)}',
-                  style: TextStyle(color: muted, fontSize: 13),
+                  tr('No plan set'),
+                  style: TextStyle(color: faint, fontSize: 12),
                 ),
             ],
           ),
