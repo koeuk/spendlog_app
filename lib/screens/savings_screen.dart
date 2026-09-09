@@ -26,19 +26,7 @@ class SavingsScreen extends ConsumerWidget {
     final entries = ref.watch(savingsEntriesProvider(month));
 
     return Scaffold(
-      appBar: AppBar(
-        // A tab-like root: the title starts the line and the stepper takes the
-        // actions slot, exactly as Budgets does.
-        centerTitle: false,
-        title: Text(tr('Savings')),
-        actions: [
-          MonthStepper(
-            month: month,
-            onChanged: (ym) => ref.read(savingsMonthProvider.notifier).state = ym,
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      appBar: AppBar(centerTitle: false, title: Text(tr('Savings'))),
       floatingActionButton: AddPill(
         label: tr('Add'),
         onPressed: () => showSavingsEntrySheet(context, month: month),
@@ -63,11 +51,22 @@ class SavingsScreen extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(
               AppTheme.pageInset,
-              8,
+              0,
               AppTheme.pageInset,
               AppTheme.navBarClearance + 72,
             ),
             children: [
+              // The month sits with the card it governs rather than in the app
+              // bar, where it crowded the title.
+              Align(
+                alignment: Alignment.centerRight,
+                child: MonthStepper(
+                  month: month,
+                  onChanged: (ym) =>
+                      ref.read(savingsMonthProvider.notifier).state = ym,
+                ),
+              ),
+              const SizedBox(height: 4),
               _PlanCard(summary: data, month: month),
               const SizedBox(height: 20),
               Padding(
