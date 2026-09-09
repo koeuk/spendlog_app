@@ -97,6 +97,58 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
     if (picked != null) setState(() => _savedOn = picked);
   }
 
+  /// Deleting from the sheet as well as by long-press: someone who opened an
+  /// entry to fix it often finds it should not exist at all, and a gesture
+  /// they have to already know about is not an answer to that.
+  Future<void> _delete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(widget.entry!.isDeposit
+            ? tr('Delete this deposit?')
+            : tr('Delete this withdrawal?')),
+        content: Text(
+          '${money(widget.entry!.amount)} · ${dayLabel(widget.entry!.savedOn)}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(tr('Cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
+            child: Text(tr('Delete')),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+
+    try {
+      await ref.read(repositoryProvider).deleteSavingsEntry(widget.entry!.uuid);
+
+      if (mounted) {
+        invalidateSavings(ref);
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _error = apiErrorMessage(e, fallback: 'Could not delete the entry.');
+        });
+      }
+    }
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -286,6 +338,18 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
                         ? tr('Save changes')
                         : (withdrawing ? tr('Withdraw') : tr('Deposit'))),
               ),
+              if (_editing) ...[
+                const SizedBox(height: 4),
+                TextButton.icon(
+                  onPressed: _busy ? null : _delete,
+                  icon: const Icon(Icons.delete_outline, size: 18),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFFDC2626),
+                    minimumSize: const Size.fromHeight(46),
+                  ),
+                  label: Text(tr('Delete entry')),
+                ),
+              ],
             ],
           ),
         ),

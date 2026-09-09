@@ -188,9 +188,6 @@ class SavingsScreen extends ConsumerWidget {
   }
 }
 
-/// The one headline card: the all-time balance up top, then the month against
-/// its plan. Tapping it — or its pencil — sets the plan, the way the Budgets
-/// overall card does.
 /// The two figures side by side: everything put aside across every month,
 /// and how this month is going against its plan. Two cards rather than one,
 /// because they answer different questions — the running balance never
