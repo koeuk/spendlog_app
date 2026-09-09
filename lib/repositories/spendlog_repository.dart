@@ -370,6 +370,7 @@ class SpendLogRepository {
     required String type,
     required String amount,
     required String savedOn,
+    String? source,
     String? note,
     String currency = 'USD',
   }) async {
@@ -379,6 +380,7 @@ class SpendLogRepository {
         'type': type,
         'amount': amount,
         'saved_on': savedOn,
+        'source': source,
         'note': note,
         if (currency != 'USD') 'currency': currency,
       },
@@ -390,6 +392,7 @@ class SpendLogRepository {
     required String type,
     required String amount,
     required String savedOn,
+    String? source,
     String? note,
     String currency = 'USD',
   }) async {
@@ -399,6 +402,8 @@ class SpendLogRepository {
         'type': type,
         'amount': amount,
         'saved_on': savedOn,
+        // Sent even when null, so clearing it on edit actually clears it.
+        'source': source,
         // Sent even when null: that is how a note gets cleared on edit.
         'note': note,
         if (currency != 'USD') 'currency': currency,

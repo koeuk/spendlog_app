@@ -350,6 +350,7 @@ class _EntryRow extends StatelessWidget {
     final deposit = entry.isDeposit;
     final color = deposit ? AppTheme.accent(context) : _red;
     final note = entry.note;
+    final source = entry.source;
 
     return Card(
       shape: AppTheme.rowShape(context),
@@ -387,6 +388,8 @@ class _EntryRow extends StatelessWidget {
                     Text(
                       [
                         if (entry.savedOn.isNotEmpty) dayLabel(entry.savedOn),
+                        // Where a deposit came from, when it was named.
+                        if (source != null && source.isNotEmpty) source,
                         if (note != null && note.isNotEmpty) note,
                       ].join(' · '),
                       overflow: TextOverflow.ellipsis,

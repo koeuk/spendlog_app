@@ -6,6 +6,7 @@ class SavingsEntry {
     required this.type,
     required this.amount,
     required this.savedOn,
+    this.source,
     this.note,
   });
 
@@ -16,6 +17,11 @@ class SavingsEntry {
 
   final String amount;
   final String savedOn;
+
+  /// Where a deposit came from, e.g. "Salary". Null on withdrawals, which
+  /// have no origin to name.
+  final String? source;
+
   final String? note;
 
   bool get isDeposit => type == 'deposit';
@@ -23,6 +29,7 @@ class SavingsEntry {
   factory SavingsEntry.fromJson(Map<String, dynamic> json) => SavingsEntry(
         uuid: json['uuid'] as String,
         type: json['type'] as String? ?? 'deposit',
+        source: json['source'] as String?,
         amount: json['amount'] as String? ?? '0.00',
         savedOn: json['saved_on'] as String? ?? '',
         note: json['note'] as String?,

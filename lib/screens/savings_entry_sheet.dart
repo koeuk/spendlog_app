@@ -45,6 +45,7 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
   final _formKey = GlobalKey<FormState>();
   late final _amount = TextEditingController(text: widget.entry?.amount ?? '');
   late final _note = TextEditingController(text: widget.entry?.note ?? '');
+  late final _source = TextEditingController(text: widget.entry?.source ?? '');
 
   late String _type = widget.entry?.type ?? widget.initialType;
   late DateTime _savedOn = _initialDate();
@@ -82,6 +83,7 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
   void dispose() {
     _amount.dispose();
     _note.dispose();
+    _source.dispose();
     super.dispose();
   }
 
@@ -158,6 +160,9 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
     });
 
     final note = _note.text.trim();
+    // Only a deposit has an origin; the server drops one sent with a
+    // withdrawal anyway, but not sending it keeps the two in step.
+    final source = _type == 'withdraw' ? '' : _source.text.trim();
     final repo = ref.read(repositoryProvider);
 
     try {
@@ -167,6 +172,7 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
           type: _type,
           amount: _amount.text.trim(),
           savedOn: dateParam(_savedOn),
+          source: source.isEmpty ? null : source,
           note: note.isEmpty ? null : note,
           currency: _currency,
         );
@@ -175,6 +181,7 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
           type: _type,
           amount: _amount.text.trim(),
           savedOn: dateParam(_savedOn),
+          source: source.isEmpty ? null : source,
           note: note.isEmpty ? null : note,
           currency: _currency,
         );
@@ -301,6 +308,10 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
                   style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.5)),
                 ),
               ],
+              if (!withdrawing) ...[
+                const SizedBox(height: 14),
+                _SourceField(controller: _source),
+              ],
               const SizedBox(height: 14),
               OutlinedButton.icon(
                 onPressed: _pickDate,
@@ -354,6 +365,97 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// "Where from" on a deposit: type freely, with the account's own income
+/// sources offered as you go. A label rather than a link to an income row —
+/// see the API doc — so anything typed here is valid, and the suggestions
+/// are a convenience, not a constraint.
+class _SourceField extends ConsumerStatefulWidget {
+  const _SourceField({required this.controller});
+
+  final TextEditingController controller;
+
+  @override
+  ConsumerState<_SourceField> createState() => _SourceFieldState();
+}
+
+class _SourceFieldState extends ConsumerState<_SourceField> {
+  /// Owned here, not built in `build`: RawAutocomplete keeps a reference to
+  /// it, and a fresh node each frame drops focus mid-typing and leaks the
+  /// old one.
+  final _focus = FocusNode();
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // A failed or pending fetch leaves an ordinary text field, never a
+    // spinner or an error: the source is optional, so suggestions going
+    // missing must not block the entry.
+    final sources = ref.watch(incomeSourcesProvider).valueOrNull ?? const <String>[];
+
+    return RawAutocomplete<String>(
+      textEditingController: widget.controller,
+      focusNode: _focus,
+      optionsBuilder: (value) {
+        final query = value.text.trim().toLowerCase();
+        if (sources.isEmpty) return const Iterable<String>.empty();
+
+        return query.isEmpty
+            ? sources
+            : sources.where((s) => s.toLowerCase().contains(query));
+      },
+      fieldViewBuilder: (context, textController, focusNode, onSubmitted) {
+        return TextFormField(
+          controller: textController,
+          focusNode: focusNode,
+          decoration: InputDecoration(
+            hintText: tr('Where from (optional)'),
+            prefixIcon: Icon(
+              Icons.arrow_downward,
+              size: 18,
+              color: AppTheme.faint(context, 0.45),
+            ),
+          ),
+          maxLength: 255,
+          textCapitalization: TextCapitalization.words,
+          buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
+          onFieldSubmitted: (_) => onSubmitted(),
+        );
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(16),
+            clipBehavior: Clip.antiAlias,
+            child: ConstrainedBox(
+              // Bounded, or a long list would run off the sheet.
+              constraints: const BoxConstraints(maxHeight: 200, maxWidth: 360),
+              child: ListView(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                children: [
+                  for (final option in options)
+                    ListTile(
+                      dense: true,
+                      title: Text(option),
+                      onTap: () => onSelected(option),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
