@@ -172,7 +172,6 @@ class _MonthCard extends StatelessWidget {
           children: [
             Eyebrow(tr('This month'), onBrand: true),
             const SizedBox(height: 10),
-
             Text(
               money(overall.spent),
               style: textTheme.headlineMedium?.copyWith(

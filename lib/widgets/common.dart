@@ -11,10 +11,18 @@ import 'glass.dart';
 /// The small pieces every tab shares — eyebrow labels, progress bars, error
 /// states — kept in one place so the tabs read alike.
 class Eyebrow extends StatelessWidget {
-  const Eyebrow(this.text, {super.key, this.onBrand = false});
+  const Eyebrow(this.text, {super.key, this.onBrand = false, this.color});
 
   final String text;
+
+  /// Sitting on the accent colour rather than the page, so the label is white
+  /// held back to 70% — a full-strength eyebrow competes with the figure it
+  /// introduces.
   final bool onBrand;
+
+  /// Overrides both defaults where a card wants the label at a particular
+  /// weight — the dashboard's month card, where it reads at full white.
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -23,9 +31,11 @@ class Eyebrow extends StatelessWidget {
       style: Theme.of(context).textTheme.labelSmall?.copyWith(
         letterSpacing: 1.2,
         fontWeight: FontWeight.w700,
-        color: onBrand
-            ? Colors.white.withValues(alpha: 0.7)
-            : AppTheme.faint(context, 0.45),
+        color:
+            color ??
+            (onBrand
+                ? Colors.white.withValues(alpha: 0.7)
+                : AppTheme.faint(context, 0.45)),
       ),
     );
   }
@@ -201,7 +211,9 @@ class PillSegment extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(99),
             border: Border.all(
-              color: selected ? AppTheme.accent(context) : AppTheme.faint(context, 0.10),
+              color: selected
+                  ? AppTheme.accent(context)
+                  : AppTheme.faint(context, 0.10),
             ),
           ),
           child: Text(
@@ -239,7 +251,11 @@ class RepeatRow extends StatelessWidget {
     return DropdownButtonFormField<String>(
       initialValue: value ?? _never,
       decoration: InputDecoration(
-        prefixIcon: Icon(Icons.repeat, size: 20, color: AppTheme.faint(context, 0.5)),
+        prefixIcon: Icon(
+          Icons.repeat,
+          size: 20,
+          color: AppTheme.faint(context, 0.5),
+        ),
       ),
       items: [
         DropdownMenuItem(value: _never, child: Text(tr('Never repeats'))),
@@ -337,9 +353,16 @@ class MonthStepper extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(monthLabel(month), style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  monthLabel(month),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(width: 2),
-                Icon(Icons.expand_more, size: 18, color: AppTheme.faint(context, 0.5)),
+                Icon(
+                  Icons.expand_more,
+                  size: 18,
+                  color: AppTheme.faint(context, 0.5),
+                ),
               ],
             ),
           ),
@@ -357,7 +380,10 @@ class MonthStepper extends StatelessWidget {
 
 /// A sheet with a year stepper over a grid of the twelve months. Resolves to
 /// the chosen `YYYY-MM`, or null when dismissed.
-Future<String?> showMonthPicker(BuildContext context, {required String current}) {
+Future<String?> showMonthPicker(
+  BuildContext context, {
+  required String current,
+}) {
   return showGlassSheet<String>(
     context: context,
     builder: (context) => _MonthPickerSheet(current: current),
@@ -375,8 +401,18 @@ class _MonthPickerSheet extends StatefulWidget {
 
 class _MonthPickerSheetState extends State<_MonthPickerSheet> {
   static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   late int _year = int.parse(widget.current.split('-').first);
@@ -390,7 +426,12 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 10, AppTheme.pageInset, 16),
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.pageInset,
+          10,
+          AppTheme.pageInset,
+          16,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -417,7 +458,10 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
                   child: Text(
                     '$_year',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 IconButton(
@@ -447,7 +491,9 @@ class _MonthPickerSheetState extends State<_MonthPickerSheet> {
             const SizedBox(height: 8),
             // The way back after wandering years away.
             TextButton(
-              onPressed: today == widget.current ? null : () => Navigator.of(context).pop(today),
+              onPressed: today == widget.current
+                  ? null
+                  : () => Navigator.of(context).pop(today),
               child: Text(tr('This month')),
             ),
           ],
