@@ -1,28 +1,30 @@
 import 'dart:async';
 
 import '../l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../models/expense.dart';
 import '../models/expense_filters.dart';
+import '../providers/async_notifier.dart';
 import '../providers/data_providers.dart';
+import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
-import '../utils/async.dart';
 import '../utils/category_style.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
 import 'expense_form_sheet.dart';
 
-class ExpensesScreen extends ConsumerStatefulWidget {
+class ExpensesScreen extends StatefulWidget {
   const ExpensesScreen({super.key});
 
   @override
-  ConsumerState<ExpensesScreen> createState() => _ExpensesScreenState();
+  State<ExpensesScreen> createState() => _ExpensesScreenState();
 }
 
-class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
+class _ExpensesScreenState extends State<ExpensesScreen> {
   final _scroll = ScrollController();
   final _search = TextEditingController();
   Timer? _debounce;
@@ -34,7 +36,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
       // Fetch the next page a screenful before the end, so scrolling never
       // visibly hits the bottom.
       if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 600) {
-        ref.read(expensesProvider.notifier).loadMore();
+        context.read<ExpensesNotifier>().loadMore();
       }
     });
   }
@@ -52,16 +54,16 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
       final trimmed = value.trim();
-      ref
-          .read(expenseFiltersProvider.notifier)
-          .update(
-            (f) => f.copyWith(search: () => trimmed.isEmpty ? null : trimmed),
-          );
+      context.read<ExpenseFiltersNotifier>().update(
+        (f) => f.copyWith(search: () => trimmed.isEmpty ? null : trimmed),
+      );
     });
   }
 
   Future<void> _pickDateRange() async {
-    final filters = ref.read(expenseFiltersProvider);
+    // Read before the picker: `context` must not be touched across an await.
+    final filterState = context.read<ExpenseFiltersNotifier>();
+    final filters = filterState.value;
     final picked = await showDateRangePicker(
       context: context,
       firstDate: DateTime(2020),
@@ -79,14 +81,10 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
     String day(DateTime d) =>
         '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-    ref
-        .read(expenseFiltersProvider.notifier)
-        .update(
-          (f) => f.copyWith(
-            from: () => day(picked.start),
-            to: () => day(picked.end),
-          ),
-        );
+    filterState.update(
+      (f) =>
+          f.copyWith(from: () => day(picked.start), to: () => day(picked.end)),
+    );
   }
 
   Future<void> _delete(Expense expense) async {
@@ -112,11 +110,16 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
       ),
     );
 
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
+
+    // Both captured before the delete: `context` must not be touched across an
+    // await, and the refresh must still land if this screen is gone by then.
+    final repository = context.read<SpendLogRepository>();
+    final refresh = moneyInvalidator(context);
 
     try {
-      await ref.read(repositoryProvider).deleteExpense(expense.uuid);
-      invalidateMoney(ref);
+      await repository.deleteExpense(expense.uuid);
+      refresh();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -127,8 +130,8 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final expenses = ref.watch(expensesProvider);
-    final filters = ref.watch(expenseFiltersProvider);
+    final expenses = context.watch<ExpensesNotifier>().state;
+    final filters = context.watch<ExpenseFiltersNotifier>().value;
 
     return Scaffold(
       appBar: AppBar(
@@ -157,15 +160,16 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
   }
 
   Widget _buildList(
-    AsyncValue<ExpensesState> expenses,
+    AsyncState<ExpensesState> expenses,
     ExpenseFilters filters,
   ) {
     return expenses.when(
-      loading: () =>
-          Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
+      loading: () => Center(
+        child: CircularProgressIndicator(color: AppTheme.accent(context)),
+      ),
       error: (e, _) => LoadFailed(
         message: apiErrorMessage(e),
-        onRetry: () => ref.invalidate(expensesProvider),
+        onRetry: () => context.read<ExpensesNotifier>().invalidate(),
       ),
       data: (state) {
         if (state.items.isEmpty) {
@@ -191,7 +195,8 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
 
         return RefreshIndicator(
           color: AppTheme.accent(context),
-          onRefresh: () => refreshQuietly(ref.refresh(expensesProvider.future)),
+          // `refresh` never throws — see AsyncNotifier.refresh.
+          onRefresh: () => context.read<ExpensesNotifier>().refresh(),
           child: ListView.separated(
             controller: _scroll,
             // Clears the floating nav bar and the FAB stacked above it.
@@ -237,7 +242,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
 
 /// Search box plus one scrolling row of chips: every category, the date
 /// range, and — while anything is active — a clear-all.
-class _FilterBar extends ConsumerWidget {
+class _FilterBar extends StatelessWidget {
   const _FilterBar({
     required this.search,
     required this.filters,
@@ -251,9 +256,10 @@ class _FilterBar extends ConsumerWidget {
   final VoidCallback onPickDates;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final categories = ref.watch(categoriesProvider).valueOrNull ?? [];
-    final notifier = ref.read(expenseFiltersProvider.notifier);
+  Widget build(BuildContext context) {
+    final categories =
+        context.watch<CategoriesNotifier>().state.valueOrNull ?? [];
+    final notifier = context.read<ExpenseFiltersNotifier>();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -382,7 +388,7 @@ class _FilterBar extends ConsumerWidget {
                     side: BorderSide(color: AppTheme.faint(context, 0.10)),
                     onPressed: () {
                       search.clear();
-                      notifier.state = const ExpenseFilters();
+                      notifier.value = const ExpenseFilters();
                     },
                   ),
                 ],
@@ -449,8 +455,10 @@ class _ExpenseTile extends StatelessWidget {
                         Flexible(
                           child: Text(
                             [
-                              if (expense.category != null) expense.category!.name,
-                              if (expense.spentOn != null) dayLabel(expense.spentOn!),
+                              if (expense.category != null)
+                                expense.category!.name,
+                              if (expense.spentOn != null)
+                                dayLabel(expense.spentOn!),
                             ].join(' · '),
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -462,7 +470,11 @@ class _ExpenseTile extends StatelessWidget {
                         // Made by a recurring rule, not typed in.
                         if (expense.recurring) ...[
                           const SizedBox(width: 5),
-                          Icon(Icons.repeat, size: 14, color: AppTheme.faint(context, 0.4)),
+                          Icon(
+                            Icons.repeat,
+                            size: 14,
+                            color: AppTheme.faint(context, 0.4),
+                          ),
                         ],
                       ],
                     ),

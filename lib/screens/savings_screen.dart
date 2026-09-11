@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../l10n/l10n.dart';
 import '../models/savings.dart';
+import '../providers/async_notifier.dart';
 import '../providers/data_providers.dart';
+import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
-import '../utils/async.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
 import 'savings_entry_sheet.dart';
@@ -14,16 +15,18 @@ import 'savings_plan_sheet.dart';
 
 /// The month's savings plan and what has actually gone aside against it —
 /// budgets' twin on the other side of the ledger.
-class SavingsScreen extends ConsumerWidget {
+class SavingsScreen extends StatelessWidget {
   const SavingsScreen({super.key});
 
   static const _danger = Color(0xFFDC2626);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final month = ref.watch(savingsMonthProvider);
-    final summary = ref.watch(savingsSummaryProvider(month));
-    final entries = ref.watch(savingsEntriesProvider(month));
+  Widget build(BuildContext context) {
+    final month = context.watch<SavingsMonth>().value;
+    // Keyed by month: one notifier holds a value per month, so the sheets can
+    // ask about a month this screen is not showing.
+    final summary = context.watch<SavingsSummaryNotifier>().state(month);
+    final entries = context.watch<SavingsEntriesNotifier>().state(month);
 
     return Scaffold(
       appBar: AppBar(centerTitle: false, title: Text(tr('Savings'))),
@@ -32,21 +35,23 @@ class SavingsScreen extends ConsumerWidget {
         onPressed: () => showSavingsEntrySheet(context, month: month),
       ),
       body: summary.when(
-        loading: () =>
-            Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
+        loading: () => Center(
+          child: CircularProgressIndicator(color: AppTheme.accent(context)),
+        ),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
           onRetry: () {
-            ref.invalidate(savingsSummaryProvider(month));
-            ref.invalidate(savingsEntriesProvider(month));
+            context.read<SavingsSummaryNotifier>().invalidate(month);
+            context.read<SavingsEntriesNotifier>().invalidate(month);
           },
         ),
         data: (data) => RefreshIndicator(
           color: AppTheme.accent(context),
           onRefresh: () {
-            ref.invalidate(savingsEntriesProvider(month));
+            context.read<SavingsEntriesNotifier>().invalidate(month);
 
-            return refreshQuietly(ref.refresh(savingsSummaryProvider(month).future));
+            // `refresh` never throws — see FamilyAsyncNotifier.refresh.
+            return context.read<SavingsSummaryNotifier>().refresh(month);
           },
           child: ListView(
             padding: const EdgeInsets.fromLTRB(
@@ -62,8 +67,7 @@ class SavingsScreen extends ConsumerWidget {
                 alignment: Alignment.centerRight,
                 child: MonthStepper(
                   month: month,
-                  onChanged: (ym) =>
-                      ref.read(savingsMonthProvider.notifier).state = ym,
+                  onChanged: (ym) => context.read<SavingsMonth>().value = ym,
                 ),
               ),
               const SizedBox(height: 4),
@@ -74,7 +78,7 @@ class SavingsScreen extends ConsumerWidget {
                 child: Eyebrow(tr('This month')),
               ),
               const SizedBox(height: 10),
-              ..._entryRows(context, ref, month, entries),
+              ..._entryRows(context, month, entries),
             ],
           ),
         ),
@@ -84,9 +88,8 @@ class SavingsScreen extends ConsumerWidget {
 
   List<Widget> _entryRows(
     BuildContext context,
-    WidgetRef ref,
     String month,
-    AsyncValue<List<SavingsEntry>> entries,
+    AsyncState<List<SavingsEntry>> entries,
   ) {
     return entries.when(
       loading: () => [
@@ -107,7 +110,8 @@ class SavingsScreen extends ConsumerWidget {
       error: (e, _) => [
         LoadFailed(
           message: apiErrorMessage(e),
-          onRetry: () => ref.invalidate(savingsEntriesProvider(month)),
+          onRetry: () =>
+              context.read<SavingsEntriesNotifier>().invalidate(month),
         ),
       ],
       data: (list) {
@@ -137,8 +141,9 @@ class SavingsScreen extends ConsumerWidget {
           for (final entry in list) ...[
             _EntryRow(
               entry: entry,
-              onTap: () => showSavingsEntrySheet(context, entry: entry, month: month),
-              onDelete: () => _deleteEntry(context, ref, entry),
+              onTap: () =>
+                  showSavingsEntrySheet(context, entry: entry, month: month),
+              onDelete: () => _deleteEntry(context, entry),
             ),
             if (entry != list.last) const SizedBox(height: 10),
           ],
@@ -147,18 +152,16 @@ class SavingsScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _deleteEntry(
-    BuildContext context,
-    WidgetRef ref,
-    SavingsEntry entry,
-  ) async {
+  Future<void> _deleteEntry(BuildContext context, SavingsEntry entry) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text(entry.isDeposit
-            ? tr('Delete this deposit?')
-            : tr('Delete this withdrawal?')),
+        title: Text(
+          entry.isDeposit
+              ? tr('Delete this deposit?')
+              : tr('Delete this withdrawal?'),
+        ),
         content: Text('${money(entry.amount)} · ${dayLabel(entry.savedOn)}'),
         actions: [
           TextButton(
@@ -174,11 +177,14 @@ class SavingsScreen extends ConsumerWidget {
       ),
     );
 
-    if (confirmed != true) return;
+    if (confirmed != true || !context.mounted) return;
+
+    // Read before the delete: `context` must not be touched across an await.
+    final repository = context.read<SpendLogRepository>();
 
     try {
-      await ref.read(repositoryProvider).deleteSavingsEntry(entry.uuid);
-      invalidateSavings(ref);
+      await repository.deleteSavingsEntry(entry.uuid);
+      if (context.mounted) invalidateSavings(context);
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context)
@@ -208,7 +214,9 @@ class _SummaryRow extends StatelessWidget {
         children: [
           Expanded(child: _TotalCard(summary: summary)),
           const SizedBox(width: 12),
-          Expanded(child: _MonthCard(summary: summary, month: month)),
+          Expanded(
+            child: _MonthCard(summary: summary, month: month),
+          ),
         ],
       ),
     );
@@ -241,9 +249,9 @@ class _TotalCard extends StatelessWidget {
               child: Text(
                 money(summary.totalSaved),
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
             const SizedBox(height: 6),
@@ -300,18 +308,13 @@ class _MonthCard extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   moneySigned(summary.savedThisMonth),
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineSmall
+                  style: Theme.of(context).textTheme.headlineSmall
                       ?.copyWith(fontWeight: FontWeight.w800),
                 ),
               ),
               const SizedBox(height: 6),
               if (summary.hasPlan) ...[
-                ProgressTrack(
-                  percent: summary.percent,
-                  status: summary.status,
-                ),
+                ProgressTrack(percent: summary.percent, status: summary.status),
                 const SizedBox(height: 6),
                 Text(
                   '${summary.percent}% ${tr('of')} ${money(summary.planned)}',
@@ -370,7 +373,9 @@ class _EntryRow extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
-                  deposit ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                  deposit
+                      ? Icons.arrow_downward_rounded
+                      : Icons.arrow_upward_rounded,
                   size: 20,
                   color: color,
                 ),

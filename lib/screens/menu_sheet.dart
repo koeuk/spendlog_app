@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
@@ -36,12 +38,7 @@ const _entries = <_Entry>[
     path: '/income',
     admin: false,
   ),
-  (
-    icon: Icons.repeat,
-    label: 'Recurring',
-    path: '/recurring',
-    admin: false,
-  ),
+  (icon: Icons.repeat, label: 'Recurring', path: '/recurring', admin: false),
   (
     icon: Icons.category_outlined,
     label: 'Categories',
@@ -70,13 +67,15 @@ const _entries = <_Entry>[
   ),
 ];
 
-class _MenuSheet extends ConsumerWidget {
+class _MenuSheet extends StatelessWidget {
   const _MenuSheet();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isAdmin = ref.watch(
-      authProvider.select((s) => s.user?.isAdmin ?? false),
+  Widget build(BuildContext context) {
+    // `select`, so the sheet rebuilds only when admin-ness changes — not on
+    // every profile edit that touches the same notifier.
+    final isAdmin = context.select<AuthNotifier, bool>(
+      (auth) => auth.state.user?.isAdmin ?? false,
     );
     final rows = _entries.where((e) => isAdmin || !e.admin).toList();
     final hairline = AppTheme.faint(context, 0.06);
@@ -197,11 +196,11 @@ class _MenuRow extends StatelessWidget {
 /// Dark mode on or off. "Auto" counts as whatever the system currently
 /// shows, and flipping the switch pins the choice; Settings still offers
 /// Auto for anyone who wants it back.
-class _ThemeRow extends ConsumerWidget {
+class _ThemeRow extends StatelessWidget {
   const _ThemeRow();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final ink = Theme.of(context).colorScheme.onSurface;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -229,9 +228,9 @@ class _ThemeRow extends ConsumerWidget {
             value: isDark,
             activeThumbColor: Colors.white,
             activeTrackColor: AppTheme.accent(context),
-            onChanged: (on) => ref
-                .read(themeModeProvider.notifier)
-                .set(on ? ThemeMode.dark : ThemeMode.light),
+            onChanged: (on) => context.read<ThemeModeNotifier>().set(
+              on ? ThemeMode.dark : ThemeMode.light,
+            ),
           ),
         ],
       ),

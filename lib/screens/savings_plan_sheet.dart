@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../l10n/l10n.dart';
 import '../providers/data_providers.dart';
+import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
 import '../utils/format.dart';
 import '../widgets/glass.dart';
@@ -20,16 +21,18 @@ Future<void> showSavingsPlanSheet(
     context: context,
     isScrollControlled: true,
     builder: (context) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: _PlanForm(month: month, planned: planned),
     ),
   );
 }
 
 /// A widget rather than a bare builder so the sheet owns its controller, its
-/// form state and its own `ref` — borrowing the card's would outlive the card
+/// form state and its own `BuildContext` — borrowing the card's would outlive it
 /// whenever the screen rebuilt underneath.
-class _PlanForm extends ConsumerStatefulWidget {
+class _PlanForm extends StatefulWidget {
   const _PlanForm({required this.month, this.planned});
 
   final String month;
@@ -38,13 +41,15 @@ class _PlanForm extends ConsumerStatefulWidget {
   final String? planned;
 
   @override
-  ConsumerState<_PlanForm> createState() => _PlanFormState();
+  State<_PlanForm> createState() => _PlanFormState();
 }
 
-class _PlanFormState extends ConsumerState<_PlanForm> {
+class _PlanFormState extends State<_PlanForm> {
   final _formKey = GlobalKey<FormState>();
   late final _amount = TextEditingController(
-    text: (double.tryParse(widget.planned ?? '') ?? 0) > 0 ? widget.planned : '',
+    text: (double.tryParse(widget.planned ?? '') ?? 0) > 0
+        ? widget.planned
+        : '',
   );
 
   /// What the *entered* amount is denominated in. Storage is always USD,
@@ -68,17 +73,20 @@ class _PlanFormState extends ConsumerState<_PlanForm> {
       _error = null;
     });
 
-    try {
-      await ref.read(repositoryProvider).setSavingsPlan(
-            month: widget.month,
-            amount: _amount.text.trim(),
-            currency: _currency,
-          );
+    // Both captured before the write: `context` must not be touched across an
+    // await, and the refresh must still land if this sheet is gone by then.
+    final repository = context.read<SpendLogRepository>();
+    final refresh = savingsInvalidator(context);
 
-      if (mounted) {
-        invalidateSavings(ref);
-        Navigator.of(context).pop();
-      }
+    try {
+      await repository.setSavingsPlan(
+        month: widget.month,
+        amount: _amount.text.trim(),
+        currency: _currency,
+      );
+
+      refresh();
+      if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -95,13 +103,15 @@ class _PlanFormState extends ConsumerState<_PlanForm> {
       _error = null;
     });
 
-    try {
-      await ref.read(repositoryProvider).deleteSavingsPlan(uuid);
+    // Captured before the write — see _save.
+    final repository = context.read<SpendLogRepository>();
+    final refresh = savingsInvalidator(context);
 
-      if (mounted) {
-        invalidateSavings(ref);
-        Navigator.of(context).pop();
-      }
+    try {
+      await repository.deleteSavingsPlan(uuid);
+
+      refresh();
+      if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -112,13 +122,16 @@ class _PlanFormState extends ConsumerState<_PlanForm> {
     }
   }
 
-
   /// Rewrite the typed amount for the new currency rather than dropping it.
   /// Falls back to clearing only when the rate has not arrived, which is the
   /// one case where keeping the number would be a lie about how much money it
   /// is.
   void _switchCurrency(String next) {
-    final rate = ref.read(moneySettingsProvider).valueOrNull?.khrPerUsd;
+    final rate = context
+        .read<MoneySettingsNotifier>()
+        .state
+        .valueOrNull
+        ?.khrPerUsd;
     final converted = rate == null
         ? null
         : convertAmount(
@@ -141,7 +154,10 @@ class _PlanFormState extends ConsumerState<_PlanForm> {
   @override
   Widget build(BuildContext context) {
     // Only the stored row carries a uuid, and only a stored row can be cleared.
-    final plan = ref.watch(savingsPlanProvider(widget.month)).valueOrNull;
+    final plan = context
+        .watch<SavingsPlanNotifier>()
+        .state(widget.month)
+        .valueOrNull;
 
     return SafeArea(
       child: Padding(
@@ -155,21 +171,25 @@ class _PlanFormState extends ConsumerState<_PlanForm> {
               Text(
                 '${tr('Savings plan')} — ${monthLabel(widget.month)}',
                 textAlign: TextAlign.center,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
+                style: Theme.of(context).textTheme.titleMedium
                     ?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 6),
               Text(
                 tr('How much do you mean to put aside this month?'),
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12.5, color: AppTheme.faint(context, 0.5)),
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: AppTheme.faint(context, 0.5),
+                ),
               ),
               const SizedBox(height: 18),
               if (_error != null) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.errorFill(context),
                     borderRadius: BorderRadius.circular(20),
@@ -177,7 +197,10 @@ class _PlanFormState extends ConsumerState<_PlanForm> {
                   child: Text(
                     _error!,
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: AppTheme.errorInk(context), fontSize: 13),
+                    style: TextStyle(
+                      color: AppTheme.errorInk(context),
+                      fontSize: 13,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -191,14 +214,17 @@ class _PlanFormState extends ConsumerState<_PlanForm> {
                         hintText: tr('Amount'),
                         prefixText: _currency == 'USD' ? '\$ ' : '៛ ',
                       ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       autofocus: true,
                       textInputAction: TextInputAction.done,
                       onFieldSubmitted: (_) => _save(),
                       validator: (v) {
                         final parsed = double.tryParse(v?.trim() ?? '');
-                        if (parsed == null || parsed < 0) return 'Enter an amount.';
+                        if (parsed == null || parsed < 0) {
+                          return 'Enter an amount.';
+                        }
 
                         // Mirrors Currency::minimumInput — ៛100 is the smallest
                         // note in circulation, so anything under it is not an
@@ -224,7 +250,9 @@ class _PlanFormState extends ConsumerState<_PlanForm> {
                       });
                     },
                     showSelectedIcon: false,
-                    style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                    style: const ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                    ),
                   ),
                 ],
               ),
@@ -246,7 +274,9 @@ class _PlanFormState extends ConsumerState<_PlanForm> {
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : Text(tr('Save plan')),
               ),
@@ -255,7 +285,8 @@ class _PlanFormState extends ConsumerState<_PlanForm> {
                 TextButton(
                   onPressed: _busy ? null : () => _clear(plan.uuid),
                   style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFFDC2626)),
+                    foregroundColor: const Color(0xFFDC2626),
+                  ),
                   child: Text(tr('Clear plan')),
                 ),
               ],

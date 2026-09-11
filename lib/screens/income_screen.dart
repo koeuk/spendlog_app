@@ -1,49 +1,53 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../models/income.dart';
+import '../repositories/spendlog_repository.dart';
+import '../providers/async_notifier.dart';
 import '../providers/data_providers.dart';
 import '../theme.dart';
-import '../utils/async.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
 import 'income_form_sheet.dart';
 
 /// One month of income: the total up top, every entry beneath it.
-class IncomeScreen extends ConsumerWidget {
+class IncomeScreen extends StatelessWidget {
   const IncomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final month = ref.watch(incomeMonthProvider);
-    final summary = ref.watch(incomeSummaryProvider);
-    final incomes = ref.watch(incomesProvider);
+  Widget build(BuildContext context) {
+    final month = context.watch<IncomeMonth>().value;
+    final summary = context.watch<IncomeSummaryNotifier>().state;
+    final incomes = context.watch<IncomesNotifier>().state;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(tr('Income')),
-      ),
+      appBar: AppBar(title: Text(tr('Income'))),
       floatingActionButton: AddPill(
         label: tr('Add'),
         onPressed: () => showIncomeForm(context),
       ),
       body: summary.when(
-        loading: () => Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
+        loading: () => Center(
+          child: CircularProgressIndicator(color: AppTheme.accent(context)),
+        ),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
           onRetry: () {
-            ref.invalidate(incomeSummaryProvider);
-            ref.invalidate(incomesProvider);
+            context.read<IncomeSummaryNotifier>().invalidate();
+            context.read<IncomesNotifier>().invalidate();
           },
         ),
         data: (data) => RefreshIndicator(
           color: AppTheme.accent(context),
           onRefresh: () {
-            ref.invalidate(incomesProvider);
+            context.read<IncomesNotifier>().invalidate();
 
-            return refreshQuietly(ref.refresh(incomeSummaryProvider.future));
+            // `refresh` never throws — see AsyncNotifier.refresh.
+            return context.read<IncomeSummaryNotifier>().refresh();
           },
           child: ListView(
             padding: const EdgeInsets.fromLTRB(
@@ -59,13 +63,13 @@ class IncomeScreen extends ConsumerWidget {
                 alignment: Alignment.centerRight,
                 child: MonthStepper(
                   month: month,
-                  onChanged: (ym) => ref.read(incomeMonthProvider.notifier).state = ym,
+                  onChanged: (ym) => context.read<IncomeMonth>().value = ym,
                 ),
               ),
               const SizedBox(height: 4),
               _SummaryCard(summary: data, month: month),
               const SizedBox(height: 16),
-              ..._rows(context, ref, incomes),
+              ..._rows(context, incomes),
             ],
           ),
         ),
@@ -73,13 +77,9 @@ class IncomeScreen extends ConsumerWidget {
     );
   }
 
-  /// The month's entries live on their own provider so a slow list never
+  /// The month's entries live on their own notifier so a slow list never
   /// holds the summary card hostage — and vice versa.
-  List<Widget> _rows(
-    BuildContext context,
-    WidgetRef ref,
-    AsyncValue<List<Income>> incomes,
-  ) {
+  List<Widget> _rows(BuildContext context, AsyncState<List<Income>> incomes) {
     return incomes.when(
       loading: () => [
         Padding(
@@ -99,7 +99,7 @@ class IncomeScreen extends ConsumerWidget {
       error: (e, _) => [
         LoadFailed(
           message: apiErrorMessage(e),
-          onRetry: () => ref.invalidate(incomesProvider),
+          onRetry: () => context.read<IncomesNotifier>().invalidate(),
         ),
       ],
       data: (list) {
@@ -130,7 +130,7 @@ class IncomeScreen extends ConsumerWidget {
             _IncomeTile(
               income: income,
               onTap: () => showIncomeForm(context, income: income),
-              onDelete: () => _delete(context, ref, income),
+              onDelete: () => _delete(context, income),
             ),
             if (income != list.last) const SizedBox(height: 10),
           ],
@@ -139,17 +139,16 @@ class IncomeScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _delete(
-    BuildContext context,
-    WidgetRef ref,
-    Income income,
-  ) async {
+  Future<void> _delete(BuildContext context, Income income) async {
     final confirmed = await confirmDeleteIncome(context, income);
-    if (confirmed != true) return;
+    if (confirmed != true || !context.mounted) return;
+
+    // Read before the delete: `context` must not be touched across an await.
+    final repository = context.read<SpendLogRepository>();
 
     try {
-      await ref.read(repositoryProvider).deleteIncome(income.uuid);
-      invalidateIncome(ref);
+      await repository.deleteIncome(income.uuid);
+      if (context.mounted) invalidateIncome(context);
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context)
@@ -301,7 +300,11 @@ class _IncomeTile extends StatelessWidget {
                           // Made by a recurring rule, not typed in.
                           if (income.recurring) ...[
                             const SizedBox(width: 5),
-                            Icon(Icons.repeat, size: 14, color: AppTheme.faint(context, 0.4)),
+                            Icon(
+                              Icons.repeat,
+                              size: 14,
+                              color: AppTheme.faint(context, 0.4),
+                            ),
                           ],
                         ],
                       ),

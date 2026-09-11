@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../models/category.dart';
 import '../providers/auth_provider.dart';
 import '../providers/data_providers.dart';
+import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
 import '../widgets/glass.dart';
-import '../utils/async.dart';
 import '../utils/category_style.dart';
 import '../widgets/common.dart';
 
@@ -17,31 +19,36 @@ import '../widgets/common.dart';
 /// Writes need the `categories:write` ability *and* the admin policy. A
 /// non-admin's token never carries the ability, so the controls are hidden
 /// rather than offered and then refused with a 403.
-class CategoriesScreen extends ConsumerWidget {
+class CategoriesScreen extends StatelessWidget {
   const CategoriesScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final categories = ref.watch(categoriesProvider);
-    final canWrite = ref.watch(authProvider).user?.isAdmin ?? false;
+  Widget build(BuildContext context) {
+    final categories = context.watch<CategoriesNotifier>().state;
+    final canWrite = context.select<AuthNotifier, bool>(
+      (auth) => auth.state.user?.isAdmin ?? false,
+    );
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(tr('Categories')),
-      ),
+      appBar: AppBar(title: Text(tr('Categories'))),
       floatingActionButton: canWrite
-          ? AddPill(label: tr('New'), onPressed: () => showCategoryForm(context))
+          ? AddPill(
+              label: tr('New'),
+              onPressed: () => showCategoryForm(context),
+            )
           : null,
       body: categories.when(
-        loading: () => Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
+        loading: () => Center(
+          child: CircularProgressIndicator(color: AppTheme.accent(context)),
+        ),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
-          onRetry: () => ref.invalidate(categoriesProvider),
+          onRetry: () => context.read<CategoriesNotifier>().invalidate(),
         ),
         data: (list) => RefreshIndicator(
           color: AppTheme.accent(context),
-          onRefresh: () =>
-              refreshQuietly(ref.refresh(categoriesProvider.future)),
+          // `refresh` never throws — see AsyncNotifier.refresh.
+          onRefresh: () => context.read<CategoriesNotifier>().refresh(),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(
               AppTheme.pageInset,
@@ -157,16 +164,16 @@ Future<void> showCategoryForm(BuildContext context, {Category? category}) {
   );
 }
 
-class _CategoryForm extends ConsumerStatefulWidget {
+class _CategoryForm extends StatefulWidget {
   const _CategoryForm({this.category});
 
   final Category? category;
 
   @override
-  ConsumerState<_CategoryForm> createState() => _CategoryFormState();
+  State<_CategoryForm> createState() => _CategoryFormState();
 }
 
-class _CategoryFormState extends ConsumerState<_CategoryForm> {
+class _CategoryFormState extends State<_CategoryForm> {
   final _formKey = GlobalKey<FormState>();
   late final _name = TextEditingController(text: widget.category?.name ?? '');
 
@@ -184,11 +191,6 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
     super.dispose();
   }
 
-  void _refresh() {
-    // A renamed or recoloured category shows up on every screen that draws one.
-    invalidateMoney(ref);
-  }
-
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -197,7 +199,11 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
       _error = null;
     });
 
-    final repo = ref.read(repositoryProvider);
+    // Both captured before the write: a sheet dragged away mid-save must not
+    // cost the refresh, and `context` must not be touched across an await.
+    final repo = context.read<SpendLogRepository>();
+    // A renamed or recoloured category shows up on every screen that draws one.
+    final refresh = moneyInvalidator(context);
 
     try {
       if (_editing) {
@@ -215,7 +221,7 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
         );
       }
 
-      _refresh();
+      refresh();
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
@@ -250,13 +256,17 @@ class _CategoryFormState extends ConsumerState<_CategoryForm> {
       ),
     );
 
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
 
     setState(() => _busy = true);
 
+    // Captured before the delete — see _submit.
+    final repo = context.read<SpendLogRepository>();
+    final refresh = moneyInvalidator(context);
+
     try {
-      await ref.read(repositoryProvider).deleteCategory(widget.category!.uuid);
-      _refresh();
+      await repo.deleteCategory(widget.category!.uuid);
+      refresh();
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {

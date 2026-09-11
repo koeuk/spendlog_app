@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../models/expense.dart';
 import '../models/recurring.dart';
 import '../providers/data_providers.dart';
+import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/glass.dart';
@@ -20,7 +23,9 @@ Future<void> showExpenseForm(BuildContext context, {Expense? expense}) {
     context: context,
     isScrollControlled: true,
     builder: (context) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: _ExpenseForm(expense: expense),
     ),
   );
@@ -28,16 +33,16 @@ Future<void> showExpenseForm(BuildContext context, {Expense? expense}) {
 
 const _newCategoryMarker = '__new__';
 
-class _ExpenseForm extends ConsumerStatefulWidget {
+class _ExpenseForm extends StatefulWidget {
   const _ExpenseForm({this.expense});
 
   final Expense? expense;
 
   @override
-  ConsumerState<_ExpenseForm> createState() => _ExpenseFormState();
+  State<_ExpenseForm> createState() => _ExpenseFormState();
 }
 
-class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
+class _ExpenseFormState extends State<_ExpenseForm> {
   final _formKey = GlobalKey<FormState>();
   late final _item = TextEditingController(text: widget.expense?.item ?? '');
   late final _price = TextEditingController(text: widget.expense?.price ?? '');
@@ -89,7 +94,11 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
       _error = null;
     });
 
-    final repo = ref.read(repositoryProvider);
+    // All captured before the write: `context` must not be touched across an
+    // await, and the refreshes must still land if this sheet is gone by then.
+    final repo = context.read<SpendLogRepository>();
+    final refreshMoney = moneyInvalidator(context);
+    final refreshRecurring = recurringInvalidator(context);
 
     try {
       if (_editing) {
@@ -98,7 +107,9 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
           item: _item.text.trim(),
           price: _price.text.trim(),
           spentOn: _spentOnParam,
-          categoryUuid: _categoryUuid == _newCategoryMarker ? null : _categoryUuid,
+          categoryUuid: _categoryUuid == _newCategoryMarker
+              ? null
+              : _categoryUuid,
           currency: _currency,
         );
       } else if (_repeat != null) {
@@ -118,20 +129,26 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
           item: _item.text.trim(),
           price: _price.text.trim(),
           spentOn: _spentOnParam,
-          categoryUuid: _categoryUuid == _newCategoryMarker ? null : _categoryUuid,
-          newCategory:
-              _categoryUuid == _newCategoryMarker ? _newCategory.text.trim() : null,
+          categoryUuid: _categoryUuid == _newCategoryMarker
+              ? null
+              : _categoryUuid,
+          newCategory: _categoryUuid == _newCategoryMarker
+              ? _newCategory.text.trim()
+              : null,
           currency: _currency,
         );
       }
 
-      if (mounted) {
-        invalidateMoney(ref);
-        if (_repeat != null) invalidateRecurring(ref);
-        Navigator.of(context).pop();
-      }
+      refreshMoney();
+      if (_repeat != null) refreshRecurring();
+      if (mounted) Navigator.of(context).pop();
     } catch (e) {
-      setState(() => _error = apiErrorMessage(e, fallback: 'Could not save the expense.'));
+      setState(
+        () => _error = apiErrorMessage(
+          e,
+          fallback: 'Could not save the expense.',
+        ),
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -147,7 +164,9 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text(tr('Delete this expense?')),
-        content: Text('${widget.expense!.item} — ${money(widget.expense!.price)}'),
+        content: Text(
+          '${widget.expense!.item} — ${money(widget.expense!.price)}',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -155,43 +174,55 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFDC2626),
+            ),
             child: Text(tr('Delete')),
           ),
         ],
       ),
     );
 
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
 
     setState(() {
       _busy = true;
       _error = null;
     });
 
-    try {
-      await ref.read(repositoryProvider).deleteExpense(widget.expense!.uuid);
+    // Captured before the delete — see _submit.
+    final repo = context.read<SpendLogRepository>();
+    final refreshMoney = moneyInvalidator(context);
 
-      invalidateMoney(ref);
+    try {
+      await repo.deleteExpense(widget.expense!.uuid);
+
+      refreshMoney();
 
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
         setState(() {
           _busy = false;
-          _error = apiErrorMessage(e, fallback: 'Could not delete the expense.');
+          _error = apiErrorMessage(
+            e,
+            fallback: 'Could not delete the expense.',
+          );
         });
       }
     }
   }
-
 
   /// Rewrite the typed amount for the new currency rather than leaving the
   /// number and swapping the prefix — "12.50" under a ៛ is three tenths of a
   /// cent, not twelve dollars fifty. Clears only when the rate is unknown,
   /// the one case where keeping the figure would be a lie.
   void _switchCurrency(String next) {
-    final rate = ref.read(moneySettingsProvider).valueOrNull?.khrPerUsd;
+    final rate = context
+        .read<MoneySettingsNotifier>()
+        .state
+        .valueOrNull
+        ?.khrPerUsd;
     final converted = rate == null
         ? null
         : convertAmount(
@@ -213,7 +244,7 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
 
   @override
   Widget build(BuildContext context) {
-    final categories = ref.watch(categoriesProvider);
+    final categories = context.watch<CategoriesNotifier>().state;
 
     return SafeArea(
       child: Padding(
@@ -227,15 +258,16 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
               Text(
                 _editing ? 'Edit expense' : 'Add an expense',
                 textAlign: TextAlign.center,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
+                style: Theme.of(context).textTheme.titleMedium
                     ?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 18),
               if (_error != null) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.errorFill(context),
                     borderRadius: BorderRadius.circular(20),
@@ -243,7 +275,10 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                   child: Text(
                     _error!,
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: AppTheme.errorInk(context), fontSize: 13),
+                    style: TextStyle(
+                      color: AppTheme.errorInk(context),
+                      fontSize: 13,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -253,8 +288,9 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                 decoration: InputDecoration(hintText: tr('What was it?')),
                 textCapitalization: TextCapitalization.sentences,
                 autofocus: !_editing,
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Name the expense.' : null,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Name the expense.'
+                    : null,
               ),
               const SizedBox(height: 14),
               Row(
@@ -266,11 +302,14 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                         hintText: tr('Price'),
                         prefixText: _currency == 'USD' ? '\$ ' : '៛ ',
                       ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       validator: (v) {
                         final parsed = double.tryParse(v?.trim() ?? '');
-                        if (parsed == null || parsed < 0) return 'Enter a price.';
+                        if (parsed == null || parsed < 0) {
+                          return 'Enter a price.';
+                        }
 
                         return null;
                       },
@@ -288,7 +327,9 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                     onSelectionChanged: (selection) =>
                         _switchCurrency(selection.first),
                     showSelectedIcon: false,
-                    style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                    style: const ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                    ),
                   ),
                 ],
               ),
@@ -301,7 +342,9 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: AppTheme.accent(context)),
+                        strokeWidth: 2,
+                        color: AppTheme.accent(context),
+                      ),
                     ),
                   ),
                 ),
@@ -336,7 +379,11 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                         value: _newCategoryMarker,
                         child: Row(
                           children: [
-                            Icon(Icons.add, size: 18, color: AppTheme.accent(context)),
+                            Icon(
+                              Icons.add,
+                              size: 18,
+                              color: AppTheme.accent(context),
+                            ),
                             SizedBox(width: 10),
                             Text(tr('New category…')),
                           ],
@@ -351,9 +398,12 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: _newCategory,
-                  decoration: InputDecoration(hintText: tr('New category name')),
+                  decoration: InputDecoration(
+                    hintText: tr('New category name'),
+                  ),
                   textCapitalization: TextCapitalization.words,
-                  validator: (v) => _categoryUuid == _newCategoryMarker &&
+                  validator: (v) =>
+                      _categoryUuid == _newCategoryMarker &&
                           (v == null || v.trim().isEmpty)
                       ? 'Name the category.'
                       : null,
@@ -395,14 +445,16 @@ class _ExpenseFormState extends ConsumerState<_ExpenseForm> {
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : Text(
                         _editing
                             ? 'Save changes'
                             : _repeat != null
-                                ? tr('Add repeating expense')
-                                : 'Add expense',
+                            ? tr('Add repeating expense')
+                            : 'Add expense',
                       ),
               ),
               if (_editing) ...[

@@ -1,13 +1,15 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:spendlog_app/api/api_client.dart';
 import 'package:spendlog_app/api/env.dart';
 import 'package:spendlog_app/main.dart';
 import 'package:spendlog_app/models/user.dart';
+import 'package:spendlog_app/providers/app_providers.dart';
 import 'package:spendlog_app/providers/auth_provider.dart';
-import 'package:spendlog_app/router.dart';
 import 'package:spendlog_app/screens/budgets_screen.dart';
 import 'package:spendlog_app/screens/dashboard_screen.dart';
 import 'package:spendlog_app/screens/expenses_screen.dart';
@@ -25,9 +27,9 @@ void main() {
     // reaching for the keychain or the network.
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
-      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
-      (call) async => null,
-    );
+          const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+          (call) async => null,
+        );
   });
 
   test('app graph compiles', () {
@@ -65,27 +67,43 @@ void main() {
     expect(url.path, '/api/v1');
   });
 
-  test('the router survives an auth change', () async {
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
+  testWidgets('the router survives an auth change', (tester) async {
+    late BuildContext context;
 
-    final before = container.read(routerProvider);
-    await pumpEventQueue();
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: appProviders(),
+        child: Builder(
+          builder: (inner) {
+            context = inner;
 
-    container.read(authProvider.notifier).setUser(
-          const User(
-            uuid: 'u-1',
-            name: 'Ada Lovelace',
-            email: 'ada@example.com',
-            isAdmin: false,
-          ),
-        );
-    await pumpEventQueue();
+            return const SizedBox();
+          },
+        ),
+      ),
+    );
+
+    final before = context.read<GoRouter>();
+
+    context.read<AuthNotifier>().setUser(
+      const User(
+        uuid: 'u-1',
+        name: 'Ada Lovelace',
+        email: 'ada@example.com',
+        isAdmin: false,
+      ),
+    );
+    await tester.pump();
 
     // Rebuilding the router on an auth change re-applies `initialLocation`
     // and throws away all four tabs' navigation state — so saving a profile
-    // would bounce the user back to the dashboard.
-    expect(identical(before, container.read(routerProvider)), isTrue);
+    // would bounce the user back to the dashboard. It is declared with
+    // `create`, not an `update`, precisely so an auth change cannot.
+    expect(identical(before, context.read<GoRouter>()), isTrue);
+
+    // AuthNotifier holds the splash for three seconds at launch; letting the
+    // timer run out keeps the teardown from reporting it as pending.
+    await tester.pump(const Duration(seconds: 4));
   });
 
   group('a rejected token', () {
@@ -112,8 +130,9 @@ void main() {
 
     test('stays quiet for the endpoints reached without a token', () async {
       var fired = false;
-      final subscription =
-          ApiClient.instance.onUnauthorized.listen((_) => fired = true);
+      final subscription = ApiClient.instance.onUnauthorized.listen(
+        (_) => fired = true,
+      );
       addTearDown(subscription.cancel);
 
       await expectLater(
@@ -140,14 +159,13 @@ class _StatusAdapter implements HttpClientAdapter {
     RequestOptions options,
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
-  ) async =>
-      ResponseBody.fromString(
-        '{"message":"Unauthenticated."}',
-        statusCode,
-        headers: {
-          Headers.contentTypeHeader: [Headers.jsonContentType],
-        },
-      );
+  ) async => ResponseBody.fromString(
+    '{"message":"Unauthenticated."}',
+    statusCode,
+    headers: {
+      Headers.contentTypeHeader: [Headers.jsonContentType],
+    },
+  );
 
   @override
   void close({bool force = false}) {}

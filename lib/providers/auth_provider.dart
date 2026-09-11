@@ -1,12 +1,10 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 
 import '../api/api_client.dart';
 import '../models/user.dart';
 import '../repositories/auth_repository.dart';
-
-final authRepositoryProvider = Provider<AuthRepository>(
-  (ref) => AuthRepository(ApiClient.instance),
-);
 
 /// The app's one source of truth for "who is signed in".
 ///
@@ -22,27 +20,31 @@ class AuthState {
   bool get signedIn => user != null;
 }
 
-class AuthNotifier extends Notifier<AuthState> {
-  @override
-  AuthState build() {
+class AuthNotifier extends ChangeNotifier {
+  AuthNotifier(this._repository) {
     // A token revoked mid-session (from the web's token list, say) must land
     // the user back on login rather than leaving every screen showing
     // "Unauthenticated." with no way out.
-    final subscription =
+    _subscription =
         ApiClient.instance.onUnauthorized.listen((_) => _dropSession());
-    ref.onDispose(subscription.cancel);
 
     _restore();
-
-    return const AuthState(restoring: true);
   }
 
-  AuthRepository get _repository => ref.read(authRepositoryProvider);
+  final AuthRepository _repository;
+
+  late final StreamSubscription<void> _subscription;
+
+  AuthState _state = const AuthState(restoring: true);
+
+  AuthState get state => _state;
+
+  bool _disposed = false;
 
   /// Signed out *by the server*, so unlike [signOut] there is nothing to
   /// revoke — the interceptor has already dropped the dead token.
   void _dropSession() {
-    if (state.signedIn || state.restoring) state = const AuthState();
+    if (_state.signedIn || _state.restoring) _set(const AuthState());
   }
 
   /// How long the splash is held at launch.
@@ -65,7 +67,7 @@ class AuthNotifier extends Notifier<AuthState> {
 
     await held;
 
-    state = restored;
+    _set(restored);
   }
 
   Future<AuthState> _resolveSession() async {
@@ -92,19 +94,29 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> signIn(String email, String password) async {
-    state = AuthState(user: await _repository.login(email, password));
+    _set(AuthState(user: await _repository.login(email, password)));
   }
 
   Future<void> signOut() async {
     await _repository.logout();
-    state = const AuthState();
+    _set(const AuthState());
   }
 
   /// Called after a profile edit so the whole app shows the new details
   /// without waiting for the next /me.
-  void setUser(User user) {
-    state = AuthState(user: user);
+  void setUser(User user) => _set(AuthState(user: user));
+
+  void _set(AuthState next) {
+    if (_disposed) return;
+
+    _state = next;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _subscription.cancel();
+    super.dispose();
   }
 }
-
-final authProvider = NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);

@@ -1,25 +1,26 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../models/activity.dart';
 import '../providers/auth_provider.dart';
 import '../providers/data_providers.dart';
 import '../theme.dart';
-import '../utils/async.dart';
 import '../widgets/common.dart';
 
 /// Who did what, newest first. Your own by default; admins can widen it to
 /// everyone, at which point each line also names the person.
-class ActivityScreen extends ConsumerStatefulWidget {
+class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
 
   @override
-  ConsumerState<ActivityScreen> createState() => _ActivityScreenState();
+  State<ActivityScreen> createState() => _ActivityScreenState();
 }
 
-class _ActivityScreenState extends ConsumerState<ActivityScreen> {
+class _ActivityScreenState extends State<ActivityScreen> {
   final _scroll = ScrollController();
 
   @override
@@ -29,7 +30,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
       // Fetch the next page a screenful before the end, so scrolling never
       // visibly hits the bottom.
       if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 600) {
-        ref.read(activityProvider.notifier).loadMore();
+        context.read<ActivityNotifier>().loadMore();
       }
     });
   }
@@ -42,9 +43,11 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin = ref.watch(authProvider.select((s) => s.user?.isAdmin ?? false));
-    final everyone = ref.watch(activityEveryoneProvider);
-    final activity = ref.watch(activityProvider);
+    final isAdmin = context.select<AuthNotifier, bool>(
+      (auth) => auth.state.user?.isAdmin ?? false,
+    );
+    final everyone = context.watch<ActivityEveryone>().value;
+    final activity = context.watch<ActivityNotifier>().state;
 
     return Scaffold(
       appBar: AppBar(title: Text(tr('Activity log'))),
@@ -52,17 +55,26 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
         children: [
           if (isAdmin)
             Padding(
-              padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 4, AppTheme.pageInset - 6, 12),
+              padding: const EdgeInsets.fromLTRB(
+                AppTheme.pageInset,
+                4,
+                AppTheme.pageInset - 6,
+                12,
+              ),
               child: Row(
                 children: [
-                  for (final (label, value) in const [('Mine', false), ('Everyone', true)])
+                  for (final (label, value) in const [
+                    ('Mine', false),
+                    ('Everyone', true),
+                  ])
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.only(right: 6),
                         child: PillSegment(
                           label: label,
                           selected: everyone == value,
-                          onTap: () => ref.read(activityEveryoneProvider.notifier).state = value,
+                          onTap: () =>
+                              context.read<ActivityEveryone>().value = value,
                         ),
                       ),
                     ),
@@ -71,31 +83,46 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
             ),
           Expanded(
             child: activity.when(
-              loading: () => Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
+              loading: () => Center(
+                child: CircularProgressIndicator(
+                  color: AppTheme.accent(context),
+                ),
+              ),
               error: (e, _) => LoadFailed(
                 message: apiErrorMessage(e),
-                onRetry: () => ref.invalidate(activityProvider),
+                onRetry: () => context.read<ActivityNotifier>().invalidate(),
               ),
               data: (data) => RefreshIndicator(
                 color: AppTheme.accent(context),
-                onRefresh: () => refreshQuietly(ref.refresh(activityProvider.future)),
+                // `refresh` never throws — see AsyncNotifier.refresh.
+                onRefresh: () => context.read<ActivityNotifier>().refresh(),
                 child: data.items.isEmpty
                     ? ListView(
                         padding: const EdgeInsets.only(top: 80),
                         children: [
-                          Icon(Icons.history, size: 44, color: AppTheme.faint(context, 0.25)),
+                          Icon(
+                            Icons.history,
+                            size: 44,
+                            color: AppTheme.faint(context, 0.25),
+                          ),
                           const SizedBox(height: 12),
                           Text(
                             tr('Nothing logged yet.'),
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: AppTheme.faint(context, 0.5)),
+                            style: TextStyle(
+                              color: AppTheme.faint(context, 0.5),
+                            ),
                           ),
                         ],
                       )
                     : ListView.separated(
                         controller: _scroll,
                         padding: const EdgeInsets.fromLTRB(
-                          AppTheme.pageInset, 0, AppTheme.pageInset, AppTheme.navBarClearance),
+                          AppTheme.pageInset,
+                          0,
+                          AppTheme.pageInset,
+                          AppTheme.navBarClearance,
+                        ),
                         itemCount: data.items.length + (data.hasMore ? 1 : 0),
                         separatorBuilder: (_, _) => const SizedBox(height: 10),
                         itemBuilder: (context, index) {
@@ -106,13 +133,19 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                                 child: SizedBox(
                                   width: 22,
                                   height: 22,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.accent(context)),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppTheme.accent(context),
+                                  ),
                                 ),
                               ),
                             );
                           }
 
-                          return _ActivityTile(entry: data.items[index], showUser: everyone);
+                          return _ActivityTile(
+                            entry: data.items[index],
+                            showUser: everyone,
+                          );
                         },
                       ),
               ),
@@ -134,20 +167,20 @@ class _ActivityTile extends StatelessWidget {
   static const _red = Color(0xFFDC2626);
 
   Color _tint(BuildContext context) => switch (entry.action) {
-        'deleted' => _red,
-        'updated' => _amber,
-        _ => AppTheme.accent(context),
-      };
+    'deleted' => _red,
+    'updated' => _amber,
+    _ => AppTheme.accent(context),
+  };
 
   IconData get _icon => switch (entry.subject) {
-        'expense' => Icons.receipt_long_outlined,
-        'income' => Icons.payments_outlined,
-        'budget' => Icons.savings_outlined,
-        'category' => Icons.category_outlined,
-        'savings_plan' => Icons.flag_outlined,
-        'savings_entry' => Icons.swap_vert_rounded,
-        _ => Icons.circle_outlined,
-      };
+    'expense' => Icons.receipt_long_outlined,
+    'income' => Icons.payments_outlined,
+    'budget' => Icons.savings_outlined,
+    'category' => Icons.category_outlined,
+    'savings_plan' => Icons.flag_outlined,
+    'savings_entry' => Icons.swap_vert_rounded,
+    _ => Icons.circle_outlined,
+  };
 
   /// "Created expense", "Deleted savings entry".
   String get _headline {
@@ -159,7 +192,20 @@ class _ActivityTile extends StatelessWidget {
   }
 
   static String _when(DateTime at) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final day = DateTime(at.year, at.month, at.day);
@@ -167,7 +213,9 @@ class _ActivityTile extends StatelessWidget {
         '${at.hour.toString().padLeft(2, '0')}:${at.minute.toString().padLeft(2, '0')}';
 
     if (day == today) return '${tr('Today')} · $time';
-    if (day == today.subtract(const Duration(days: 1))) return '${tr('Yesterday')} · $time';
+    if (day == today.subtract(const Duration(days: 1))) {
+      return '${tr('Yesterday')} · $time';
+    }
 
     return '${months[at.month - 1]} ${at.day} · $time';
   }
@@ -208,7 +256,10 @@ class _ActivityTile extends StatelessWidget {
                         entry.label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
                       ),
                       const SizedBox(height: 3),
                       Text(meta, style: TextStyle(fontSize: 12, color: muted)),
@@ -230,7 +281,9 @@ class _ActivityTile extends StatelessWidget {
                         TextSpan(text: '${change.fieldLabel}: '),
                         TextSpan(
                           text: change.from ?? '—',
-                          style: const TextStyle(decoration: TextDecoration.lineThrough),
+                          style: const TextStyle(
+                            decoration: TextDecoration.lineThrough,
+                          ),
                         ),
                         const TextSpan(text: '  →  '),
                         TextSpan(

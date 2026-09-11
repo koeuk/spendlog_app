@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
 import '../theme.dart';
 import '../api/api_client.dart';
-import '../providers/auth_provider.dart';
+import '../repositories/auth_repository.dart';
 import 'auth_shell.dart';
 
-class ForgotPasswordScreen extends ConsumerStatefulWidget {
+class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  ConsumerState<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
 
@@ -37,13 +39,19 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     });
 
     final email = _email.text.trim();
+    // Captured before the await: `context` must not be touched across one.
+    final repository = context.read<AuthRepository>();
 
     try {
-      await ref.read(authRepositoryProvider).requestResetCode(email);
+      await repository.requestResetCode(email);
 
-      if (mounted) context.go('/reset-password?email=${Uri.encodeComponent(email)}');
+      if (mounted) {
+        context.go('/reset-password?email=${Uri.encodeComponent(email)}');
+      }
     } catch (e) {
-      setState(() => _error = apiErrorMessage(e, fallback: 'Could not send the code.'));
+      setState(
+        () => _error = apiErrorMessage(e, fallback: 'Could not send the code.'),
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -65,7 +73,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           children: [
             if (_error != null) ...[
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: AppTheme.errorFill(context),
                   borderRadius: BorderRadius.circular(20),
@@ -73,7 +84,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 child: Text(
                   _error!,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppTheme.errorInk(context), fontSize: 13),
+                  style: TextStyle(
+                    color: AppTheme.errorInk(context),
+                    fontSize: 13,
+                  ),
                 ),
               ),
               const SizedBox(height: 14),
@@ -86,7 +100,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               autofocus: true,
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _submit(),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter your email.' : null,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Enter your email.' : null,
             ),
             const SizedBox(height: 20),
             FilledButton(
@@ -95,7 +110,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : Text(tr('Email me a code')),
             ),

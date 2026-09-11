@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 
 import '../providers/branding_provider.dart';
 import '../theme.dart';
 
 /// The app's mark: the uploaded logo when there is one, on a white tile so
 /// any logo reads; otherwise the stock piggy on the accent colour.
-class BrandMark extends ConsumerWidget {
+class BrandMark extends StatelessWidget {
   const BrandMark({super.key, this.size = 64, this.bare = false});
 
   final double size;
@@ -18,15 +18,26 @@ class BrandMark extends ConsumerWidget {
   final bool bare;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final logo = ref.watch(brandingProvider.select((b) => b.logoUrl));
+  Widget build(BuildContext context) {
+    // `select`, not `watch`: the mark redraws only when the logo itself
+    // changes, not when an admin moves the accent colour.
+    final logo = context.select<BrandingNotifier, String?>(
+      (branding) => branding.state.logoUrl,
+    );
     final radius = BorderRadius.circular(size * 0.31);
 
     final fallback = Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(color: AppTheme.accent(context), borderRadius: radius),
-      child: Icon(Icons.savings_outlined, color: AppTheme.onAccent(context), size: size / 2),
+      decoration: BoxDecoration(
+        color: AppTheme.accent(context),
+        borderRadius: radius,
+      ),
+      child: Icon(
+        Icons.savings_outlined,
+        color: AppTheme.onAccent(context),
+        size: size / 2,
+      ),
     );
 
     if (logo == null) return fallback;
@@ -58,4 +69,5 @@ class BrandMark extends ConsumerWidget {
 }
 
 /// Stock-safe read of the app name for titles.
-String brandName(WidgetRef ref) => ref.watch(brandingProvider.select((b) => b.name));
+String brandName(BuildContext context) =>
+    context.select<BrandingNotifier, String>((branding) => branding.state.name);

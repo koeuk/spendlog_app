@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 
 import '../models/branding.dart';
 import '../providers/branding_provider.dart';
@@ -15,7 +15,7 @@ import '../theme.dart';
 /// Installed once, in `MaterialApp.builder`, beneath the navigator, so every
 /// route (signed-out screens included) shares the same ground and the
 /// scaffolds themselves can stay transparent.
-class GlassBackdrop extends ConsumerWidget {
+class GlassBackdrop extends StatelessWidget {
   const GlassBackdrop({super.key, required this.child});
 
   final Widget child;
@@ -25,13 +25,15 @@ class GlassBackdrop extends ConsumerWidget {
   static const darkGround = AppTheme.darkGround;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final branding = ref.watch(brandingProvider);
+    final branding = context.watch<BrandingNotifier>().state;
 
     // A chosen background paints flat, as on the web. Light mode only: an
     // admin picking Cream should not switch dark mode off for everyone.
-    final chosen = branding.plainBackground ? Branding.parseHex(branding.bodyColor) : null;
+    final chosen = branding.plainBackground
+        ? Branding.parseHex(branding.bodyColor)
+        : null;
 
     return ColoredBox(
       color: isDark ? darkGround : (chosen ?? lightGround),
@@ -48,7 +50,9 @@ class GlassPanel extends StatelessWidget {
   const GlassPanel({
     super.key,
     required this.child,
-    this.borderRadius = const BorderRadius.all(Radius.circular(AppTheme.cardRadius)),
+    this.borderRadius = const BorderRadius.all(
+      Radius.circular(AppTheme.cardRadius),
+    ),
     this.blur = 22,
     this.strong = false,
   });

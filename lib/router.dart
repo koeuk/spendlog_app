@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'providers/auth_provider.dart';
@@ -21,31 +19,23 @@ import 'screens/savings_screen.dart';
 import 'screens/shell_screen.dart';
 import 'screens/splash_screen.dart';
 
-/// Turns auth changes into a `refreshListenable` tick.
+/// The app's one router, built once and handed [auth] as its
+/// `refreshListenable`.
 ///
-/// The router must be built exactly once. Watching [authProvider] here instead
-/// would hand `MaterialApp.router` a brand new [GoRouter] on every auth
-/// change — including the [AuthNotifier.setUser] that follows a profile save —
-/// which re-applies `initialLocation` and destroys every tab's navigation
-/// state. Refreshing only re-runs `redirect` against the current location.
-class _AuthRefresh extends ChangeNotifier {
-  _AuthRefresh(Ref ref) {
-    ref.listen(authProvider, (_, _) => notifyListeners());
-  }
-}
-
-final routerProvider = Provider<GoRouter>((ref) {
-  final refresh = _AuthRefresh(ref);
-  ref.onDispose(refresh.dispose);
-
-  final router = GoRouter(
+/// Built once on purpose. Rebuilding it on every auth change — including the
+/// [AuthNotifier.setUser] that follows a profile save — would hand
+/// `MaterialApp.router` a brand new [GoRouter], which re-applies
+/// `initialLocation` and destroys every tab's navigation state. An
+/// [AuthNotifier] is already a `Listenable`, so passing it straight through
+/// re-runs `redirect` against the current location and nothing else.
+GoRouter buildRouter(AuthNotifier auth) {
+  return GoRouter(
     initialLocation: '/splash',
-    refreshListenable: refresh,
+    refreshListenable: auth,
     // Auth is the only routing rule: signed out belongs on the auth screens,
     // signed in belongs in the app, and restoring belongs on the splash.
     redirect: (context, state) {
-      // Read rather than watch: the listenable above drives re-evaluation.
-      final auth = ref.read(authProvider);
+      final session = auth.state;
 
       final onAuthPages =
           state.matchedLocation == '/login' ||
@@ -53,11 +43,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           state.matchedLocation.startsWith('/reset-password');
 
       // Returning the location we are already on would be a redirect loop.
-      if (auth.restoring) {
+      if (session.restoring) {
         return state.matchedLocation == '/splash' ? null : '/splash';
       }
-      if (!auth.signedIn && !onAuthPages) return '/login';
-      if (auth.signedIn && (onAuthPages || state.matchedLocation == '/splash')) return '/';
+      if (!session.signedIn && !onAuthPages) return '/login';
+      if (session.signedIn &&
+          (onAuthPages || state.matchedLocation == '/splash')) {
+        return '/';
+      }
 
       return null;
     },
@@ -165,8 +158,4 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
-
-  ref.onDispose(router.dispose);
-
-  return router;
-});
+}

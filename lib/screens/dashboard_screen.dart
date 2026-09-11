@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
 import '../api/api_client.dart';
@@ -10,39 +12,42 @@ import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../providers/data_providers.dart';
 import '../theme.dart';
-import '../utils/async.dart';
 import '../utils/category_style.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
 import '../widgets/spending_chart.dart';
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authProvider).user;
-    final month = ref.watch(dashboardMonthProvider);
-    final dashboard = ref.watch(dashboardProvider);
+  Widget build(BuildContext context) {
+    final user = context.select<AuthNotifier, User?>((auth) => auth.state.user);
+    final month = context.watch<DashboardMonth>().value;
+    final dashboard = context.watch<DashboardNotifier>().state;
 
     return Scaffold(
       // No app bar: the greeting row below is the header, and it needs the
       // avatar and two lines of text that a title slot cannot hold.
       body: dashboard.when(
-        loading: () => Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
+        loading: () => Center(
+          child: CircularProgressIndicator(color: AppTheme.accent(context)),
+        ),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
-          onRetry: () => ref.invalidate(dashboardProvider),
+          onRetry: () => context.read<DashboardNotifier>().invalidate(),
         ),
         data: (data) => RefreshIndicator(
           color: AppTheme.accent(context),
           onRefresh: () {
-            // The chart loads on its own provider, so a pull that only
+            // The chart loads on its own notifier, so a pull that only
             // refreshed the dashboard call would leave it showing stale money
             // beside freshly updated cards.
-            ref.invalidate(dashboardTrendReportProvider);
+            context.read<DashboardTrendReportNotifier>().invalidate();
 
-            return refreshQuietly(ref.refresh(dashboardProvider.future));
+            // `refresh` never throws — see AsyncNotifier.refresh — so the
+            // future handed back here cannot surface as an unhandled error.
+            return context.read<DashboardNotifier>().refresh();
           },
           child: ListView(
             padding: EdgeInsets.fromLTRB(
@@ -60,7 +65,7 @@ class DashboardScreen extends ConsumerWidget {
                 alignment: Alignment.centerRight,
                 child: MonthStepper(
                   month: month,
-                  onChanged: (ym) => ref.read(dashboardMonthProvider.notifier).state = ym,
+                  onChanged: (ym) => context.read<DashboardMonth>().value = ym,
                 ),
               ),
               const SizedBox(height: 4),
@@ -123,14 +128,20 @@ class _GreetingHeader extends StatelessWidget {
                 children: [
                   Text(
                     _greeting(),
-                    style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.55)),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.faint(context, 0.55),
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     user?.name ?? '',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ],
               ),
@@ -155,31 +166,44 @@ class _MonthCard extends StatelessWidget {
     return Card(
       color: AppTheme.accent(context),
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Eyebrow(tr('This month'), onBrand: true),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
+
             Text(
               money(overall.spent),
-              style: textTheme.headlineMedium
-                  ?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
+              style: textTheme.headlineMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+              ),
             ),
             const SizedBox(height: 14),
             if (overall.budget != null) ...[
-              ProgressTrack(percent: overall.barPercent, status: overall.status, onBrand: true),
+              ProgressTrack(
+                percent: overall.barPercent,
+                status: overall.status,
+                onBrand: true,
+              ),
               const SizedBox(height: 8),
               Text(
                 overall.status == 'over'
                     ? '${moneyAbs(overall.remaining ?? '0.00')} over the ${money(overall.budget!)} budget'
                     : '${money(overall.remaining ?? '0.00')} left of ${money(overall.budget!)}',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13),
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontSize: 13,
+                ),
               ),
             ] else
               Text(
                 'No budget set for ${monthLabel(data.budgetMonth)}',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13),
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontSize: 13,
+                ),
               ),
             if (data.balance != null) ...[
               const SizedBox(height: 4),
@@ -233,8 +257,8 @@ class _MoneyRow extends StatelessWidget {
               detail: savings == null
                   ? ''
                   : savings.hasPlan
-                      ? '${moneySigned(savings.savedThisMonth)} of ${money(savings.planned)} ${tr('this month')}'
-                      : tr('No plan'),
+                  ? '${moneySigned(savings.savedThisMonth)} of ${money(savings.planned)} ${tr('this month')}'
+                  : tr('No plan'),
               onTap: () => context.go('/savings'),
             ),
           ),
@@ -271,7 +295,11 @@ class _MoneyCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(child: Eyebrow(label)),
-                  Icon(Icons.chevron_right, size: 18, color: AppTheme.faint(context, 0.25)),
+                  Icon(
+                    Icons.chevron_right,
+                    size: 18,
+                    color: AppTheme.faint(context, 0.25),
+                  ),
                 ],
               ),
               const SizedBox(height: 6),
@@ -280,9 +308,7 @@ class _MoneyCard extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   value,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
+                  style: Theme.of(context).textTheme.titleLarge
                       ?.copyWith(fontWeight: FontWeight.w800),
                 ),
               ),
@@ -291,7 +317,10 @@ class _MoneyCard extends StatelessWidget {
                 Text(
                   detail,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.45)),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.faint(context, 0.45),
+                  ),
                 ),
               ],
             ],
@@ -319,9 +348,7 @@ class _TodayCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               money(total),
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineMedium
+              style: Theme.of(context).textTheme.headlineMedium
                   ?.copyWith(fontWeight: FontWeight.w800),
             ),
           ],
@@ -338,13 +365,13 @@ class _TodayCard extends StatelessWidget {
 /// is a second round trip, and hanging it off the main call would hold every
 /// card on screen hostage to it. A failure here costs the chart, not the
 /// dashboard.
-class _SpendingCard extends ConsumerWidget {
+class _SpendingCard extends StatelessWidget {
   const _SpendingCard();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final granularity = ref.watch(dashboardTrendProvider);
-    final report = ref.watch(dashboardTrendReportProvider);
+  Widget build(BuildContext context) {
+    final granularity = context.watch<DashboardTrend>().value;
+    final report = context.watch<DashboardTrendReportNotifier>().state;
 
     return Card(
       child: Padding(
@@ -362,9 +389,7 @@ class _SpendingCard extends ConsumerWidget {
               children: [
                 Text(
                   money(report.valueOrNull?.seriesTotal ?? '0.00'),
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
+                  style: Theme.of(context).textTheme.titleLarge
                       ?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(width: 8),
@@ -391,8 +416,8 @@ class _SpendingCard extends ConsumerWidget {
                         label: option.label,
                         selected: granularity == option.value,
                         height: 32,
-                        onTap: () => ref.read(dashboardTrendProvider.notifier).state =
-                            option.value,
+                        onTap: () =>
+                            context.read<DashboardTrend>().value = option.value,
                       ),
                     ),
                   ),
@@ -404,7 +429,11 @@ class _SpendingCard extends ConsumerWidget {
             SizedBox(
               height: 170,
               child: report.when(
-                loading: () => Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
+                loading: () => Center(
+                  child: CircularProgressIndicator(
+                    color: AppTheme.accent(context),
+                  ),
+                ),
                 error: (e, _) => Center(
                   child: Text(
                     apiErrorMessage(e, fallback: 'Could not load spending.'),
@@ -453,8 +482,10 @@ class _BreakdownCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text(slice.name,
-                        style: const TextStyle(fontWeight: FontWeight.w500)),
+                    child: Text(
+                      slice.name,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
                   ),
                   Text(
                     money(slice.spent),
@@ -523,8 +554,10 @@ class _RecentCard extends StatelessWidget {
                       style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
                   ),
-                  Text(money(expense.price),
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(
+                    money(expense.price),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                 ],
               ),
               if (expense != data.recent.last) const SizedBox(height: 12),

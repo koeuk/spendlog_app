@@ -1,44 +1,46 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../api/api_client.dart';
 import '../models/admin.dart';
 import '../providers/data_providers.dart';
+import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
-import '../utils/async.dart';
 import '../widgets/common.dart';
 
 /// User management, mirroring the web's Users screen: list, create, edit,
 /// suspend, delete. The API refuses non-admins regardless of what this UI
 /// shows, so hiding it for them is courtesy, not security.
-class AdminUsersScreen extends ConsumerWidget {
+class AdminUsersScreen extends StatelessWidget {
   const AdminUsersScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final users = ref.watch(adminUsersProvider);
+  Widget build(BuildContext context) {
+    final users = context.watch<AdminUsersNotifier>().state;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(tr('Users')),
-      ),
+      appBar: AppBar(title: Text(tr('Users'))),
       floatingActionButton: AddPill(
         label: tr('Add'),
         icon: Icons.person_add_alt,
         onPressed: () => _UserFormPage.open(context),
       ),
       body: users.when(
-        loading: () => Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
+        loading: () => Center(
+          child: CircularProgressIndicator(color: AppTheme.accent(context)),
+        ),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
-          onRetry: () => ref.invalidate(adminUsersProvider),
+          onRetry: () => context.read<AdminUsersNotifier>().invalidate(),
         ),
         data: (list) => RefreshIndicator(
           color: AppTheme.accent(context),
-          onRefresh: () =>
-              refreshQuietly(ref.refresh(adminUsersProvider.future)),
+          // `refresh` never throws — see AsyncNotifier.refresh.
+          onRefresh: () => context.read<AdminUsersNotifier>().refresh(),
           child: ListView.separated(
             padding: const EdgeInsets.fromLTRB(
               AppTheme.pageInset,
@@ -138,7 +140,7 @@ class _Badge extends StatelessWidget {
   }
 }
 
-class _UserFormPage extends ConsumerStatefulWidget {
+class _UserFormPage extends StatefulWidget {
   const _UserFormPage({this.user});
 
   final AdminUser? user;
@@ -153,10 +155,10 @@ class _UserFormPage extends ConsumerStatefulWidget {
   }
 
   @override
-  ConsumerState<_UserFormPage> createState() => _UserFormPageState();
+  State<_UserFormPage> createState() => _UserFormPageState();
 }
 
-class _UserFormPageState extends ConsumerState<_UserFormPage> {
+class _UserFormPageState extends State<_UserFormPage> {
   final _formKey = GlobalKey<FormState>();
   late final _name = TextEditingController(text: widget.user?.name ?? '');
   late final _username = TextEditingController(
@@ -186,31 +188,40 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
       maxHeight: 1024,
       imageQuality: 85,
     );
-    if (picked == null) return;
+    if (picked == null || !mounted) return;
+
+    // Read before the upload: `context` must not be touched across an await.
+    final repository = context.read<SpendLogRepository>();
 
     await _updatePhoto(
-      () async => ref
-          .read(repositoryProvider)
-          .uploadAdminUserAvatar(
-            widget.user!.uuid,
-            bytes: await picked.readAsBytes(),
-            filename: picked.name,
-          ),
+      () async => repository.uploadAdminUserAvatar(
+        widget.user!.uuid,
+        bytes: await picked.readAsBytes(),
+        filename: picked.name,
+      ),
     );
   }
 
-  Future<void> _removePhoto() => _updatePhoto(
-    () => ref.read(repositoryProvider).removeAdminUserAvatar(widget.user!.uuid),
-  );
+  Future<void> _removePhoto() {
+    final repository = context.read<SpendLogRepository>();
+
+    return _updatePhoto(
+      () => repository.removeAdminUserAvatar(widget.user!.uuid),
+    );
+  }
 
   Future<void> _updatePhoto(Future<AdminUser> Function() call) async {
     setState(() => _photoBusy = true);
 
+    // Captured before the call, so a page left mid-upload still drops the
+    // stale list.
+    final refresh = context.read<AdminUsersNotifier>().invalidate;
+
     try {
       final updated = await call();
+      refresh();
       if (!mounted) return;
       setState(() => _current = updated);
-      ref.invalidate(adminUsersProvider);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -242,23 +253,24 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
       _error = null;
     });
 
-    try {
-      await ref
-          .read(repositoryProvider)
-          .saveAdminUser(
-            uuid: widget.user?.uuid,
-            name: _name.text.trim(),
-            email: _email.text.trim(),
-            username: _username.text.trim(),
-            password: _password.text,
-            role: _role,
-            status: _status,
-          );
+    // Both captured before the write: `context` must not be touched across an
+    // await, and the refresh must still land if this page is gone by then.
+    final repository = context.read<SpendLogRepository>();
+    final refresh = context.read<AdminUsersNotifier>().invalidate;
 
-      if (mounted) {
-        ref.invalidate(adminUsersProvider);
-        Navigator.of(context).pop();
-      }
+    try {
+      await repository.saveAdminUser(
+        uuid: widget.user?.uuid,
+        name: _name.text.trim(),
+        email: _email.text.trim(),
+        username: _username.text.trim(),
+        password: _password.text,
+        role: _role,
+        status: _status,
+      );
+
+      refresh();
+      if (mounted) Navigator.of(context).pop();
     } catch (e) {
       setState(
         () => _error = apiErrorMessage(e, fallback: 'Could not save the user.'),
@@ -291,15 +303,17 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
       ),
     );
 
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
+
+    // Captured before the delete — see _save.
+    final repository = context.read<SpendLogRepository>();
+    final refresh = context.read<AdminUsersNotifier>().invalidate;
 
     try {
-      await ref.read(repositoryProvider).deleteAdminUser(widget.user!.uuid);
+      await repository.deleteAdminUser(widget.user!.uuid);
 
-      if (mounted) {
-        ref.invalidate(adminUsersProvider);
-        Navigator.of(context).pop();
-      }
+      refresh();
+      if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -312,9 +326,7 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _editing ? 'Edit user' : 'Add a user',
-        ),
+        title: Text(_editing ? 'Edit user' : 'Add a user'),
         actions: [
           if (_editing)
             IconButton(
@@ -374,9 +386,7 @@ class _UserFormPageState extends ConsumerState<_UserFormPage> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _username,
-              decoration: InputDecoration(
-                hintText: tr('Username (optional)'),
-              ),
+              decoration: InputDecoration(hintText: tr('Username (optional)')),
               autocorrect: false,
             ),
             const SizedBox(height: 12),

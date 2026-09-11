@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../models/recurring.dart';
 import '../providers/data_providers.dart';
+import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
 import '../utils/category_style.dart';
 import '../utils/format.dart';
@@ -23,23 +26,25 @@ Future<void> showRecurringForm(
     context: context,
     isScrollControlled: true,
     builder: (context) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: _RecurringForm(rule: rule, initialKind: kind),
     ),
   );
 }
 
-class _RecurringForm extends ConsumerStatefulWidget {
+class _RecurringForm extends StatefulWidget {
   const _RecurringForm({this.rule, required this.initialKind});
 
   final RecurringRule? rule;
   final String initialKind;
 
   @override
-  ConsumerState<_RecurringForm> createState() => _RecurringFormState();
+  State<_RecurringForm> createState() => _RecurringFormState();
 }
 
-class _RecurringFormState extends ConsumerState<_RecurringForm> {
+class _RecurringFormState extends State<_RecurringForm> {
   final _formKey = GlobalKey<FormState>();
   late final _title = TextEditingController(text: widget.rule?.title ?? '');
   late final _amount = TextEditingController(text: widget.rule?.amount ?? '');
@@ -48,10 +53,12 @@ class _RecurringFormState extends ConsumerState<_RecurringForm> {
   late String _kind = widget.rule?.kind ?? widget.initialKind;
   late String? _categoryUuid = widget.rule?.category?.uuid;
   late String _frequency = widget.rule?.frequency ?? 'monthly';
-  late DateTime _startsOn = widget.rule != null && widget.rule!.startsOn.isNotEmpty
+  late DateTime _startsOn =
+      widget.rule != null && widget.rule!.startsOn.isNotEmpty
       ? DateTime.parse(widget.rule!.startsOn)
       : DateTime.now();
-  late DateTime? _endsOn = widget.rule?.endsOn != null && widget.rule!.endsOn!.isNotEmpty
+  late DateTime? _endsOn =
+      widget.rule?.endsOn != null && widget.rule!.endsOn!.isNotEmpty
       ? DateTime.parse(widget.rule!.endsOn!)
       : null;
   late bool _active = widget.rule?.active ?? true;
@@ -122,7 +129,10 @@ class _RecurringFormState extends ConsumerState<_RecurringForm> {
       _error = null;
     });
 
-    final repo = ref.read(repositoryProvider);
+    // Both captured before the write: `context` must not be touched across an
+    // await, and the refresh must still land if this sheet is gone by then.
+    final repo = context.read<SpendLogRepository>();
+    final refresh = recurringInvalidator(context);
 
     try {
       if (_editing) {
@@ -153,12 +163,12 @@ class _RecurringFormState extends ConsumerState<_RecurringForm> {
         );
       }
 
-      if (mounted) {
-        invalidateRecurring(ref);
-        Navigator.of(context).pop();
-      }
+      refresh();
+      if (mounted) Navigator.of(context).pop();
     } catch (e) {
-      setState(() => _error = apiErrorMessage(e, fallback: 'Could not save the rule.'));
+      setState(
+        () => _error = apiErrorMessage(e, fallback: 'Could not save the rule.'),
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -168,17 +178,21 @@ class _RecurringFormState extends ConsumerState<_RecurringForm> {
   /// row advertises the long-press, so the edit form offers the same in the open.
   Future<void> _delete() async {
     final confirmed = await confirmDeleteRecurring(context, widget.rule!);
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
 
     setState(() {
       _busy = true;
       _error = null;
     });
 
-    try {
-      await ref.read(repositoryProvider).deleteRecurringRule(widget.rule!.uuid);
+    // Captured before the delete — see _submit.
+    final repo = context.read<SpendLogRepository>();
+    final refresh = recurringInvalidator(context);
 
-      invalidateRecurring(ref);
+    try {
+      await repo.deleteRecurringRule(widget.rule!.uuid);
+
+      refresh();
 
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
@@ -193,13 +207,16 @@ class _RecurringFormState extends ConsumerState<_RecurringForm> {
 
   String _dayText(DateTime d) => '${d.day}/${d.month}/${d.year}';
 
-
   /// Rewrite the typed amount for the new currency rather than dropping it.
   /// Falls back to clearing only when the rate has not arrived, which is the
   /// one case where keeping the number would be a lie about how much money it
   /// is.
   void _switchCurrency(String next) {
-    final rate = ref.read(moneySettingsProvider).valueOrNull?.khrPerUsd;
+    final rate = context
+        .read<MoneySettingsNotifier>()
+        .state
+        .valueOrNull
+        ?.khrPerUsd;
     final converted = rate == null
         ? null
         : convertAmount(
@@ -221,7 +238,7 @@ class _RecurringFormState extends ConsumerState<_RecurringForm> {
 
   @override
   Widget build(BuildContext context) {
-    final categories = ref.watch(categoriesProvider);
+    final categories = context.watch<CategoriesNotifier>().state;
     final outline = OutlinedButton.styleFrom(
       minimumSize: const Size.fromHeight(52),
       shape: const StadiumBorder(),
@@ -241,15 +258,16 @@ class _RecurringFormState extends ConsumerState<_RecurringForm> {
               Text(
                 _editing ? tr('Edit rule') : tr('New recurring rule'),
                 textAlign: TextAlign.center,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
+                style: Theme.of(context).textTheme.titleMedium
                     ?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 18),
               if (_error != null) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.errorFill(context),
                     borderRadius: BorderRadius.circular(20),
@@ -257,7 +275,10 @@ class _RecurringFormState extends ConsumerState<_RecurringForm> {
                   child: Text(
                     _error!,
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: AppTheme.errorInk(context), fontSize: 13),
+                    style: TextStyle(
+                      color: AppTheme.errorInk(context),
+                      fontSize: 13,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -270,7 +291,9 @@ class _RecurringFormState extends ConsumerState<_RecurringForm> {
                     child: PillSegment(
                       label: tr('Expense'),
                       selected: _isExpense,
-                      onTap: _editing ? () {} : () => setState(() => _kind = 'expense'),
+                      onTap: _editing
+                          ? () {}
+                          : () => setState(() => _kind = 'expense'),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -278,7 +301,9 @@ class _RecurringFormState extends ConsumerState<_RecurringForm> {
                     child: PillSegment(
                       label: tr('Income'),
                       selected: !_isExpense,
-                      onTap: _editing ? () {} : () => setState(() => _kind = 'income'),
+                      onTap: _editing
+                          ? () {}
+                          : () => setState(() => _kind = 'income'),
                     ),
                   ),
                 ],
@@ -287,12 +312,15 @@ class _RecurringFormState extends ConsumerState<_RecurringForm> {
               TextFormField(
                 controller: _title,
                 decoration: InputDecoration(
-                  hintText: _isExpense ? tr('What is it?') : tr('Source — salary, rent…'),
+                  hintText: _isExpense
+                      ? tr('What is it?')
+                      : tr('Source — salary, rent…'),
                 ),
                 textCapitalization: TextCapitalization.sentences,
                 autofocus: !_editing,
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Give the rule a title.' : null,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Give the rule a title.'
+                    : null,
               ),
               const SizedBox(height: 14),
               Row(
@@ -304,12 +332,17 @@ class _RecurringFormState extends ConsumerState<_RecurringForm> {
                         hintText: tr('Amount'),
                         prefixText: _currency == 'USD' ? '\$ ' : '៛ ',
                       ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       validator: (v) {
                         final parsed = double.tryParse(v?.trim() ?? '');
-                        if (parsed == null || parsed <= 0) return 'Enter an amount.';
-                        if (_currency == 'KHR' && parsed < 100) return 'At least ៛100.';
+                        if (parsed == null || parsed <= 0) {
+                          return 'Enter an amount.';
+                        }
+                        if (_currency == 'KHR' && parsed < 100) {
+                          return 'At least ៛100.';
+                        }
 
                         return null;
                       },
@@ -326,7 +359,9 @@ class _RecurringFormState extends ConsumerState<_RecurringForm> {
                       _switchCurrency(selection.first);
                     },
                     showSelectedIcon: false,
-                    style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                    style: const ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                    ),
                   ),
                 ],
               ),
@@ -334,7 +369,10 @@ class _RecurringFormState extends ConsumerState<_RecurringForm> {
                 const SizedBox(height: 8),
                 Text(
                   tr('Entered in riel, stored in US dollars.'),
-                  style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.5)),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.faint(context, 0.5),
+                  ),
                 ),
               ],
               if (_isExpense) ...[
@@ -347,7 +385,9 @@ class _RecurringFormState extends ConsumerState<_RecurringForm> {
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: AppTheme.accent(context)),
+                          strokeWidth: 2,
+                          color: AppTheme.accent(context),
+                        ),
                       ),
                     ),
                   ),
@@ -392,7 +432,8 @@ class _RecurringFormState extends ConsumerState<_RecurringForm> {
                         height: 36,
                       ),
                     ),
-                    if (f != recurringFrequencies.last) const SizedBox(width: 6),
+                    if (f != recurringFrequencies.last)
+                      const SizedBox(width: 6),
                   ],
                 ],
               ),
@@ -445,8 +486,12 @@ class _RecurringFormState extends ConsumerState<_RecurringForm> {
                 maxLength: 500,
                 // The counter would sit oddly under a pill field; the limit
                 // still applies.
-                buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
-                    null,
+                buildCounter: (
+                  _, {
+                  required currentLength,
+                  required isFocused,
+                  maxLength,
+                }) => null,
               ),
               if (_editing) ...[
                 const SizedBox(height: 6),
@@ -458,11 +503,17 @@ class _RecurringFormState extends ConsumerState<_RecurringForm> {
                   activeTrackColor: AppTheme.accent(context),
                   title: Text(
                     tr('Active'),
-                    style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   subtitle: Text(
                     tr('Paused rules create nothing until switched back on.'),
-                    style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.5)),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.faint(context, 0.5),
+                    ),
                   ),
                 ),
               ],
@@ -473,7 +524,10 @@ class _RecurringFormState extends ConsumerState<_RecurringForm> {
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : Text(_editing ? tr('Save changes') : tr('Create rule')),
               ),
@@ -481,7 +535,9 @@ class _RecurringFormState extends ConsumerState<_RecurringForm> {
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: _busy ? null : _delete,
-                  style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFFDC2626),
+                  ),
                   child: Text(tr('Delete rule')),
                 ),
               ],

@@ -1,24 +1,26 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../models/budget_summary.dart';
 import '../providers/data_providers.dart';
+import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
 import '../widgets/glass.dart';
-import '../utils/async.dart';
 import '../utils/category_style.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
 
-class BudgetsScreen extends ConsumerWidget {
+class BudgetsScreen extends StatelessWidget {
   const BudgetsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final month = ref.watch(budgetsMonthProvider);
-    final summary = ref.watch(budgetSummaryProvider);
+  Widget build(BuildContext context) {
+    final month = context.watch<BudgetsMonth>().value;
+    final summary = context.watch<BudgetSummaryNotifier>().state;
 
     return Scaffold(
       appBar: AppBar(
@@ -30,22 +32,30 @@ class BudgetsScreen extends ConsumerWidget {
         actions: [
           MonthStepper(
             month: month,
-            onChanged: (ym) => ref.read(budgetsMonthProvider.notifier).state = ym,
+            onChanged: (ym) => context.read<BudgetsMonth>().value = ym,
           ),
           const SizedBox(width: 8),
         ],
       ),
       body: summary.when(
-        loading: () => Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
+        loading: () => Center(
+          child: CircularProgressIndicator(color: AppTheme.accent(context)),
+        ),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
-          onRetry: () => ref.invalidate(budgetSummaryProvider),
+          onRetry: () => context.read<BudgetSummaryNotifier>().invalidate(),
         ),
         data: (data) => RefreshIndicator(
           color: AppTheme.accent(context),
-          onRefresh: () => refreshQuietly(ref.refresh(budgetSummaryProvider.future)),
+          // `refresh` never throws — see AsyncNotifier.refresh.
+          onRefresh: () => context.read<BudgetSummaryNotifier>().refresh(),
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 8, AppTheme.pageInset, AppTheme.navBarClearance),
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.pageInset,
+              8,
+              AppTheme.pageInset,
+              AppTheme.navBarClearance,
+            ),
             children: [
               _OverallCard(line: data.overall, month: month),
               const SizedBox(height: 16),
@@ -88,7 +98,6 @@ class _OverallCard extends StatelessWidget {
   final BudgetLine line;
   final String month;
 
-
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -96,7 +105,8 @@ class _OverallCard extends StatelessWidget {
     return Card(
       color: AppTheme.accent(context),
       child: InkWell(
-        onTap: () => showBudgetSheet(context, month: month, line: line, overall: true),
+        onTap: () =>
+            showBudgetSheet(context, month: month, line: line, overall: true),
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -106,8 +116,11 @@ class _OverallCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(child: Eyebrow(tr('Overall budget'), onBrand: true)),
-                  Icon(Icons.edit_outlined,
-                      size: 18, color: Colors.white.withValues(alpha: 0.8)),
+                  Icon(
+                    Icons.edit_outlined,
+                    size: 18,
+                    color: Colors.white.withValues(alpha: 0.8),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -115,23 +128,35 @@ class _OverallCard extends StatelessWidget {
                 line.budget == null
                     ? money(line.spent)
                     : '${money(line.spent)} / ${money(line.budget!)}',
-                style: textTheme.headlineSmall
-                    ?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
+                style: textTheme.headlineSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 14),
               if (line.budget != null) ...[
-                ProgressTrack(percent: line.barPercent, status: line.status, onBrand: true),
+                ProgressTrack(
+                  percent: line.barPercent,
+                  status: line.status,
+                  onBrand: true,
+                ),
                 const SizedBox(height: 8),
                 Text(
                   line.status == 'over'
                       ? 'Over by ${moneyAbs(line.remaining ?? '0.00')}'
                       : '${money(line.remaining ?? '0.00')} left',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    fontSize: 13,
+                  ),
                 ),
               ] else
                 Text(
                   'Tap to set a budget for ${monthLabel(month)}',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    fontSize: 13,
+                  ),
                 ),
             ],
           ),
@@ -148,11 +173,6 @@ class _CategoryRow extends StatelessWidget {
   final String month;
 
   @override
-
-
-
-
-  
   Widget build(BuildContext context) {
     final color = CategoryStyle.color(line.color);
 
@@ -167,14 +187,19 @@ class _CategoryRow extends StatelessWidget {
               Icon(CategoryStyle.icon(line.icon), size: 18, color: color),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(line.name ?? '',
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                child: Text(
+                  line.name ?? '',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
               ),
               Text(
                 line.budget == null
                     ? money(line.spent)
                     : '${money(line.spent)} / ${money(line.budget!)}',
-                style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 13,
+                ),
               ),
             ],
           ),
@@ -201,16 +226,18 @@ Future<void> showBudgetSheet(
     context: context,
     isScrollControlled: true,
     builder: (context) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: _BudgetForm(month: month, line: line, overall: overall),
     ),
   );
 }
 
 /// A widget rather than a bare builder so the sheet owns its controller, its
-/// form state and — crucially — its own `ref`. Borrowing the tapped row's
-/// `WidgetRef` would outlive that row whenever the list rebuilt underneath.
-class _BudgetForm extends ConsumerStatefulWidget {
+/// form state and — crucially — its own `BuildContext`. Borrowing the tapped
+/// row's context would outlive that row whenever the list rebuilt underneath.
+class _BudgetForm extends StatefulWidget {
   const _BudgetForm({
     required this.month,
     required this.line,
@@ -222,10 +249,10 @@ class _BudgetForm extends ConsumerStatefulWidget {
   final bool overall;
 
   @override
-  ConsumerState<_BudgetForm> createState() => _BudgetFormState();
+  State<_BudgetForm> createState() => _BudgetFormState();
 }
 
-class _BudgetFormState extends ConsumerState<_BudgetForm> {
+class _BudgetFormState extends State<_BudgetForm> {
   final _formKey = GlobalKey<FormState>();
   late final _amount = TextEditingController(text: widget.line.budget ?? '');
 
@@ -241,10 +268,6 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
     super.dispose();
   }
 
-  void _refreshMoneyOnScreen() {
-    invalidateMoney(ref);
-  }
-
   void _report(Object error) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(apiErrorMessage(error))));
@@ -255,15 +278,20 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
 
     setState(() => _busy = true);
 
-    try {
-      await ref.read(repositoryProvider).setBudget(
-            month: widget.month,
-            amount: _amount.text.trim(),
-            categoryUuid: widget.overall ? null : widget.line.uuid,
-            currency: _currency,
-          );
+    // Both captured before the write: `context` must not be touched across an
+    // await, and the refresh must still land if this sheet is gone by then.
+    final repository = context.read<SpendLogRepository>();
+    final refreshMoneyOnScreen = moneyInvalidator(context);
 
-      _refreshMoneyOnScreen();
+    try {
+      await repository.setBudget(
+        month: widget.month,
+        amount: _amount.text.trim(),
+        categoryUuid: widget.overall ? null : widget.line.uuid,
+        currency: _currency,
+      );
+
+      refreshMoneyOnScreen();
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
@@ -276,9 +304,13 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
   Future<void> _remove() async {
     setState(() => _busy = true);
 
+    // Captured before the write — see _save.
+    final repository = context.read<SpendLogRepository>();
+    final refreshMoneyOnScreen = moneyInvalidator(context);
+
     try {
       // Summary rows carry no budget uuid; the stored rows do.
-      final rows = await ref.read(repositoryProvider).budgets(widget.month);
+      final rows = await repository.budgets(widget.month);
       final match = rows.where(
         (b) => widget.overall
             ? b.category == null
@@ -286,13 +318,13 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
       );
 
       if (match.isNotEmpty) {
-        await ref.read(repositoryProvider).deleteBudget(match.first.uuid);
+        await repository.deleteBudget(match.first.uuid);
       }
 
       // Refresh either way: no matching row means the summary is showing a
       // budget the server no longer has, and closing on a stale figure would
       // look like the button did nothing.
-      _refreshMoneyOnScreen();
+      refreshMoneyOnScreen();
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
@@ -307,7 +339,11 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
   /// one case where keeping the number would be a lie about how much money it
   /// is.
   void _switchCurrency(String next) {
-    final rate = ref.read(moneySettingsProvider).valueOrNull?.khrPerUsd;
+    final rate = context
+        .read<MoneySettingsNotifier>()
+        .state
+        .valueOrNull
+        ?.khrPerUsd;
     final converted = rate == null
         ? null
         : convertAmount(
@@ -343,9 +379,7 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
                     ? 'Overall budget — ${monthLabel(widget.month)}'
                     : '${widget.line.name} — ${monthLabel(widget.month)}',
                 textAlign: TextAlign.center,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
+                style: Theme.of(context).textTheme.titleMedium
                     ?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 18),
@@ -358,14 +392,17 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
                         hintText: tr('Amount'),
                         prefixText: _currency == 'USD' ? '\$ ' : '៛ ',
                       ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       autofocus: true,
                       textInputAction: TextInputAction.done,
                       onFieldSubmitted: (_) => _save(),
                       validator: (v) {
                         final parsed = double.tryParse(v?.trim() ?? '');
-                        if (parsed == null || parsed < 0) return 'Enter an amount.';
+                        if (parsed == null || parsed < 0) {
+                          return 'Enter an amount.';
+                        }
 
                         // Mirrors Currency::minimumInput — ៛100 is the smallest
                         // note in circulation, so anything under it is not an
@@ -390,7 +427,9 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
                       _switchCurrency(selection.first);
                     },
                     showSelectedIcon: false,
-                    style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                    style: const ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                    ),
                   ),
                 ],
               ),
@@ -412,7 +451,9 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : Text(tr('Save budget')),
               ),
@@ -420,7 +461,9 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: _busy ? null : _remove,
-                  style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFFDC2626),
+                  ),
                   child: Text(tr('Remove budget')),
                 ),
               ],

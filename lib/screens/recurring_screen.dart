@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../models/recurring.dart';
 import '../providers/data_providers.dart';
+import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
-import '../utils/async.dart';
 import '../utils/category_style.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
@@ -14,41 +16,44 @@ import 'recurring_form_sheet.dart';
 
 /// Every recurring rule — the templates the server turns into expense and
 /// income rows on schedule. Filtered by kind on-screen; the list is one call.
-class RecurringScreen extends ConsumerStatefulWidget {
+class RecurringScreen extends StatefulWidget {
   const RecurringScreen({super.key});
 
   @override
-  ConsumerState<RecurringScreen> createState() => _RecurringScreenState();
+  State<RecurringScreen> createState() => _RecurringScreenState();
 }
 
-class _RecurringScreenState extends ConsumerState<RecurringScreen> {
+class _RecurringScreenState extends State<RecurringScreen> {
   /// null = all, otherwise expense | income.
   String? _kind;
 
   @override
   Widget build(BuildContext context) {
-    final rules = ref.watch(recurringRulesProvider);
+    final rules = context.watch<RecurringRulesNotifier>().state;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(tr('Recurring')),
-      ),
+      appBar: AppBar(title: Text(tr('Recurring'))),
       floatingActionButton: AddPill(
         label: tr('New rule'),
         onPressed: () => showRecurringForm(context, kind: _kind ?? 'expense'),
       ),
       body: rules.when(
-        loading: () => Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
+        loading: () => Center(
+          child: CircularProgressIndicator(color: AppTheme.accent(context)),
+        ),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
-          onRetry: () => ref.invalidate(recurringRulesProvider),
+          onRetry: () => context.read<RecurringRulesNotifier>().invalidate(),
         ),
         data: (all) {
-          final list = _kind == null ? all : all.where((r) => r.kind == _kind).toList();
+          final list = _kind == null
+              ? all
+              : all.where((r) => r.kind == _kind).toList();
 
           return RefreshIndicator(
             color: AppTheme.accent(context),
-            onRefresh: () => refreshQuietly(ref.refresh(recurringRulesProvider.future)),
+            // `refresh` never throws — see AsyncNotifier.refresh.
+            onRefresh: () => context.read<RecurringRulesNotifier>().refresh(),
             child: ListView(
               padding: const EdgeInsets.fromLTRB(
                 AppTheme.pageInset,
@@ -89,7 +94,9 @@ class _RecurringScreenState extends ConsumerState<RecurringScreen> {
                         const SizedBox(height: 12),
                         Text(
                           all.isEmpty
-                              ? tr('No recurring rules yet — add rent, salary, subscriptions.')
+                              ? tr(
+                                  'No recurring rules yet — add rent, salary, subscriptions.',
+                                )
                               : tr('Nothing of this kind repeats yet.'),
                           textAlign: TextAlign.center,
                           style: TextStyle(color: AppTheme.faint(context, 0.5)),
@@ -116,11 +123,14 @@ class _RecurringScreenState extends ConsumerState<RecurringScreen> {
 
   Future<void> _delete(RecurringRule rule) async {
     final confirmed = await confirmDeleteRecurring(context, rule);
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
+
+    // Read before the delete: `context` must not be touched across an await.
+    final repository = context.read<SpendLogRepository>();
 
     try {
-      await ref.read(repositoryProvider).deleteRecurringRule(rule.uuid);
-      invalidateRecurring(ref);
+      await repository.deleteRecurringRule(rule.uuid);
+      if (mounted) invalidateRecurring(context);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -192,13 +202,17 @@ class _RuleTile extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
-                              color: rule.active ? ink : ink.withValues(alpha: 0.55),
+                              color: rule.active
+                                  ? ink
+                                  : ink.withValues(alpha: 0.55),
                             ),
                           ),
                         ),
                         if (!rule.active) ...[
                           const SizedBox(width: 8),
-                          _StateChip(label: rule.ended ? tr('Ended') : tr('Paused')),
+                          _StateChip(
+                            label: rule.ended ? tr('Ended') : tr('Paused'),
+                          ),
                         ],
                       ],
                     ),

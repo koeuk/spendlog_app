@@ -1,28 +1,25 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../l10n/l10n.dart';
+import 'async_notifier.dart';
 
 /// The language choice, remembered across launches like the theme mode.
-/// Mirrored into [L10n.locale] so `tr()` needs no context, and watched by
+/// Mirrored into [L10n.locale] so `tr()` needs no context, and depended on by
 /// the repository so server-side text is fetched again in the new language.
-class LocaleNotifier extends Notifier<String> {
+class LocaleNotifier extends ValueState<String> {
+  LocaleNotifier() : super(L10n.locale) {
+    _restore();
+  }
+
   static const _storage = FlutterSecureStorage();
   static const _key = 'locale';
-
-  @override
-  String build() {
-    _restore();
-
-    return L10n.locale;
-  }
 
   Future<void> _restore() async {
     try {
       final saved = await _storage.read(key: _key);
       if (saved != null && L10n.supported.contains(saved)) {
         L10n.locale = saved;
-        state = saved;
+        value = saved;
       }
     } catch (_) {
       // A first launch, or a platform without the store: English is right.
@@ -33,7 +30,7 @@ class LocaleNotifier extends Notifier<String> {
     if (!L10n.supported.contains(code)) return;
 
     L10n.locale = code;
-    state = code;
+    value = code;
 
     try {
       await _storage.write(key: _key, value: code);
@@ -42,5 +39,3 @@ class LocaleNotifier extends Notifier<String> {
     }
   }
 }
-
-final localeProvider = NotifierProvider<LocaleNotifier, String>(LocaleNotifier.new);

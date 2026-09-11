@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../models/income.dart';
 import '../models/recurring.dart';
 import '../providers/data_providers.dart';
+import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
@@ -18,28 +21,31 @@ Future<void> showIncomeForm(BuildContext context, {Income? income}) {
     context: context,
     isScrollControlled: true,
     builder: (context) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: _IncomeForm(income: income),
     ),
   );
 }
 
-class _IncomeForm extends ConsumerStatefulWidget {
+class _IncomeForm extends StatefulWidget {
   const _IncomeForm({this.income});
 
   final Income? income;
 
   @override
-  ConsumerState<_IncomeForm> createState() => _IncomeFormState();
+  State<_IncomeForm> createState() => _IncomeFormState();
 }
 
-class _IncomeFormState extends ConsumerState<_IncomeForm> {
+class _IncomeFormState extends State<_IncomeForm> {
   final _formKey = GlobalKey<FormState>();
   late final _source = TextEditingController(text: widget.income?.source ?? '');
   late final _amount = TextEditingController(text: widget.income?.amount ?? '');
   late final _note = TextEditingController(text: widget.income?.note ?? '');
 
-  late DateTime _receivedOn = widget.income != null && widget.income!.receivedOn.isNotEmpty
+  late DateTime _receivedOn =
+      widget.income != null && widget.income!.receivedOn.isNotEmpty
       ? DateTime.parse(widget.income!.receivedOn)
       : DateTime.now();
 
@@ -84,7 +90,11 @@ class _IncomeFormState extends ConsumerState<_IncomeForm> {
       _error = null;
     });
 
-    final repo = ref.read(repositoryProvider);
+    // All captured before the write: `context` must not be touched across an
+    // await, and the refreshes must still land if this sheet is gone by then.
+    final repo = context.read<SpendLogRepository>();
+    final refreshIncome = incomeInvalidator(context);
+    final refreshRecurring = recurringInvalidator(context);
     final note = _note.text.trim();
 
     try {
@@ -119,13 +129,14 @@ class _IncomeFormState extends ConsumerState<_IncomeForm> {
         );
       }
 
-      if (mounted) {
-        invalidateIncome(ref);
-        if (_repeat != null) invalidateRecurring(ref);
-        Navigator.of(context).pop();
-      }
+      refreshIncome();
+      if (_repeat != null) refreshRecurring();
+      if (mounted) Navigator.of(context).pop();
     } catch (e) {
-      setState(() => _error = apiErrorMessage(e, fallback: 'Could not save the income.'));
+      setState(
+        () =>
+            _error = apiErrorMessage(e, fallback: 'Could not save the income.'),
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -135,17 +146,21 @@ class _IncomeFormState extends ConsumerState<_IncomeForm> {
   /// row advertises the long-press, so the edit form offers the same in the open.
   Future<void> _delete() async {
     final confirmed = await confirmDeleteIncome(context, widget.income!);
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
 
     setState(() {
       _busy = true;
       _error = null;
     });
 
-    try {
-      await ref.read(repositoryProvider).deleteIncome(widget.income!.uuid);
+    // Captured before the delete — see _submit.
+    final repo = context.read<SpendLogRepository>();
+    final refreshIncome = incomeInvalidator(context);
 
-      invalidateIncome(ref);
+    try {
+      await repo.deleteIncome(widget.income!.uuid);
+
+      refreshIncome();
 
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
@@ -158,13 +173,16 @@ class _IncomeFormState extends ConsumerState<_IncomeForm> {
     }
   }
 
-
   /// Rewrite the typed amount for the new currency rather than dropping it.
   /// Falls back to clearing only when the rate has not arrived, which is the
   /// one case where keeping the number would be a lie about how much money it
   /// is.
   void _switchCurrency(String next) {
-    final rate = ref.read(moneySettingsProvider).valueOrNull?.khrPerUsd;
+    final rate = context
+        .read<MoneySettingsNotifier>()
+        .state
+        .valueOrNull
+        ?.khrPerUsd;
     final converted = rate == null
         ? null
         : convertAmount(
@@ -198,15 +216,16 @@ class _IncomeFormState extends ConsumerState<_IncomeForm> {
               Text(
                 _editing ? 'Edit income' : 'Add income',
                 textAlign: TextAlign.center,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
+                style: Theme.of(context).textTheme.titleMedium
                     ?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 18),
               if (_error != null) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.errorFill(context),
                     borderRadius: BorderRadius.circular(20),
@@ -214,7 +233,10 @@ class _IncomeFormState extends ConsumerState<_IncomeForm> {
                   child: Text(
                     _error!,
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: AppTheme.errorInk(context), fontSize: 13),
+                    style: TextStyle(
+                      color: AppTheme.errorInk(context),
+                      fontSize: 13,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -235,11 +257,14 @@ class _IncomeFormState extends ConsumerState<_IncomeForm> {
                         hintText: tr('Amount'),
                         prefixText: _currency == 'USD' ? '\$ ' : '៛ ',
                       ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       validator: (v) {
                         final parsed = double.tryParse(v?.trim() ?? '');
-                        if (parsed == null || parsed <= 0) return 'Enter an amount.';
+                        if (parsed == null || parsed <= 0) {
+                          return 'Enter an amount.';
+                        }
 
                         // Mirrors Currency::minimumInput — ៛100 is the smallest
                         // note in circulation.
@@ -262,7 +287,9 @@ class _IncomeFormState extends ConsumerState<_IncomeForm> {
                       _switchCurrency(selection.first);
                     },
                     showSelectedIcon: false,
-                    style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                    style: const ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                    ),
                   ),
                 ],
               ),
@@ -270,7 +297,10 @@ class _IncomeFormState extends ConsumerState<_IncomeForm> {
                 const SizedBox(height: 8),
                 Text(
                   tr('Entered in riel, stored in US dollars.'),
-                  style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.5)),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.faint(context, 0.5),
+                  ),
                 ),
               ],
               const SizedBox(height: 14),
@@ -296,8 +326,12 @@ class _IncomeFormState extends ConsumerState<_IncomeForm> {
                 maxLength: 500,
                 // The counter would sit oddly under a pill field; the limit
                 // still applies.
-                buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
-                    null,
+                buildCounter: (
+                  _, {
+                  required currentLength,
+                  required isFocused,
+                  maxLength,
+                }) => null,
               ),
               if (!_editing) ...[
                 const SizedBox(height: 14),
@@ -313,21 +347,26 @@ class _IncomeFormState extends ConsumerState<_IncomeForm> {
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : Text(
                         _editing
                             ? 'Save changes'
                             : _repeat != null
-                                ? tr('Add repeating income')
-                                : 'Add income',
+                            ? tr('Add repeating income')
+                            : 'Add income',
                       ),
               ),
               if (_editing) ...[
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: _busy ? null : _delete,
-                  style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFFDC2626),
+                  ),
                   child: Text(tr('Delete income')),
                 ),
               ],
@@ -407,16 +446,16 @@ class _SourceField extends StatelessWidget {
   }
 }
 
-class _SourcePickerSheet extends ConsumerStatefulWidget {
+class _SourcePickerSheet extends StatefulWidget {
   const _SourcePickerSheet({required this.current});
 
   final String current;
 
   @override
-  ConsumerState<_SourcePickerSheet> createState() => _SourcePickerSheetState();
+  State<_SourcePickerSheet> createState() => _SourcePickerSheetState();
 }
 
-class _SourcePickerSheetState extends ConsumerState<_SourcePickerSheet> {
+class _SourcePickerSheetState extends State<_SourcePickerSheet> {
   final _search = TextEditingController();
 
   @override
@@ -432,14 +471,21 @@ class _SourcePickerSheetState extends ConsumerState<_SourcePickerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final sources = ref.watch(incomeSourcesProvider);
+    final sources = context.watch<IncomeSourcesNotifier>().state;
     final query = _search.text.trim();
 
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 14, AppTheme.pageInset, 16),
+          padding: const EdgeInsets.fromLTRB(
+            AppTheme.pageInset,
+            14,
+            AppTheme.pageInset,
+            16,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -447,9 +493,7 @@ class _SourcePickerSheetState extends ConsumerState<_SourcePickerSheet> {
               Text(
                 tr('Source'),
                 textAlign: TextAlign.center,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
+                style: Theme.of(context).textTheme.titleMedium
                     ?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 14),
@@ -464,11 +508,15 @@ class _SourcePickerSheetState extends ConsumerState<_SourcePickerSheet> {
                 onChanged: (_) => setState(() {}),
                 // Enter takes the typed text as-is, the fastest path for a
                 // source used for the first time.
-                onSubmitted: (v) => v.trim().isEmpty ? null : Navigator.of(context).pop(v.trim()),
+                onSubmitted: (v) => v.trim().isEmpty
+                    ? null
+                    : Navigator.of(context).pop(v.trim()),
               ),
               const SizedBox(height: 10),
               ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.45),
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(context).height * 0.45,
+                ),
                 child: sources.when(
                   loading: () => const Padding(
                     padding: EdgeInsets.all(24),
@@ -482,13 +530,24 @@ class _SourcePickerSheetState extends ConsumerState<_SourcePickerSheet> {
                   ),
                   error: (e, _) => Padding(
                     padding: const EdgeInsets.all(12),
-                    child: Text(apiErrorMessage(e), textAlign: TextAlign.center),
+                    child: Text(
+                      apiErrorMessage(e),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                   data: (list) {
                     final matches = query.isEmpty
                         ? list
-                        : list.where((s) => s.toLowerCase().contains(query.toLowerCase())).toList();
-                    final creatable = query.isNotEmpty && !_known(list, query) ? query : null;
+                        : list
+                              .where(
+                                (s) => s.toLowerCase().contains(
+                                  query.toLowerCase(),
+                                ),
+                              )
+                              .toList();
+                    final creatable = query.isNotEmpty && !_known(list, query)
+                        ? query
+                        : null;
 
                     if (matches.isEmpty && creatable == null) {
                       return Padding(
@@ -508,23 +567,44 @@ class _SourcePickerSheetState extends ConsumerState<_SourcePickerSheet> {
                         // match is picked instead.
                         if (creatable != null)
                           ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            leading: Icon(Icons.add, color: AppTheme.accent(context)),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            leading: Icon(
+                              Icons.add,
+                              color: AppTheme.accent(context),
+                            ),
                             title: Text(
                               '${tr('Use')} "$creatable"',
-                              style: const TextStyle(fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                             onTap: () => Navigator.of(context).pop(creatable),
                           ),
                         for (final source in matches)
                           ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            leading: Icon(Icons.payments_outlined, color: AppTheme.faint(context, 0.55)),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            leading: Icon(
+                              Icons.payments_outlined,
+                              color: AppTheme.faint(context, 0.55),
+                            ),
                             title: Text(source),
-                            trailing: source.toLowerCase() == widget.current.trim().toLowerCase()
-                                ? Icon(Icons.check_circle, color: AppTheme.accent(context))
+                            trailing:
+                                source.toLowerCase() ==
+                                    widget.current.trim().toLowerCase()
+                                ? Icon(
+                                    Icons.check_circle,
+                                    color: AppTheme.accent(context),
+                                  )
                                 : null,
                             onTap: () => Navigator.of(context).pop(source),
                           ),

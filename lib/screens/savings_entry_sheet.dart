@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../l10n/l10n.dart';
 import '../models/savings.dart';
 import '../providers/data_providers.dart';
+import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
@@ -24,13 +25,15 @@ Future<void> showSavingsEntrySheet(
     context: context,
     isScrollControlled: true,
     builder: (context) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: _EntryForm(entry: entry, initialType: type, month: month),
     ),
   );
 }
 
-class _EntryForm extends ConsumerStatefulWidget {
+class _EntryForm extends StatefulWidget {
   const _EntryForm({this.entry, required this.initialType, this.month});
 
   final SavingsEntry? entry;
@@ -38,10 +41,10 @@ class _EntryForm extends ConsumerStatefulWidget {
   final String? month;
 
   @override
-  ConsumerState<_EntryForm> createState() => _EntryFormState();
+  State<_EntryForm> createState() => _EntryFormState();
 }
 
-class _EntryFormState extends ConsumerState<_EntryForm> {
+class _EntryFormState extends State<_EntryForm> {
   final _formKey = GlobalKey<FormState>();
   late final _amount = TextEditingController(text: widget.entry?.amount ?? '');
   late final _note = TextEditingController(text: widget.entry?.note ?? '');
@@ -107,9 +110,11 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text(widget.entry!.isDeposit
-            ? tr('Delete this deposit?')
-            : tr('Delete this withdrawal?')),
+        title: Text(
+          widget.entry!.isDeposit
+              ? tr('Delete this deposit?')
+              : tr('Delete this withdrawal?'),
+        ),
         content: Text(
           '${money(widget.entry!.amount)} · ${dayLabel(widget.entry!.savedOn)}',
         ),
@@ -120,7 +125,9 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFDC2626),
+            ),
             child: Text(tr('Delete')),
           ),
         ],
@@ -134,13 +141,16 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
       _error = null;
     });
 
-    try {
-      await ref.read(repositoryProvider).deleteSavingsEntry(widget.entry!.uuid);
+    // Both captured before the delete: `context` must not be touched across an
+    // await, and the refresh must still land if this sheet is gone by then.
+    final repo = context.read<SpendLogRepository>();
+    final refresh = savingsInvalidator(context);
 
-      if (mounted) {
-        invalidateSavings(ref);
-        Navigator.of(context).pop();
-      }
+    try {
+      await repo.deleteSavingsEntry(widget.entry!.uuid);
+
+      refresh();
+      if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -163,7 +173,9 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
     // Only a deposit has an origin; the server drops one sent with a
     // withdrawal anyway, but not sending it keeps the two in step.
     final source = _type == 'withdraw' ? '' : _source.text.trim();
-    final repo = ref.read(repositoryProvider);
+    // Captured before the write — see _delete.
+    final repo = context.read<SpendLogRepository>();
+    final refresh = savingsInvalidator(context);
 
     try {
       if (_editing) {
@@ -187,10 +199,8 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
         );
       }
 
-      if (mounted) {
-        invalidateSavings(ref);
-        Navigator.of(context).pop();
-      }
+      refresh();
+      if (mounted) Navigator.of(context).pop();
     } catch (e) {
       // An over-withdrawal is a 422 whose errors.amount says exactly why;
       // apiErrorMessage surfaces that line verbatim.
@@ -203,13 +213,16 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
     }
   }
 
-
   /// Rewrite the typed amount for the new currency rather than dropping it.
   /// Falls back to clearing only when the rate has not arrived, which is the
   /// one case where keeping the number would be a lie about how much money it
   /// is.
   void _switchCurrency(String next) {
-    final rate = ref.read(moneySettingsProvider).valueOrNull?.khrPerUsd;
+    final rate = context
+        .read<MoneySettingsNotifier>()
+        .state
+        .valueOrNull
+        ?.khrPerUsd;
     final converted = rate == null
         ? null
         : convertAmount(
@@ -245,15 +258,16 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
               Text(
                 _editing ? tr('Edit entry') : tr('New savings entry'),
                 textAlign: TextAlign.center,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
+                style: Theme.of(context).textTheme.titleMedium
                     ?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 18),
               if (_error != null) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.errorFill(context),
                     borderRadius: BorderRadius.circular(20),
@@ -261,7 +275,10 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
                   child: Text(
                     _error!,
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: AppTheme.errorInk(context), fontSize: 13),
+                    style: TextStyle(
+                      color: AppTheme.errorInk(context),
+                      fontSize: 13,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -295,13 +312,18 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
                         hintText: tr('Amount'),
                         prefixText: _currency == 'USD' ? '\$ ' : '៛ ',
                       ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       autofocus: !_editing,
                       validator: (v) {
                         final parsed = double.tryParse(v?.trim() ?? '');
-                        if (parsed == null || parsed <= 0) return 'Enter an amount.';
-                        if (_currency == 'KHR' && parsed < 100) return 'At least ៛100.';
+                        if (parsed == null || parsed <= 0) {
+                          return 'Enter an amount.';
+                        }
+                        if (_currency == 'KHR' && parsed < 100) {
+                          return 'At least ៛100.';
+                        }
 
                         return null;
                       },
@@ -318,7 +340,9 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
                       _switchCurrency(selection.first);
                     },
                     showSelectedIcon: false,
-                    style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                    style: const ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                    ),
                   ),
                 ],
               ),
@@ -326,7 +350,10 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
                 const SizedBox(height: 8),
                 Text(
                   tr('Entered in riel, stored in US dollars.'),
-                  style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.5)),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.faint(context, 0.5),
+                  ),
                 ),
               ],
               if (!withdrawing) ...[
@@ -354,8 +381,12 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
                 decoration: InputDecoration(hintText: tr('Note (optional)')),
                 textCapitalization: TextCapitalization.sentences,
                 maxLength: 500,
-                buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
-                    null,
+                buildCounter: (
+                  _, {
+                  required currentLength,
+                  required isFocused,
+                  maxLength,
+                }) => null,
               ),
               const SizedBox(height: 18),
               FilledButton(
@@ -364,11 +395,16 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
-                    : Text(_editing
-                        ? tr('Save changes')
-                        : (withdrawing ? tr('Withdraw') : tr('Deposit'))),
+                    : Text(
+                        _editing
+                            ? tr('Save changes')
+                            : (withdrawing ? tr('Withdraw') : tr('Deposit')),
+                      ),
               ),
               if (_editing) ...[
                 const SizedBox(height: 4),
@@ -394,16 +430,16 @@ class _EntryFormState extends ConsumerState<_EntryForm> {
 /// sources offered as you go. A label rather than a link to an income row —
 /// see the API doc — so anything typed here is valid, and the suggestions
 /// are a convenience, not a constraint.
-class _SourceField extends ConsumerStatefulWidget {
+class _SourceField extends StatefulWidget {
   const _SourceField({required this.controller});
 
   final TextEditingController controller;
 
   @override
-  ConsumerState<_SourceField> createState() => _SourceFieldState();
+  State<_SourceField> createState() => _SourceFieldState();
 }
 
-class _SourceFieldState extends ConsumerState<_SourceField> {
+class _SourceFieldState extends State<_SourceField> {
   /// Owned here, not built in `build`: RawAutocomplete keeps a reference to
   /// it, and a fresh node each frame drops focus mid-typing and leaks the
   /// old one.
@@ -420,7 +456,9 @@ class _SourceFieldState extends ConsumerState<_SourceField> {
     // A failed or pending fetch leaves an ordinary text field, never a
     // spinner or an error: the source is optional, so suggestions going
     // missing must not block the entry.
-    final sources = ref.watch(incomeSourcesProvider).valueOrNull ?? const <String>[];
+    final sources =
+        context.watch<IncomeSourcesNotifier>().state.valueOrNull ??
+        const <String>[];
 
     return RawAutocomplete<String>(
       textEditingController: widget.controller,
@@ -447,7 +485,12 @@ class _SourceFieldState extends ConsumerState<_SourceField> {
           ),
           maxLength: 255,
           textCapitalization: TextCapitalization.words,
-          buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
+          buildCounter: (
+            _, {
+            required currentLength,
+            required isFocused,
+            maxLength,
+          }) => null,
           onFieldSubmitted: (_) => onSubmitted(),
         );
       },

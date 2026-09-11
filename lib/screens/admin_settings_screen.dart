@@ -1,28 +1,28 @@
 import 'dart:typed_data';
 
 import '../l10n/l10n.dart';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../api/api_client.dart';
 import '../models/admin.dart';
 import '../providers/branding_provider.dart';
 import '../providers/data_providers.dart';
+import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
 import '../widgets/glass.dart';
-import '../utils/async.dart';
 import '../widgets/common.dart';
 
 /// The web's admin Settings pages, for admins, as tabs: the currency
 /// settings, the dashboard guidance, the help-page FAQs, the app's name and
 /// marks, and its colours.
-class AdminSettingsScreen extends ConsumerStatefulWidget {
+class AdminSettingsScreen extends StatefulWidget {
   const AdminSettingsScreen({super.key});
 
   @override
-  ConsumerState<AdminSettingsScreen> createState() =>
-      _AdminSettingsScreenState();
+  State<AdminSettingsScreen> createState() => _AdminSettingsScreenState();
 }
 
 enum _Tab { spending, guidance, faqs, appearance, colours }
@@ -41,15 +41,15 @@ extension on _Tab {
   bool get sharesSpendingForm => this == _Tab.spending || this == _Tab.guidance;
 }
 
-class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
+class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   _Tab _tab = _Tab.spending;
 
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(spendingSettingsProvider);
-    final faqs = ref.watch(faqsProvider);
-    final branding = ref.watch(brandingSettingsProvider);
-    final colours = ref.watch(colorSettingsProvider);
+    final settings = context.watch<SpendingSettingsNotifier>().state;
+    final faqs = context.watch<FaqsNotifier>().state;
+    final branding = context.watch<BrandingSettingsNotifier>().state;
+    final colours = context.watch<ColorSettingsNotifier>().state;
 
     return Scaffold(
       appBar: AppBar(title: Text(tr('App settings'))),
@@ -59,7 +59,12 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
           // and every pill keeps the same width.
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 4, AppTheme.pageInset - 6, 12),
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.pageInset,
+              4,
+              AppTheme.pageInset - 6,
+              12,
+            ),
             child: Row(
               children: [
                 for (final tab in _Tab.values)
@@ -80,14 +85,14 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
           Expanded(
             child: RefreshIndicator(
               color: AppTheme.accent(context),
-              onRefresh: () async {
-                await refreshQuietly(
-                  ref.refresh(spendingSettingsProvider.future),
-                );
-                await refreshQuietly(ref.refresh(faqsProvider.future));
-                await refreshQuietly(ref.refresh(brandingSettingsProvider.future));
-                await refreshQuietly(ref.refresh(colorSettingsProvider.future));
-              },
+              // None of the four throws — see AsyncNotifier.refresh — so one
+              // failing tab cannot abandon the other three mid-pull.
+              onRefresh: () => Future.wait([
+                context.read<SpendingSettingsNotifier>().refresh(),
+                context.read<FaqsNotifier>().refresh(),
+                context.read<BrandingSettingsNotifier>().refresh(),
+                context.read<ColorSettingsNotifier>().refresh(),
+              ]),
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(
                   AppTheme.pageInset,
@@ -115,8 +120,9 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                         ? const SizedBox.shrink()
                         : LoadFailed(
                             message: apiErrorMessage(e),
-                            onRetry: () =>
-                                ref.invalidate(spendingSettingsProvider),
+                            onRetry: () => context
+                                .read<SpendingSettingsNotifier>()
+                                .invalidate(),
                           ),
                     data: (data) => _SettingsForm(settings: data, tab: _tab),
                   ),
@@ -125,7 +131,9 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                       loading: () => const _Loading(),
                       error: (e, _) => LoadFailed(
                         message: apiErrorMessage(e),
-                        onRetry: () => ref.invalidate(brandingSettingsProvider),
+                        onRetry: () => context
+                            .read<BrandingSettingsNotifier>()
+                            .invalidate(),
                       ),
                       data: (data) => _BrandingForm(settings: data),
                     ),
@@ -134,7 +142,8 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                       loading: () => const _Loading(),
                       error: (e, _) => LoadFailed(
                         message: apiErrorMessage(e),
-                        onRetry: () => ref.invalidate(colorSettingsProvider),
+                        onRetry: () =>
+                            context.read<ColorSettingsNotifier>().invalidate(),
                       ),
                       data: (data) => _ColoursForm(settings: data),
                     ),
@@ -151,7 +160,8 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                       ),
                       error: (e, _) => LoadFailed(
                         message: apiErrorMessage(e),
-                        onRetry: () => ref.invalidate(faqsProvider),
+                        onRetry: () =>
+                            context.read<FaqsNotifier>().invalidate(),
                       ),
                       data: (list) => _FaqCard(faqs: list),
                     ),
@@ -167,17 +177,17 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
 
 /// The spending and guidance tabs. One widget, because the server takes the
 /// whole settings row in a single PUT: saving from either tab sends both.
-class _SettingsForm extends ConsumerStatefulWidget {
+class _SettingsForm extends StatefulWidget {
   const _SettingsForm({required this.settings, required this.tab});
 
   final SpendingSettings settings;
   final _Tab tab;
 
   @override
-  ConsumerState<_SettingsForm> createState() => _SettingsFormState();
+  State<_SettingsForm> createState() => _SettingsFormState();
 }
 
-class _SettingsFormState extends ConsumerState<_SettingsForm> {
+class _SettingsFormState extends State<_SettingsForm> {
   late final _rate = TextEditingController(
     text: '${widget.settings.khrPerUsd}',
   );
@@ -198,21 +208,24 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
   Future<void> _save() async {
     setState(() => _busy = true);
 
-    try {
-      await ref
-          .read(repositoryProvider)
-          .updateSpendingSettings(
-            enabled: _enabled,
-            warning: _warning.text.trim(),
-            advice: _advice.text.trim(),
-            khrPerUsd: double.tryParse(_rate.text.trim()),
-            defaultCurrency: _currency,
-          );
+    // Both captured before the write: `context` must not be touched across an
+    // await, and the stale figures must drop whether or not this page is left.
+    final repository = context.read<SpendLogRepository>();
+    final refresh = context.read<SpendingSettingsNotifier>().invalidate;
 
+    try {
+      await repository.updateSpendingSettings(
+        enabled: _enabled,
+        warning: _warning.text.trim(),
+        advice: _advice.text.trim(),
+        khrPerUsd: double.tryParse(_rate.text.trim()),
+        defaultCurrency: _currency,
+      );
+
+      refresh();
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(tr('Settings saved.'))));
-        ref.invalidate(spendingSettingsProvider);
       }
     } catch (e) {
       if (mounted) {
@@ -313,9 +326,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
     if (_enabled) ...[
       TextField(
         controller: _warning,
-        decoration: InputDecoration(
-          hintText: tr('Warning (when over budget)'),
-        ),
+        decoration: InputDecoration(hintText: tr('Warning (when over budget)')),
         maxLines: 2,
       ),
       const SizedBox(height: 12),
@@ -333,28 +344,33 @@ class _Loading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: 100,
-        child: Center(
-          child: CircularProgressIndicator(strokeWidth: 2.4, color: AppTheme.accent(context)),
-        ),
-      );
+    height: 100,
+    child: Center(
+      child: CircularProgressIndicator(
+        strokeWidth: 2.4,
+        color: AppTheme.accent(context),
+      ),
+    ),
+  );
 }
 
 /// Settings → Appearance: the name, the footer's copyright holder, and the
 /// logo and favicon. Images are picked here and only sent on Save, so backing
 /// out of the tab discards them like any other unsaved field.
-class _BrandingForm extends ConsumerStatefulWidget {
+class _BrandingForm extends StatefulWidget {
   const _BrandingForm({required this.settings});
 
   final BrandingSettings settings;
 
   @override
-  ConsumerState<_BrandingForm> createState() => _BrandingFormState();
+  State<_BrandingForm> createState() => _BrandingFormState();
 }
 
-class _BrandingFormState extends ConsumerState<_BrandingForm> {
+class _BrandingFormState extends State<_BrandingForm> {
   late final _name = TextEditingController(text: widget.settings.appName);
-  late final _holder = TextEditingController(text: widget.settings.copyrightHolder ?? '');
+  late final _holder = TextEditingController(
+    text: widget.settings.copyrightHolder ?? '',
+  );
 
   XFile? _logo;
   XFile? _favicon;
@@ -392,27 +408,35 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
   Future<void> _save() async {
     setState(() => _busy = true);
 
+    // All captured before the write: `context` must not be touched across an
+    // await, and the app must re-theme whether or not this page is left.
+    final repository = context.read<SpendLogRepository>();
+    final refresh = context.read<BrandingSettingsNotifier>().invalidate;
+    final branding = context.read<BrandingNotifier>();
+
     try {
       final logo = _logo;
       final favicon = _favicon;
 
-      await ref.read(repositoryProvider).updateBranding(
-            appName: _name.text.trim(),
-            copyrightHolder: _holder.text.trim(),
-            logo: logo == null ? null : (bytes: await logo.readAsBytes(), filename: logo.name),
-            favicon: favicon == null
-                ? null
-                : (bytes: await favicon.readAsBytes(), filename: favicon.name),
-            removeLogo: _removeLogo,
-            removeFavicon: _removeFavicon,
-          );
+      await repository.updateBranding(
+        appName: _name.text.trim(),
+        copyrightHolder: _holder.text.trim(),
+        logo: logo == null
+            ? null
+            : (bytes: await logo.readAsBytes(), filename: logo.name),
+        favicon: favicon == null
+            ? null
+            : (bytes: await favicon.readAsBytes(), filename: favicon.name),
+        removeLogo: _removeLogo,
+        removeFavicon: _removeFavicon,
+      );
 
+      refresh();
+      // The app wears the new marks at once, like the web after a save.
+      branding.refresh();
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(tr('Appearance saved.'))));
-        ref.invalidate(brandingSettingsProvider);
-        // The app wears the new marks at once, like the web after a save.
-        ref.read(brandingProvider.notifier).refresh();
       }
     } catch (e) {
       if (mounted) {
@@ -448,7 +472,9 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
               textCapitalization: TextCapitalization.words,
               decoration: InputDecoration(
                 hintText: tr('Copyright holder'),
-                helperText: tr('Shown in the footer. Leave blank to use the app name.'),
+                helperText: tr(
+                  'Shown in the footer. Leave blank to use the app name.',
+                ),
               ),
             ),
             const SizedBox(height: 18),
@@ -460,9 +486,17 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
               removed: _removeLogo,
               onChoose: () async {
                 final file = await _pick();
-                if (file != null) setState(() { _logo = file; _removeLogo = false; });
+                if (file != null) {
+                  setState(() {
+                    _logo = file;
+                    _removeLogo = false;
+                  });
+                }
               },
-              onRemove: () => setState(() { _logo = null; _removeLogo = true; }),
+              onRemove: () => setState(() {
+                _logo = null;
+                _removeLogo = true;
+              }),
             ),
             const SizedBox(height: 16),
             _ImageField(
@@ -473,14 +507,24 @@ class _BrandingFormState extends ConsumerState<_BrandingForm> {
               removed: _removeFavicon,
               onChoose: () async {
                 final file = await _pick();
-                if (file != null) setState(() { _favicon = file; _removeFavicon = false; });
+                if (file != null) {
+                  setState(() {
+                    _favicon = file;
+                    _removeFavicon = false;
+                  });
+                }
               },
-              onRemove: () => setState(() { _favicon = null; _removeFavicon = true; }),
+              onRemove: () => setState(() {
+                _favicon = null;
+                _removeFavicon = true;
+              }),
             ),
             const SizedBox(height: 20),
             FilledButton(
               onPressed: _busy ? null : _save,
-              child: _busy ? const _ButtonSpinner() : Text(tr('Save appearance')),
+              child: _busy
+                  ? const _ButtonSpinner()
+                  : Text(tr('Save appearance')),
             ),
           ],
         ),
@@ -519,7 +563,10 @@ class _ImageField extends StatelessWidget {
       preview = FutureBuilder<List<int>>(
         future: picked!.readAsBytes(),
         builder: (context, snapshot) => snapshot.hasData
-            ? Image.memory(Uint8List.fromList(snapshot.data!), fit: BoxFit.contain)
+            ? Image.memory(
+                Uint8List.fromList(snapshot.data!),
+                fit: BoxFit.contain,
+              )
             : const SizedBox.shrink(),
       );
     } else if (currentUrl != null && !removed) {
@@ -555,13 +602,18 @@ class _ImageField extends StatelessWidget {
             if (hasImage)
               TextButton(
                 onPressed: onRemove,
-                style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFDC2626),
+                ),
                 child: Text(tr('Remove')),
               ),
           ],
         ),
         const SizedBox(height: 6),
-        Text(hint, style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.5))),
+        Text(
+          hint,
+          style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.5)),
+        ),
       ],
     );
   }
@@ -569,16 +621,16 @@ class _ImageField extends StatelessWidget {
 
 /// Settings → Colours: the button colour (a preset or any readable hex) and
 /// the page background (presets only, since the whole theme derives from it).
-class _ColoursForm extends ConsumerStatefulWidget {
+class _ColoursForm extends StatefulWidget {
   const _ColoursForm({required this.settings});
 
   final ColorSettings settings;
 
   @override
-  ConsumerState<_ColoursForm> createState() => _ColoursFormState();
+  State<_ColoursForm> createState() => _ColoursFormState();
 }
 
-class _ColoursFormState extends ConsumerState<_ColoursForm> {
+class _ColoursFormState extends State<_ColoursForm> {
   late String _button = widget.settings.buttonColor;
   late String _body = widget.settings.bodyColor;
   late final _custom = TextEditingController(text: widget.settings.buttonColor);
@@ -597,25 +649,30 @@ class _ColoursFormState extends ConsumerState<_ColoursForm> {
 
   Future<void> _save() async {
     if (!_hex.hasMatch(_button)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(tr('Enter a colour as #rrggbb.'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tr('Enter a colour as #rrggbb.'))));
       return;
     }
 
     setState(() => _busy = true);
 
-    try {
-      await ref.read(repositoryProvider).updateColors(
-            buttonColor: _button.toLowerCase(),
-            bodyColor: _body,
-          );
+    // Captured before the write — see _BrandingFormState._save.
+    final repository = context.read<SpendLogRepository>();
+    final refresh = context.read<ColorSettingsNotifier>().invalidate;
+    final branding = context.read<BrandingNotifier>();
 
+    try {
+      await repository.updateColors(
+        buttonColor: _button.toLowerCase(),
+        bodyColor: _body,
+      );
+
+      refresh();
+      branding.refresh();
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(tr('Colours saved.'))));
-        ref.invalidate(colorSettingsProvider);
-        ref.read(brandingProvider.notifier).refresh();
       }
     } catch (e) {
       if (mounted) {
@@ -639,7 +696,10 @@ class _ColoursFormState extends ConsumerState<_ColoursForm> {
           children: [
             Eyebrow(tr('Colours')),
             const SizedBox(height: 14),
-            Text(tr('Button colour'), style: TextStyle(fontWeight: FontWeight.w500)),
+            Text(
+              tr('Button colour'),
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
             const SizedBox(height: 10),
             Wrap(
               spacing: 10,
@@ -647,7 +707,9 @@ class _ColoursFormState extends ConsumerState<_ColoursForm> {
               children: [
                 for (final preset in widget.settings.buttonPresets)
                   Tooltip(
-                    message: preset.isDefault ? '${preset.label} (default)' : preset.label,
+                    message: preset.isDefault
+                        ? '${preset.label} (default)'
+                        : preset.label,
                     child: GestureDetector(
                       onTap: () => setState(() {
                         _button = preset.value;
@@ -660,14 +722,21 @@ class _ColoursFormState extends ConsumerState<_ColoursForm> {
                           color: _parse(preset.value),
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: _button.toLowerCase() == preset.value.toLowerCase()
+                            color:
+                                _button.toLowerCase() ==
+                                    preset.value.toLowerCase()
                                 ? ink
                                 : Colors.transparent,
                             width: 2.5,
                           ),
                         ),
-                        child: _button.toLowerCase() == preset.value.toLowerCase()
-                            ? const Icon(Icons.check, size: 16, color: Colors.white)
+                        child:
+                            _button.toLowerCase() == preset.value.toLowerCase()
+                            ? const Icon(
+                                Icons.check,
+                                size: 16,
+                                color: Colors.white,
+                              )
                             : null,
                       ),
                     ),
@@ -688,7 +757,9 @@ class _ColoursFormState extends ConsumerState<_ColoursForm> {
                     width: 18,
                     height: 18,
                     decoration: BoxDecoration(
-                      color: _hex.hasMatch(_button) ? _parse(_button) : Colors.transparent,
+                      color: _hex.hasMatch(_button)
+                          ? _parse(_button)
+                          : Colors.transparent,
                       shape: BoxShape.circle,
                       border: Border.all(color: AppTheme.faint(context, 0.2)),
                     ),
@@ -697,7 +768,10 @@ class _ColoursFormState extends ConsumerState<_ColoursForm> {
               ),
             ),
             const SizedBox(height: 20),
-            Text(tr('Background'), style: TextStyle(fontWeight: FontWeight.w500)),
+            Text(
+              tr('Background'),
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,
@@ -738,19 +812,19 @@ class _ButtonSpinner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-      );
+    width: 20,
+    height: 20,
+    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+  );
 }
 
-class _FaqCard extends ConsumerWidget {
+class _FaqCard extends StatelessWidget {
   const _FaqCard({required this.faqs});
 
   final List<FaqEntry> faqs;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     // No panel around the list: a heading on the page, then one row per
     // entry, the way every other list in the app reads.
     return Column(
@@ -762,7 +836,7 @@ class _FaqCard extends ConsumerWidget {
             children: [
               Expanded(child: Eyebrow(tr('Help page FAQs'))),
               TextButton.icon(
-                onPressed: () => _showFaqSheet(context, ref),
+                onPressed: () => _showFaqSheet(context),
                 icon: const Icon(Icons.add, size: 16),
                 label: Text(tr('Add')),
               ),
@@ -808,15 +882,15 @@ class _FaqCard extends ConsumerWidget {
   }
 }
 
-class _FaqRow extends ConsumerWidget {
+class _FaqRow extends StatelessWidget {
   const _FaqRow({required this.faq});
 
   final FaqEntry faq;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => _showFaqSheet(context, ref, faq: faq),
+      onTap: () => _showFaqSheet(context, faq: faq),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         child: Row(
@@ -864,11 +938,12 @@ class _FaqRow extends ConsumerWidget {
   }
 }
 
-Future<void> _showFaqSheet(
-  BuildContext context,
-  WidgetRef ref, {
-  FaqEntry? faq,
-}) {
+Future<void> _showFaqSheet(BuildContext context, {FaqEntry? faq}) {
+  // Captured before the sheet opens: its buttons run after awaits, by which
+  // point the row that opened it may be gone from the list.
+  final repository = context.read<SpendLogRepository>();
+  final refreshFaqs = context.read<FaqsNotifier>().invalidate;
+
   final question = TextEditingController(text: faq?.question ?? '');
   final answer = TextEditingController(text: faq?.answer ?? '');
   var published = faq == null || faq.status == 'published';
@@ -917,16 +992,14 @@ Future<void> _showFaqSheet(
                 FilledButton(
                   onPressed: () async {
                     try {
-                      await ref
-                          .read(repositoryProvider)
-                          .saveFaq(
-                            uuid: faq?.uuid,
-                            question: question.text.trim(),
-                            answer: answer.text.trim(),
-                            status: published ? 'published' : 'draft',
-                          );
+                      await repository.saveFaq(
+                        uuid: faq?.uuid,
+                        question: question.text.trim(),
+                        answer: answer.text.trim(),
+                        status: published ? 'published' : 'draft',
+                      );
 
-                      ref.invalidate(faqsProvider);
+                      refreshFaqs();
                       if (sheetContext.mounted) {
                         Navigator.of(sheetContext).pop();
                       }
@@ -944,8 +1017,8 @@ Future<void> _showFaqSheet(
                   TextButton(
                     onPressed: () async {
                       try {
-                        await ref.read(repositoryProvider).deleteFaq(faq.uuid);
-                        ref.invalidate(faqsProvider);
+                        await repository.deleteFaq(faq.uuid);
+                        refreshFaqs();
                         if (sheetContext.mounted) {
                           Navigator.of(sheetContext).pop();
                         }

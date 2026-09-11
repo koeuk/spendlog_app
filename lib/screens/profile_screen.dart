@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -7,7 +7,7 @@ import '../api/api_client.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../l10n/l10n.dart';
-import '../providers/data_providers.dart';
+import '../repositories/spendlog_repository.dart';
 import '../providers/locale_provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme.dart';
@@ -18,15 +18,15 @@ import '../widgets/glass.dart';
 /// in, then labelled groups of rows. Anything that needs a form — editing the
 /// account, changing the password — opens in a sheet so the list itself stays
 /// a list you can scan.
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   static const _danger = Color(0xFFDC2626);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authProvider).user;
-    final themeMode = ref.watch(themeModeProvider);
+  Widget build(BuildContext context) {
+    final user = context.select<AuthNotifier, User?>((auth) => auth.state.user);
+    final themeMode = context.watch<ThemeModeNotifier>().value;
     final isAdmin = user?.isAdmin ?? false;
 
     return Scaffold(
@@ -57,13 +57,13 @@ class ProfileScreen extends ConsumerWidget {
                 icon: Icons.brightness_6_outlined,
                 label: tr('Appearance'),
                 value: tr(_themeLabel(themeMode)),
-                onTap: () => _chooseTheme(context, ref, themeMode),
+                onTap: () => _chooseTheme(context, themeMode),
               ),
               _SettingsRow(
                 icon: Icons.translate,
                 label: tr('Language'),
-                value: L10n.label(ref.watch(localeProvider)),
-                onTap: () => _chooseLanguage(context, ref),
+                value: L10n.label(context.watch<LocaleNotifier>().value),
+                onTap: () => _chooseLanguage(context),
               ),
               // App-wide settings (exchange rate, FAQ) are admin-only; the
               // server gates the page too, this just keeps the row honest.
@@ -92,7 +92,7 @@ class ProfileScreen extends ConsumerWidget {
                 label: tr('Sign out'),
                 color: _danger,
                 chevron: false,
-                onTap: () => ref.read(authProvider.notifier).signOut(),
+                onTap: () => context.read<AuthNotifier>().signOut(),
               ),
             ],
           ),
@@ -107,26 +107,27 @@ class ProfileScreen extends ConsumerWidget {
     ThemeMode.dark => 'Dark',
   };
 
-  Future<void> _chooseLanguage(BuildContext context, WidgetRef ref) async {
+  Future<void> _chooseLanguage(BuildContext context) async {
+    // Read before the sheet: `context` must not be touched across an await.
+    final locale = context.read<LocaleNotifier>();
+
     final chosen = await _showSheet<String>(
       context,
-      _LanguageSheet(current: ref.read(localeProvider)),
+      _LanguageSheet(current: locale.value),
     );
 
-    if (chosen != null) ref.read(localeProvider.notifier).set(chosen);
+    if (chosen != null) locale.set(chosen);
   }
 
-  Future<void> _chooseTheme(
-    BuildContext context,
-    WidgetRef ref,
-    ThemeMode current,
-  ) async {
+  Future<void> _chooseTheme(BuildContext context, ThemeMode current) async {
+    final themeMode = context.read<ThemeModeNotifier>();
+
     final chosen = await _showSheet<ThemeMode>(
       context,
       _AppearanceSheet(current: current),
     );
 
-    if (chosen != null) ref.read(themeModeProvider.notifier).set(chosen);
+    if (chosen != null) themeMode.set(chosen);
   }
 }
 
@@ -150,16 +151,16 @@ Future<T?> _showSheet<T>(BuildContext context, Widget child) {
 /// The portrait: photo (or initial) with a camera badge that changes it,
 /// the name beneath, and an ADMIN chip where it applies. Details live in the
 /// rows below rather than crowding the picture.
-class _Header extends ConsumerStatefulWidget {
+class _Header extends StatefulWidget {
   const _Header({required this.user});
 
   final User? user;
 
   @override
-  ConsumerState<_Header> createState() => _HeaderState();
+  State<_Header> createState() => _HeaderState();
 }
 
-class _HeaderState extends ConsumerState<_Header> {
+class _HeaderState extends State<_Header> {
   bool _busy = false;
 
   Future<void> _photoMenu() async {
@@ -213,9 +214,9 @@ class _HeaderState extends ConsumerState<_Header> {
     setState(() => _busy = true);
     try {
       if (action == 'change') {
-        await _pickAndUploadPhoto(context, ref);
+        await _pickAndUploadPhoto(context);
       } else {
-        await _removePhoto(context, ref);
+        await _removePhoto(context);
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -346,7 +347,7 @@ class _HeaderState extends ConsumerState<_Header> {
 /// wait for the edit sheet's "Save changes", which validates the text fields
 /// and would hold a perfectly good photo hostage to a blank name. Shared by
 /// the portrait's badge and the edit sheet.
-Future<void> _pickAndUploadPhoto(BuildContext context, WidgetRef ref) async {
+Future<void> _pickAndUploadPhoto(BuildContext context) async {
   final XFile? picked;
   try {
     picked = await ImagePicker().pickImage(
@@ -371,29 +372,33 @@ Future<void> _pickAndUploadPhoto(BuildContext context, WidgetRef ref) async {
 
   // A non-null copy: the closure below cannot see the null check's promotion.
   final file = picked;
+  final repository = context.read<SpendLogRepository>();
 
   await _applyPhoto(
     context,
-    ref,
-    () async => ref
-        .read(repositoryProvider)
-        .uploadAvatar(bytes: await file.readAsBytes(), filename: file.name),
+    () async => repository.uploadAvatar(
+      bytes: await file.readAsBytes(),
+      filename: file.name,
+    ),
   );
 }
 
-Future<void> _removePhoto(BuildContext context, WidgetRef ref) => _applyPhoto(
-  context,
-  ref,
-  () => ref.read(repositoryProvider).removeAvatar(),
-);
+Future<void> _removePhoto(BuildContext context) {
+  final repository = context.read<SpendLogRepository>();
+
+  return _applyPhoto(context, repository.removeAvatar);
+}
 
 Future<void> _applyPhoto(
   BuildContext context,
-  WidgetRef ref,
   Future<User> Function() call,
 ) async {
+  // Captured before the upload: `context` must not be touched across an await,
+  // and the new photo must reach the app whether or not the sheet is still up.
+  final auth = context.read<AuthNotifier>();
+
   try {
-    ref.read(authProvider.notifier).setUser(await call());
+    auth.setUser(await call());
   } catch (e) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -594,14 +599,23 @@ class _LanguageSheet extends StatelessWidget {
           for (final code in L10n.supported)
             ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              leading: Icon(Icons.translate, size: 22, color: AppTheme.faint(context, 0.6)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              leading: Icon(
+                Icons.translate,
+                size: 22,
+                color: AppTheme.faint(context, 0.6),
+              ),
               title: Text(
                 L10n.label(code),
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               trailing: code == current
-                  ? Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary)
+                  ? Icon(
+                      Icons.check_circle,
+                      color: Theme.of(context).colorScheme.primary,
+                    )
                   : null,
               onTap: () => Navigator.of(context).pop(code),
             ),
@@ -669,18 +683,19 @@ class _AppearanceSheet extends StatelessWidget {
   }
 }
 
-/// Owns its controllers and `ref` so it survives the list rebuilding under it.
-class _ProfileSheet extends ConsumerStatefulWidget {
+/// Owns its controllers and its own `BuildContext` so it survives the list
+/// rebuilding under it.
+class _ProfileSheet extends StatefulWidget {
   const _ProfileSheet();
 
   @override
-  ConsumerState<_ProfileSheet> createState() => _ProfileSheetState();
+  State<_ProfileSheet> createState() => _ProfileSheetState();
 }
 
-class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
+class _ProfileSheetState extends State<_ProfileSheet> {
   final _formKey = GlobalKey<FormState>();
 
-  User? get _user => ref.read(authProvider).user;
+  User? get _user => context.read<AuthNotifier>().state.user;
 
   late final _name = TextEditingController(text: _user?.name ?? '');
   late final _username = TextEditingController(text: _user?.username ?? '');
@@ -700,10 +715,10 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
   }
 
   Future<void> _changePhoto() =>
-      _withPhotoBusy(() => _pickAndUploadPhoto(context, ref));
+      _withPhotoBusy(() => _pickAndUploadPhoto(context));
 
   Future<void> _removePhotoFromSheet() =>
-      _withPhotoBusy(() => _removePhoto(context, ref));
+      _withPhotoBusy(() => _removePhoto(context));
 
   Future<void> _withPhotoBusy(Future<void> Function() call) async {
     setState(() => _photoBusy = true);
@@ -719,17 +734,20 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
 
     setState(() => _saving = true);
 
-    try {
-      final user = await ref
-          .read(repositoryProvider)
-          .updateProfile(
-            name: _name.text.trim(),
-            email: _email.text.trim(),
-            username: _username.text.trim(),
-            phone: _phone.text.trim(),
-          );
+    // Both captured before the write: `context` must not be touched across an
+    // await, and the saved details must reach the app either way.
+    final repository = context.read<SpendLogRepository>();
+    final auth = context.read<AuthNotifier>();
 
-      ref.read(authProvider.notifier).setUser(user);
+    try {
+      final user = await repository.updateProfile(
+        name: _name.text.trim(),
+        email: _email.text.trim(),
+        username: _username.text.trim(),
+        phone: _phone.text.trim(),
+      );
+
+      auth.setUser(user);
 
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -752,7 +770,7 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
   @override
   Widget build(BuildContext context) {
     // Watched, not read: the box below must repaint the moment a photo lands.
-    final user = ref.watch(authProvider).user;
+    final user = context.select<AuthNotifier, User?>((auth) => auth.state.user);
 
     return _SheetFrame(
       title: tr('Edit profile'),
@@ -811,9 +829,7 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _username,
-              decoration: InputDecoration(
-                hintText: tr('Username (optional)'),
-              ),
+              decoration: InputDecoration(hintText: tr('Username (optional)')),
               autocorrect: false,
             ),
             const SizedBox(height: 12),
@@ -844,14 +860,14 @@ class _ProfileSheetState extends ConsumerState<_ProfileSheet> {
   }
 }
 
-class _PasswordSheet extends ConsumerStatefulWidget {
+class _PasswordSheet extends StatefulWidget {
   const _PasswordSheet();
 
   @override
-  ConsumerState<_PasswordSheet> createState() => _PasswordSheetState();
+  State<_PasswordSheet> createState() => _PasswordSheetState();
 }
 
-class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
+class _PasswordSheetState extends State<_PasswordSheet> {
   final _formKey = GlobalKey<FormState>();
   final _password = TextEditingController();
   final _confirm = TextEditingController();
@@ -871,13 +887,14 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
 
     setState(() => _saving = true);
 
+    // Read before the write: `context` must not be touched across an await.
+    final repository = context.read<SpendLogRepository>();
+
     try {
-      await ref
-          .read(repositoryProvider)
-          .changePassword(
-            password: _password.text,
-            passwordConfirmation: _confirm.text,
-          );
+      await repository.changePassword(
+        password: _password.text,
+        passwordConfirmation: _confirm.text,
+      );
 
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -928,9 +945,7 @@ class _PasswordSheetState extends ConsumerState<_PasswordSheet> {
             TextFormField(
               controller: _confirm,
               obscureText: !_show,
-              decoration: InputDecoration(
-                hintText: tr('Confirm new password'),
-              ),
+              decoration: InputDecoration(hintText: tr('Confirm new password')),
               validator: (v) =>
                   v != _password.text ? 'Passwords do not match.' : null,
             ),

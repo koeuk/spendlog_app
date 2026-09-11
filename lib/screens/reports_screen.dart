@@ -1,25 +1,26 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../models/report.dart';
 import '../providers/data_providers.dart';
 import '../theme.dart';
 import '../widgets/glass.dart';
-import '../utils/async.dart';
 import '../utils/category_style.dart';
 import '../utils/format.dart';
 import '../utils/report_export.dart';
 import '../widgets/common.dart';
 import '../widgets/spending_chart.dart';
 
-class ReportsScreen extends ConsumerWidget {
+class ReportsScreen extends StatelessWidget {
   const ReportsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final report = ref.watch(reportProvider);
+  Widget build(BuildContext context) {
+    final report = context.watch<ReportNotifier>().state;
 
     return Scaffold(
       appBar: AppBar(
@@ -33,22 +34,30 @@ class ReportsScreen extends ConsumerWidget {
             IconButton(
               tooltip: tr('Export'),
               icon: const Icon(Icons.ios_share, size: 21),
-              onPressed: () => _pickExportFormat(context, ref),
+              onPressed: () => _pickExportFormat(context),
             ),
           const SizedBox(width: 4),
         ],
       ),
       body: report.when(
-        loading: () => Center(child: CircularProgressIndicator(color: AppTheme.accent(context))),
+        loading: () => Center(
+          child: CircularProgressIndicator(color: AppTheme.accent(context)),
+        ),
         error: (e, _) => LoadFailed(
           message: apiErrorMessage(e),
-          onRetry: () => ref.invalidate(reportProvider),
+          onRetry: () => context.read<ReportNotifier>().invalidate(),
         ),
         data: (data) => RefreshIndicator(
           color: AppTheme.accent(context),
-          onRefresh: () => refreshQuietly(ref.refresh(reportProvider.future)),
+          // `refresh` never throws — see AsyncNotifier.refresh.
+          onRefresh: () => context.read<ReportNotifier>().refresh(),
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(AppTheme.pageInset, 4, AppTheme.pageInset, AppTheme.navBarClearance),
+            padding: const EdgeInsets.fromLTRB(
+              AppTheme.pageInset,
+              4,
+              AppTheme.pageInset,
+              AppTheme.navBarClearance,
+            ),
             children: [
               _PeriodBar(data: data),
               const SizedBox(height: 16),
@@ -69,15 +78,14 @@ class ReportsScreen extends ConsumerWidget {
 
 /// Granularity toggle above the period picker. Switching granularity drops the
 /// anchor — '2026-08' is not a period a year view can show.
-class _PeriodBar extends ConsumerWidget {
+class _PeriodBar extends StatelessWidget {
   const _PeriodBar({required this.data});
 
   final Report data;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final period = ref.watch(reportPeriodProvider);
-    final notifier = ref.read(reportPeriodProvider.notifier);
+  Widget build(BuildContext context) {
+    final periods = context.watch<ReportPeriodNotifier>();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -91,7 +99,9 @@ class _PeriodBar extends ConsumerWidget {
                   child: PillSegment(
                     label: tr(option.label),
                     selected: data.granularity == option.value,
-                    onTap: () => notifier.state = period.withGranularity(option.value),
+                    onTap: () => periods.value = periods.value.withGranularity(
+                      option.value,
+                    ),
                   ),
                 ),
               ),
@@ -113,13 +123,13 @@ class _PeriodBar extends ConsumerWidget {
 /// year view offers 24 months, which covered the whole report behind it. A
 /// sheet is bounded, dismissible by dragging, and matches every other picker
 /// in the app.
-class _PeriodPicker extends ConsumerWidget {
+class _PeriodPicker extends StatelessWidget {
   const _PeriodPicker({required this.data});
 
   final Report data;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     // The server bounds the list by the account's own history, so a new user is
     // not offered ten empty years to browse.
     final selected = data.options.firstWhere(
@@ -131,7 +141,7 @@ class _PeriodPicker extends ConsumerWidget {
       color: AppTheme.surface(context),
       borderRadius: BorderRadius.circular(AppTheme.pillRadius),
       child: InkWell(
-        onTap: () => _choose(context, ref, selected.value),
+        onTap: () => _choose(context, selected.value),
         borderRadius: BorderRadius.circular(AppTheme.pillRadius),
         child: Container(
           height: 48,
@@ -160,17 +170,20 @@ class _PeriodPicker extends ConsumerWidget {
     );
   }
 
-  Future<void> _choose(BuildContext context, WidgetRef ref, String current) async {
+  Future<void> _choose(BuildContext context, String current) async {
+    // Read before the sheet: `context` must not be touched across an await.
+    final periods = context.read<ReportPeriodNotifier>();
+
     final chosen = await showGlassSheet<String>(
       context: context,
       isScrollControlled: true,
-      builder: (context) => _PeriodSheet(options: data.options, current: current),
+      builder: (context) =>
+          _PeriodSheet(options: data.options, current: current),
     );
 
     if (chosen == null) return;
 
-    ref.read(reportPeriodProvider.notifier).state =
-        ref.read(reportPeriodProvider).withAnchor(chosen);
+    periods.update((current) => current.withAnchor(chosen));
   }
 }
 
@@ -204,9 +217,7 @@ class _PeriodSheet extends StatelessWidget {
             const SizedBox(height: 14),
             Text(
               tr('Choose a period'),
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
+              style: Theme.of(context).textTheme.titleMedium
                   ?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
@@ -224,15 +235,22 @@ class _PeriodSheet extends StatelessWidget {
                       borderRadius: BorderRadius.circular(14),
                     ),
                     selected: isCurrent,
-                    selectedTileColor: AppTheme.accent(context).withValues(alpha: 0.10),
+                    selectedTileColor: AppTheme.accent(context)
+                        .withValues(alpha: 0.10),
                     title: Text(
                       option.label,
                       style: TextStyle(
-                        fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: isCurrent
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                       ),
                     ),
                     trailing: isCurrent
-                        ? Icon(Icons.check, size: 20, color: AppTheme.accent(context))
+                        ? Icon(
+                            Icons.check,
+                            size: 20,
+                            color: AppTheme.accent(context),
+                          )
                         : null,
                     onTap: () => Navigator.of(context).pop(option.value),
                   );
@@ -268,16 +286,17 @@ class _TotalCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               money(stats.total),
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineMedium
+              style: Theme.of(context).textTheme.headlineMedium
                   ?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 10),
             if (change == null)
               Text(
                 'Nothing before $label to compare with',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13),
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontSize: 13,
+                ),
               )
             else
               Row(
@@ -350,7 +369,11 @@ class _FiguresRow extends StatelessWidget {
 }
 
 class _Figure extends StatelessWidget {
-  const _Figure({required this.eyebrow, required this.value, required this.caption});
+  const _Figure({
+    required this.eyebrow,
+    required this.value,
+    required this.caption,
+  });
 
   final String eyebrow;
   final String value;
@@ -369,15 +392,16 @@ class _Figure extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               value,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
+              style: Theme.of(context).textTheme.titleLarge
                   ?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 4),
             Text(
               caption,
-              style: TextStyle(fontSize: 11, color: AppTheme.faint(context, 0.45)),
+              style: TextStyle(
+                fontSize: 11,
+                color: AppTheme.faint(context, 0.45),
+              ),
             ),
           ],
         ),
@@ -407,9 +431,7 @@ class _ChartCard extends StatelessWidget {
               children: [
                 Text(
                   money(data.seriesTotal),
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
+                  style: Theme.of(context).textTheme.titleLarge
                       ?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(width: 8),
@@ -487,7 +509,11 @@ class _SliceRow extends StatelessWidget {
                 color: color.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(11),
               ),
-              child: Icon(CategoryStyle.icon(slice.icon), size: 17, color: color),
+              child: Icon(
+                CategoryStyle.icon(slice.icon),
+                size: 17,
+                color: color,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -513,8 +539,13 @@ class _SliceRow extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(money(slice.total),
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                Text(
+                  money(slice.total),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   '${slice.share}%',
@@ -535,8 +566,8 @@ class _SliceRow extends StatelessWidget {
 }
 
 /// PDF for reading, Excel/CSV for spreadsheets — same three the web offers.
-Future<void> _pickExportFormat(BuildContext context, WidgetRef ref) async {
-  final period = ref.read(reportPeriodProvider);
+Future<void> _pickExportFormat(BuildContext context) async {
+  final period = context.read<ReportPeriodNotifier>().value;
 
   final format = await showGlassSheet<String>(
     context: context,
