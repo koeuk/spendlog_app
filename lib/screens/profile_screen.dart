@@ -501,31 +501,36 @@ class _SettingsRow extends StatelessWidget {
           children: [
             Icon(icon, size: 20, color: color ?? AppTheme.faint(context, 0.6)),
             const SizedBox(width: 18),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: fg,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Spacer(),
-            if (value != null)
-              Flexible(
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: Text(
-                    value!,
-                    textAlign: TextAlign.end,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppTheme.faint(context, 0.45),
-                    ),
-                  ),
+            // The label takes every spare pixel, so the value and chevron sit
+            // hard against the right edge and line up down the whole list.
+            // A Spacer here instead would split that space with the value and
+            // leave a gap after it — one that grew as the value got shorter,
+            // so each row's chevron landed somewhere different.
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: fg,
                 ),
               ),
+            ),
+            if (value != null) ...[
+              const SizedBox(width: 12),
+              Text(
+                value!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppTheme.faint(context, 0.45),
+                ),
+              ),
+              const SizedBox(width: 6),
+            ],
             if (chevron)
               Icon(
                 Icons.chevron_right,

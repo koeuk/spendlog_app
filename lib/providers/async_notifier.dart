@@ -14,12 +14,12 @@ import '../repositories/spendlog_repository.dart';
 @immutable
 class AsyncState<T> {
   const AsyncState._({
-    T? value,
+    this._value,
     this.hasValue = false,
     this.error,
     this.stackTrace,
     this.isLoading = false,
-  }) : _value = value;
+  });
 
   const AsyncState.loading() : this._(isLoading: true);
 

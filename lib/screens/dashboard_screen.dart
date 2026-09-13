@@ -462,7 +462,7 @@ class _BreakdownCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -522,7 +522,7 @@ class _RecentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -531,6 +531,7 @@ class _RecentCard extends StatelessWidget {
             for (final expense in data.recent) ...[
               Row(
                 children: [
+                  
                   Container(
                     width: 36,
                     height: 36,
