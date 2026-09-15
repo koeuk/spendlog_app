@@ -9,6 +9,7 @@ import '../models/expense.dart';
 import '../models/expense_filters.dart';
 import '../models/activity.dart';
 import '../models/admin.dart';
+import '../models/borrowing.dart';
 import '../models/branding.dart';
 import '../models/income.dart';
 import '../models/money_settings.dart';
@@ -424,6 +425,144 @@ class SpendLogRepository {
 
   Future<void> deleteSavingsEntry(String uuid) =>
       _client.dio.delete('/savings/entries/$uuid');
+
+  // ----------------------------------------------------------- borrowings
+
+  /// Own rows only, still-owed first then newest borrowed. One page of 100
+  /// — the API's maximum — rather than a paging notifier: a person's debts
+  /// are a handful of rows, the same reasoning as [incomes].
+  ///
+  /// [status] is open | settled | all.
+  Future<List<Borrowing>> borrowings({String status = 'all'}) async {
+    final response = await _client.dio.get(
+      '/borrowings',
+      queryParameters: {'status': status, 'per_page': 100},
+    );
+
+    return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>)
+        .map((e) => Borrowing.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// All time — what is still owed, and to which kinds of lender.
+  Future<BorrowingSummary> borrowingSummary() async {
+    final response = await _client.dio.get('/borrowings/summary');
+
+    return BorrowingSummary.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
+  /// The lender names used before, most frequent first, and the fixed types
+  /// labelled in the app locale — the form's pickers.
+  Future<LenderOptions> borrowingLenders() async {
+    final response = await _client.dio.get('/borrowings/lenders');
+
+    return LenderOptions.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
+  /// One borrowing with its ledger of repayments, newest first.
+  Future<Borrowing> borrowing(String uuid) async {
+    final response = await _client.dio.get('/borrowings/$uuid');
+
+    return Borrowing.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
+  /// [lenderType] is one of [lenderTypes]. [borrowedOn] cannot be in the
+  /// future; [dueOn] is optional but not before it.
+  Future<Borrowing> createBorrowing({
+    required String lender,
+    required String lenderType,
+    required String amount,
+    required String borrowedOn,
+    String? dueOn,
+    String? note,
+    String currency = 'USD',
+  }) async {
+    final response = await _client.dio.post(
+      '/borrowings',
+      data: {
+        'lender': lender,
+        'lender_type': lenderType,
+        'amount': amount,
+        'borrowed_on': borrowedOn,
+        'due_on': _blankToNull(dueOn),
+        'note': _blankToNull(note),
+        if (currency != 'USD') 'currency': currency,
+      },
+    );
+
+    return Borrowing.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
+  /// Takes the full shape. A 422 on `amount` when it would drop below what
+  /// has already been repaid; apiErrorMessage surfaces that line.
+  Future<Borrowing> updateBorrowing(
+    String uuid, {
+    required String lender,
+    required String lenderType,
+    required String amount,
+    required String borrowedOn,
+    String? dueOn,
+    String? note,
+    String currency = 'USD',
+  }) async {
+    final response = await _client.dio.patch(
+      '/borrowings/$uuid',
+      data: {
+        'lender': lender,
+        'lender_type': lenderType,
+        'amount': amount,
+        'borrowed_on': borrowedOn,
+        // Sent even when null: that is how a due date or note gets cleared.
+        'due_on': _blankToNull(dueOn),
+        'note': _blankToNull(note),
+        if (currency != 'USD') 'currency': currency,
+      },
+    );
+
+    return Borrowing.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
+  /// The repayments against it go with it.
+  Future<void> deleteBorrowing(String uuid) =>
+      _client.dio.delete('/borrowings/$uuid');
+
+  /// Money paid back against one borrowing. Capped server-side at what is
+  /// still owed — more comes back as a 422 whose `errors.amount` says so.
+  /// [paidOn] cannot be in the future or before the day it was borrowed.
+  Future<void> addBorrowingRepayment(
+    String borrowingUuid, {
+    required String amount,
+    required String paidOn,
+    String? note,
+    String currency = 'USD',
+  }) async {
+    await _client.dio.post(
+      '/borrowings/$borrowingUuid/repayments',
+      data: {
+        'amount': amount,
+        'paid_on': paidOn,
+        'note': _blankToNull(note),
+        if (currency != 'USD') 'currency': currency,
+      },
+    );
+  }
+
+  Future<void> deleteBorrowingRepayment(
+    String borrowingUuid,
+    String repaymentUuid,
+  ) => _client.dio.delete(
+    '/borrowings/$borrowingUuid/repayments/$repaymentUuid',
+  );
 
   // -------------------------------------------------------------- reports
 

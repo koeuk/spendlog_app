@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/activity.dart';
 import '../models/admin.dart';
+import '../models/borrowing.dart';
 import '../models/budget.dart';
 import '../models/budget_summary.dart';
 import '../models/category.dart';
@@ -298,6 +299,45 @@ class SavingsPlanNotifier extends FamilyAsyncNotifier<SavingsPlan?, String> {
   Future<SavingsPlan?> fetch(String month) => repository.savingsPlan(month);
 }
 
+// --------------------------------------------------------------- borrowings
+
+/// Which segment of the list is showing: still owed, paid back, or both.
+class BorrowingStatus extends ValueState<String> {
+  BorrowingStatus() : super('open');
+}
+
+/// All time, so no month to depend on.
+class BorrowingSummaryNotifier extends AsyncNotifier<BorrowingSummary> {
+  @override
+  Future<BorrowingSummary> fetch() => repository.borrowingSummary();
+}
+
+/// The rows for the chosen segment. One page of 100 — see the repository.
+class BorrowingsNotifier extends AsyncNotifier<List<Borrowing>> {
+  BorrowingsNotifier(this._status);
+
+  final BorrowingStatus _status;
+
+  @override
+  List<Object?> get dependencies => [_status.value];
+
+  @override
+  Future<List<Borrowing>> fetch() =>
+      repository.borrowings(status: _status.value);
+}
+
+/// The form's pickers: names used before, and the types with their labels.
+class BorrowingLendersNotifier extends AsyncNotifier<LenderOptions> {
+  @override
+  Future<LenderOptions> fetch() => repository.borrowingLenders();
+}
+
+/// One borrowing with its ledger, keyed by uuid, for the detail screen.
+class BorrowingDetailNotifier extends FamilyAsyncNotifier<Borrowing, String> {
+  @override
+  Future<Borrowing> fetch(String uuid) => repository.borrowing(uuid);
+}
+
 // ---------------------------------------------------------------- recurring
 
 /// Every rule of both kinds; the screen filters by kind itself, so flipping
@@ -462,6 +502,21 @@ VoidCallback incomeInvalidator(BuildContext context) => _all([
   // A save can introduce a source the picker has not offered before.
   context.read<IncomeSourcesNotifier>().invalidate,
   context.read<DashboardNotifier>().invalidate,
+]);
+
+/// Drops every borrowing figure a write can move: the list, the headline
+/// summary, every open detail page, and the lender picker (a save can name
+/// a lender it has not offered before).
+void invalidateBorrowings(BuildContext context) =>
+    borrowingsInvalidator(context)();
+
+/// [invalidateBorrowings], captured now and fired later — see
+/// [moneyInvalidator].
+VoidCallback borrowingsInvalidator(BuildContext context) => _all([
+  context.read<BorrowingsNotifier>().invalidate,
+  context.read<BorrowingSummaryNotifier>().invalidate,
+  context.read<BorrowingDetailNotifier>().invalidate,
+  context.read<BorrowingLendersNotifier>().invalidate,
 ]);
 
 /// Drops the rules and every figure a rule write can move. Saving a rule

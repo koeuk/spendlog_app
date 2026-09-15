@@ -183,6 +183,10 @@ class LoadFailed extends StatelessWidget {
 /// [height] is the only thing they disagree on: the dashboard's copy sits
 /// inside a card beside other content, so it runs shorter than the one heading
 /// the Reports screen.
+///
+/// Sized by its parent — an `Expanded` in a row, a grid cell — so it carries
+/// no side padding of its own. A pill that has to size to its label, as in a
+/// wrapping row of them, passes [padding].
 class PillSegment extends StatelessWidget {
   const PillSegment({
     super.key,
@@ -190,12 +194,14 @@ class PillSegment extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.height = 40,
+    this.padding = EdgeInsets.zero,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
   final double height;
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
@@ -207,6 +213,7 @@ class PillSegment extends StatelessWidget {
         borderRadius: BorderRadius.circular(99),
         child: Container(
           height: height,
+          padding: padding,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(99),

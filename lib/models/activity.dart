@@ -16,7 +16,8 @@ class ActivityEntry {
   /// created | updated | deleted
   final String action;
 
-  /// expense | income | budget | category | savings_plan | savings_entry
+  /// expense | income | budget | category | savings_plan | savings_entry |
+  /// borrowing | borrowing_repayment
   final String subject;
 
   /// Frozen when the line was written, so it still reads after a delete.

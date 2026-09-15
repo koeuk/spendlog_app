@@ -81,6 +81,7 @@ List<SingleChildWidget> appProviders() => [
   ChangeNotifierProvider(create: (_) => BudgetsMonth()),
   ChangeNotifierProvider(create: (_) => IncomeMonth()),
   ChangeNotifierProvider(create: (_) => SavingsMonth()),
+  ChangeNotifierProvider(create: (_) => BorrowingStatus()),
   ChangeNotifierProvider(create: (_) => ReportPeriodNotifier()),
   ChangeNotifierProvider(create: (_) => ExpenseFiltersNotifier()),
   ChangeNotifierProvider(create: (_) => ActivityEveryone()),
@@ -97,16 +98,21 @@ List<SingleChildWidget> appProviders() => [
   _boundTo<IncomeMonth, IncomeSummaryNotifier>(IncomeSummaryNotifier.new),
   _boundTo<IncomeMonth, IncomesNotifier>(IncomesNotifier.new),
   _boundTo<ActivityEveryone, ActivityNotifier>(ActivityNotifier.new),
+  _boundTo<BorrowingStatus, BorrowingsNotifier>(BorrowingsNotifier.new),
 
   _bound(CategoriesNotifier.new),
   _bound(MoneySettingsNotifier.new),
   _bound(IncomeSourcesNotifier.new),
   _bound(RecurringRulesNotifier.new),
+  _bound(BorrowingSummaryNotifier.new),
+  _bound(BorrowingLendersNotifier.new),
 
   // Keyed by month, so a sheet can ask about a month the screen is not on.
   _boundFamily(SavingsSummaryNotifier.new),
   _boundFamily(SavingsEntriesNotifier.new),
   _boundFamily(SavingsPlanNotifier.new),
+  // Keyed by uuid: the detail page of whichever borrowing was opened.
+  _boundFamily(BorrowingDetailNotifier.new),
 
   // ---------------------------------------------------------------- admin
   _bound(AdminUsersNotifier.new),

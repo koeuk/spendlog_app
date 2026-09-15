@@ -4,6 +4,8 @@ import 'providers/auth_provider.dart';
 import 'screens/activity_screen.dart';
 import 'screens/admin_settings_screen.dart';
 import 'screens/admin_users_screen.dart';
+import 'screens/borrowing_detail_screen.dart';
+import 'screens/borrowings_screen.dart';
 import 'screens/budgets_screen.dart';
 import 'screens/categories_screen.dart';
 import 'screens/dashboard_screen.dart';
@@ -96,6 +98,20 @@ GoRouter buildRouter(AuthNotifier auth) {
                   GoRoute(
                     path: 'savings',
                     builder: (context, state) => const SavingsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'borrowings',
+                    builder: (context, state) => const BorrowingsScreen(),
+                    // One borrowing's page — the ledger, and every action on
+                    // the debt. Nested so back returns to the list.
+                    routes: [
+                      GoRoute(
+                        path: ':uuid',
+                        builder: (context, state) => BorrowingDetailScreen(
+                          uuid: state.pathParameters['uuid']!,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

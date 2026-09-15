@@ -59,6 +59,7 @@ void main() {
     expect(context.read<BudgetsMonth>(), isNotNull);
     expect(context.read<IncomeMonth>(), isNotNull);
     expect(context.read<SavingsMonth>(), isNotNull);
+    expect(context.read<BorrowingStatus>(), isNotNull);
     expect(context.read<ReportPeriodNotifier>(), isNotNull);
     expect(context.read<ExpenseFiltersNotifier>(), isNotNull);
     expect(context.read<ActivityEveryone>(), isNotNull);
@@ -80,6 +81,10 @@ void main() {
     expect(context.read<SavingsSummaryNotifier>(), isNotNull);
     expect(context.read<SavingsEntriesNotifier>(), isNotNull);
     expect(context.read<SavingsPlanNotifier>(), isNotNull);
+    expect(context.read<BorrowingsNotifier>(), isNotNull);
+    expect(context.read<BorrowingSummaryNotifier>(), isNotNull);
+    expect(context.read<BorrowingLendersNotifier>(), isNotNull);
+    expect(context.read<BorrowingDetailNotifier>(), isNotNull);
 
     // Admin.
     expect(context.read<AdminUsersNotifier>(), isNotNull);
@@ -103,6 +108,7 @@ void main() {
     invalidateSavings(context);
     invalidateIncome(context);
     invalidateRecurring(context);
+    invalidateBorrowings(context);
 
     await settle(tester);
   });

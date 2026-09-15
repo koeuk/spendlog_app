@@ -61,12 +61,12 @@ class BudgetsScreen extends StatelessWidget {
               const SizedBox(height: 16),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Eyebrow(tr('By category')),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 24),
                       if (data.categories.isEmpty)
                         Text(
                           tr('Nothing spent this month yet.'),
@@ -76,7 +76,7 @@ class BudgetsScreen extends StatelessWidget {
                         _CategoryRow(line: line, month: month),
                         if (line != data.categories.last)
                           Divider(
-                            height: 24,
+                            // height: 16,
                             color: AppTheme.faint(context, 0.05),
                           ),
                       ],
@@ -178,36 +178,41 @@ class _CategoryRow extends StatelessWidget {
 
     return InkWell(
       onTap: () => showBudgetSheet(context, month: month, line: line),
-      borderRadius: BorderRadius.circular(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(CategoryStyle.icon(line.icon), size: 18, color: color),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  line.name ?? '',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+      borderRadius: BorderRadius.circular(6),
+      // Inside the InkWell, so the hover and splash cover the padding too
+      // rather than hugging the text.
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(CategoryStyle.icon(line.icon), size: 18, color: color),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    line.name ?? '',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                 ),
-              ),
-              Text(
-                line.budget == null
-                    ? money(line.spent)
-                    : '${money(line.spent)} / ${money(line.budget!)}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 13,
+                Text(
+                  line.budget == null
+                      ? money(line.spent)
+                      : '${money(line.spent)} / ${money(line.budget!)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 13,
+                  ),
                 ),
-              ),
+              ],
+            ),
+            if (line.budget != null) ...[
+              const SizedBox(height: 8),
+              ProgressTrack(percent: line.barPercent, status: line.status),
             ],
-          ),
-          if (line.budget != null) ...[
-            const SizedBox(height: 8),
-            ProgressTrack(percent: line.barPercent, status: line.status),
           ],
-        ],
+        ),
       ),
     );
   }

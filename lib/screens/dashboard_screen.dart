@@ -339,7 +339,7 @@ class _TodayCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -504,7 +504,11 @@ class _BreakdownCard extends StatelessWidget {
                   ),
                 ],
               ),
-              if (slice != data.breakdown.last) const SizedBox(height: 14),
+              if (slice != data.breakdown.last) 
+              Divider(
+                height:16,
+                color: AppTheme.faint(context,0.06)
+              )
             ],
           ],
         ),
@@ -531,7 +535,6 @@ class _RecentCard extends StatelessWidget {
             for (final expense in data.recent) ...[
               Row(
                 children: [
-                  
                   Container(
                     width: 36,
                     height: 36,
@@ -560,7 +563,14 @@ class _RecentCard extends StatelessWidget {
                   ),
                 ],
               ),
-              if (expense != data.recent.last) const SizedBox(height: 12),
+              // A hairline between rows, taking the gap's place: 24 tall so
+              // the rows keep the same 12 either side of it.
+              if (expense != data.recent.last)
+                Divider(
+                  height: 16,
+                  // thickness: 1,
+                  color: AppTheme.faint(context, 0.06),
+                ),
             ],
           ],
         ),

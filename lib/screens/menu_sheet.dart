@@ -40,6 +40,12 @@ const _entries = <_Entry>[
   ),
   (icon: Icons.repeat, label: 'Recurring', path: '/recurring', admin: false),
   (
+    icon: Icons.handshake_outlined,
+    label: 'Borrowing',
+    path: '/borrowings',
+    admin: false,
+  ),
+  (
     icon: Icons.category_outlined,
     label: 'Categories',
     path: '/profile/categories',
