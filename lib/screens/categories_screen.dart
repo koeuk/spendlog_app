@@ -346,7 +346,7 @@ class _CategoryFormState extends State<_CategoryForm> {
                 color: CategoryStyle.color(_color),
                 onSelected: (value) => setState(() => _icon = value),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
               FilledButton(
                 onPressed: _busy ? null : _submit,
                 child: _busy
@@ -369,6 +369,7 @@ class _CategoryFormState extends State<_CategoryForm> {
                   ),
                   child: Text(tr('Delete category')),
                 ),
+                // const SizedBox(height: 5)
               ],
             ],
           ),

@@ -248,7 +248,7 @@ class _ExpenseFormState extends State<_ExpenseForm> {
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+        padding: const EdgeInsets.fromLTRB(24, 20, 20, 10),
         child: Form(
           key: _formKey,
           child: Column(
@@ -463,6 +463,10 @@ class _ExpenseFormState extends State<_ExpenseForm> {
                   onPressed: _busy ? null : _delete,
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0xFFDC2626),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 20,
+                    ),
                   ),
                   child: Text(tr('Delete expense')),
                 ),
