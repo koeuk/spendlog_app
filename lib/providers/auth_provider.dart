@@ -97,6 +97,22 @@ class AuthNotifier extends ChangeNotifier {
     _set(AuthState(user: await _repository.login(email, password)));
   }
 
+  Future<void> signUp({
+    required String name,
+    required String email,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    _set(AuthState(
+      user: await _repository.register(
+        name: name,
+        email: email,
+        password: password,
+        passwordConfirmation: passwordConfirmation,
+      ),
+    ));
+  }
+
   Future<void> signOut() async {
     await _repository.logout();
     _set(const AuthState());

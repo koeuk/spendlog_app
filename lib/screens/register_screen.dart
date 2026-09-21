@@ -10,17 +10,19 @@ import '../api/api_client.dart';
 import '../providers/auth_provider.dart';
 import 'auth_shell.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _confirm = TextEditingController();
 
   bool _busy = false;
   bool _showPassword = false;
@@ -28,8 +30,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    _name.dispose();
     _email.dispose();
     _password.dispose();
+    _confirm.dispose();
     super.dispose();
   }
 
@@ -45,11 +49,16 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = context.read<AuthNotifier>();
 
     try {
-      await auth.signIn(_email.text.trim(), _password.text);
+      await auth.signUp(
+        name: _name.text.trim(),
+        email: _email.text.trim(),
+        password: _password.text,
+        passwordConfirmation: _confirm.text,
+      );
       // No navigation here: the router redirects the moment auth state flips.
     } catch (e) {
       setState(
-        () => _error = apiErrorMessage(e, fallback: 'Could not sign in.'),
+        () => _error = apiErrorMessage(e, fallback: 'Could not create your account.'),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -59,22 +68,11 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return AuthShell(
-      heading: tr('Sign in'),
-      description: tr(
-        'Use your email or username to keep your spending on track.',
-      ),
-      footer: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextButton(
-            onPressed: () => context.go('/forgot-password'),
-            child: Text(tr('Forgot your password?')),
-          ),
-          TextButton(
-            onPressed: () => context.go('/register'),
-            child: Text(tr("Don't have an account? Create one")),
-          ),
-        ],
+      heading: tr('Create your account'),
+      description: tr('A few details and you can start tracking your spending.'),
+      footer: TextButton(
+        onPressed: () => context.go('/login'),
+        child: Text(tr('Already have an account? Sign in')),
       ),
       child: Form(
         key: _formKey,
@@ -103,8 +101,17 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 14),
             ],
             TextFormField(
+              controller: _name,
+              decoration: InputDecoration(hintText: tr('Name')),
+              textCapitalization: TextCapitalization.words,
+              textInputAction: TextInputAction.next,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Enter your name.' : null,
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
               controller: _email,
-              decoration: InputDecoration(hintText: tr('Email or username')),
+              decoration: InputDecoration(hintText: tr('Email')),
               keyboardType: TextInputType.emailAddress,
               autocorrect: false,
               textInputAction: TextInputAction.next,
@@ -128,10 +135,20 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
+              textInputAction: TextInputAction.next,
+              validator: (v) => (v == null || v.length < 8)
+                  ? 'Use at least 8 characters.'
+                  : null,
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _confirm,
+              obscureText: !_showPassword,
+              decoration: InputDecoration(hintText: tr('Confirm password')),
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _submit(),
               validator: (v) =>
-                  (v == null || v.isEmpty) ? 'Enter your password.' : null,
+                  (v != _password.text) ? 'The passwords do not match.' : null,
             ),
             const SizedBox(height: 20),
             FilledButton(
@@ -145,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: Colors.white,
                       ),
                     )
-                  : Text(tr('Sign in')),
+                  : Text(tr('Create account')),
             ),
           ],
         ),

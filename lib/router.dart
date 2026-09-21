@@ -15,6 +15,7 @@ import 'screens/income_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/recurring_screen.dart';
+import 'screens/register_screen.dart';
 import 'screens/reports_screen.dart';
 import 'screens/reset_password_screen.dart';
 import 'screens/savings_screen.dart';
@@ -41,6 +42,7 @@ GoRouter buildRouter(AuthNotifier auth) {
 
       final onAuthPages =
           state.matchedLocation == '/login' ||
+          state.matchedLocation == '/register' ||
           state.matchedLocation.startsWith('/forgot-password') ||
           state.matchedLocation.startsWith('/reset-password');
 
@@ -62,6 +64,10 @@ GoRouter buildRouter(AuthNotifier auth) {
         builder: (context, state) => const SplashScreen(),
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(
+        path: '/register',
+        builder: (context, state) => const RegisterScreen(),
+      ),
       GoRoute(
         path: '/forgot-password',
         builder: (context, state) => const ForgotPasswordScreen(),

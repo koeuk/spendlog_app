@@ -10,17 +10,42 @@ class AuthRepository {
 
   final ApiClient _client;
 
+  /// Names the token in the user's token list so it can be revoked
+  /// individually later. kIsWeb first: dart-io Platform checks throw on web.
+  static String get _deviceName => kIsWeb
+      ? 'Web app'
+      : defaultTargetPlatform == TargetPlatform.iOS
+          ? 'iOS app'
+          : 'Android app';
+
   Future<User> login(String email, String password) async {
     final response = await _client.dio.post('/login', data: {
       'email': email,
       'password': password,
-      // Names the token in the user's token list so it can be revoked
-      // individually later. kIsWeb first: dart-io Platform checks throw on web.
-      'device_name': kIsWeb
-          ? 'Web app'
-          : defaultTargetPlatform == TargetPlatform.iOS
-              ? 'iOS app'
-              : 'Android app',
+      'device_name': _deviceName,
+    });
+
+    final data = response.data as Map<String, dynamic>;
+    await _client.saveToken(data['token'] as String);
+
+    return User.fromJson(data['user'] as Map<String, dynamic>);
+  }
+
+  /// Creates the account and signs straight in — the server returns a token
+  /// with the response, the same shape as [login], so there is no second
+  /// round-trip. The new user always gets the plain `user` role server-side.
+  Future<User> register({
+    required String name,
+    required String email,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    final response = await _client.dio.post('/register', data: {
+      'name': name,
+      'email': email,
+      'password': password,
+      'password_confirmation': passwordConfirmation,
+      'device_name': _deviceName,
     });
 
     final data = response.data as Map<String, dynamic>;
