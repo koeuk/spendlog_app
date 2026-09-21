@@ -39,8 +39,14 @@ class ActivityEntry {
         for (final entry in (raw ?? const {}).entries)
           ActivityChange(
             field: entry.key,
-            from: (entry.value as Map<String, dynamic>?)?['from']?.toString(),
-            to: (entry.value as Map<String, dynamic>?)?['to']?.toString(),
+            // A change value is normally a {from, to} object, but tolerate a
+            // scalar (e.g. {"note": "hello"}) rather than crashing the feed.
+            from: entry.value is Map<String, dynamic>
+                ? (entry.value as Map<String, dynamic>)['from']?.toString()
+                : null,
+            to: entry.value is Map<String, dynamic>
+                ? (entry.value as Map<String, dynamic>)['to']?.toString()
+                : entry.value?.toString(),
           ),
       ],
       userName: (json['user'] as Map<String, dynamic>?)?['name'] as String? ?? '',

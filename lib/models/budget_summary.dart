@@ -58,7 +58,9 @@ class BudgetSummary {
 
   factory BudgetSummary.fromJson(Map<String, dynamic> json) => BudgetSummary(
         month: json['month'] as String? ?? '',
-        overall: BudgetLine.fromJson(json['overall'] as Map<String, dynamic>),
+        overall: BudgetLine.fromJson(
+          json['overall'] as Map<String, dynamic>? ?? const {},
+        ),
         categories: (json['categories'] as List<dynamic>? ?? [])
             .map((e) => BudgetLine.fromJson(e as Map<String, dynamic>))
             .toList(),

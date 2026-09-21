@@ -19,11 +19,13 @@ class AsyncState<T> {
     this.error,
     this.stackTrace,
     this.isLoading = false,
+    this.refreshError,
   });
 
   const AsyncState.loading() : this._(isLoading: true);
 
-  const AsyncState.data(T value) : this._(value: value, hasValue: true);
+  const AsyncState.data(T value, {Object? refreshError})
+    : this._(value: value, hasValue: true, refreshError: refreshError);
 
   const AsyncState.error(Object error, [StackTrace? stackTrace])
     : this._(error: error, stackTrace: stackTrace);
@@ -37,6 +39,12 @@ class AsyncState<T> {
   final Object? error;
   final StackTrace? stackTrace;
   final bool isLoading;
+
+  /// A refetch that failed *while a value was already on screen*. The data is
+  /// kept — [when] still renders it — so a failed pull-to-refresh leaves the
+  /// page intact; a screen can read this to flag the staleness non-destructively
+  /// (a banner, a toast) instead of blanking to a full-screen error.
+  final Object? refreshError;
 
   /// The value if one has landed, otherwise null — for the places that would
   /// rather show a dash than a spinner.
@@ -83,6 +91,12 @@ abstract class AsyncNotifier<T> extends ChangeNotifier {
   /// Rises with every fetch so a slow response that has been superseded — by
   /// a newer month, a newer filter — cannot land on top of the current one.
   int _generation = 0;
+
+  /// The current fetch generation, for subclasses that emit outside [fetch]
+  /// (paged appends): snapshot it before an await and drop the emit if it
+  /// moved, the same guard [_load] applies.
+  @protected
+  int get generation => _generation;
 
   /// The repository the call goes through, bound by the provider.
   @protected
@@ -171,7 +185,14 @@ abstract class AsyncNotifier<T> extends ChangeNotifier {
       if (generation == _generation) emit(AsyncState<T>.data(value));
     } catch (error, stackTrace) {
       if (generation == _generation) {
-        emit(AsyncState<T>.error(error, stackTrace));
+        // A refresh that fails on top of loaded data keeps the data — blanking
+        // the page the user just pulled to refresh helps no one. Only a first
+        // load, with nothing to keep, becomes a full error state.
+        emit(
+          _state.hasValue
+              ? AsyncState<T>.data(_state._value as T, refreshError: error)
+              : AsyncState<T>.error(error, stackTrace),
+        );
       }
     }
   }
@@ -283,7 +304,15 @@ abstract class FamilyAsyncNotifier<T, K> extends ChangeNotifier {
       }
     } catch (error, stackTrace) {
       if (_generations[key] == generation) {
-        _emit(key, AsyncState<T>.error(error, stackTrace));
+        // Keep this key's loaded value across a failed refresh — see the note
+        // in [AsyncNotifier._load].
+        final current = _states[key];
+        _emit(
+          key,
+          current != null && current.hasValue
+              ? AsyncState<T>.data(current._value as T, refreshError: error)
+              : AsyncState<T>.error(error, stackTrace),
+        );
       }
     }
   }
@@ -311,11 +340,12 @@ abstract class ValueState<T> extends ChangeNotifier {
   ValueState(this._value);
 
   T _value;
+  bool _disposed = false;
 
   T get value => _value;
 
   set value(T next) {
-    if (next == _value) return;
+    if (next == _value || _disposed) return;
 
     _value = next;
     notifyListeners();
@@ -324,4 +354,10 @@ abstract class ValueState<T> extends ChangeNotifier {
   /// Rewrites the value from the current one, for the fields that are edited
   /// a piece at a time.
   void update(T Function(T current) change) => value = change(_value);
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 }

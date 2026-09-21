@@ -66,6 +66,7 @@ class _PlanFormState extends State<_PlanForm> {
   }
 
   Future<void> _save() async {
+    if (_busy) return;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {

@@ -18,6 +18,6 @@ class Category {
         name: json['name'] as String? ?? '',
         color: json['color'] as String? ?? 'slate',
         icon: json['icon'] as String?,
-        expensesCount: json['expenses_count'] as int?,
+        expensesCount: (json['expenses_count'] as num?)?.toInt(),
       );
 }

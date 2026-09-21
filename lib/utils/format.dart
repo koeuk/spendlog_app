@@ -109,5 +109,9 @@ String? convertAmount(String text, {
 
   // Two places, and trailing zeros trimmed: "12.50" but "12" rather than
   // "12.00", which reads as a figure someone typed rather than a conversion.
-  return usd.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+  final trimmed = usd.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+
+  // A few riel rounds to "0.00", which the trim would blank entirely — leaving
+  // an empty field the save validator then rejects. Floor it to "0" instead.
+  return trimmed.isEmpty ? '0' : trimmed;
 }

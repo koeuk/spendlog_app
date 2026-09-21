@@ -166,6 +166,7 @@ class _RecurringFormState extends State<_RecurringForm> {
       refresh();
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
+      if (!mounted) return;
       setState(
         () => _error = apiErrorMessage(e, fallback: 'Could not save the rule.'),
       );

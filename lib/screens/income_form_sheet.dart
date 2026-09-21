@@ -133,6 +133,7 @@ class _IncomeFormState extends State<_IncomeForm> {
       if (_repeat != null) refreshRecurring();
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
+      if (!mounted) return;
       setState(
         () =>
             _error = apiErrorMessage(e, fallback: 'Could not save the income.'),

@@ -190,12 +190,17 @@ class ExpensesNotifier extends AsyncNotifier<ExpensesState> {
     if (_loadingMore || loaded == null || !loaded.hasMore) return;
 
     _loadingMore = true;
+    // If the filter changes while this page is in flight, `fetch()` runs and
+    // bumps the generation; a late page must not append onto the new list.
+    final startGeneration = generation;
 
     try {
       final next = await repository.expenses(
         page: loaded.page + 1,
         filters: _filters.value,
       );
+
+      if (generation != startGeneration) return;
 
       emit(
         AsyncState.data(
@@ -390,12 +395,17 @@ class ActivityNotifier extends AsyncNotifier<ActivityState> {
     if (_loadingMore || loaded == null || !loaded.hasMore) return;
 
     _loadingMore = true;
+    // If the scope flips while this page is in flight, `fetch()` runs and bumps
+    // the generation; a late page must not append onto the new list.
+    final startGeneration = generation;
 
     try {
       final next = await repository.activity(
         page: loaded.page + 1,
         everyone: _everyone.value,
       );
+
+      if (generation != startGeneration) return;
 
       emit(
         AsyncState.data(

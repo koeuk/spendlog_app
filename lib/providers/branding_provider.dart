@@ -18,6 +18,7 @@ class BrandingNotifier extends ChangeNotifier {
   Branding get state => _state;
 
   SpendLogRepository? _repository;
+  bool _disposed = false;
 
   /// Bound by the provider. Only the first binding starts the restore: unlike
   /// the data notifiers this one does not follow the language, since the marks
@@ -58,7 +59,15 @@ class BrandingNotifier extends ChangeNotifier {
   }
 
   void _set(Branding next) {
+    if (_disposed) return;
+
     _state = next;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }

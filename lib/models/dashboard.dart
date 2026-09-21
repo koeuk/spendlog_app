@@ -111,7 +111,9 @@ class Dashboard {
       todayDate: today['date'] as String? ?? '',
       todayTotal: today['total'] as String? ?? '0.00',
       currentMonth: json['current_month'] as String? ?? '',
-      summary: BudgetSummary.fromJson(json['summary'] as Map<String, dynamic>),
+      summary: BudgetSummary.fromJson(
+        json['summary'] as Map<String, dynamic>? ?? const {},
+      ),
       budgetMonth: json['budget_month'] as String? ?? '',
       breakdown: (json['breakdown'] as List<dynamic>? ?? [])
           .map((e) => BreakdownSlice.fromJson(e as Map<String, dynamic>))

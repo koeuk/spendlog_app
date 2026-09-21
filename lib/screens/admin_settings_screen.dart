@@ -938,7 +938,7 @@ class _FaqRow extends StatelessWidget {
   }
 }
 
-Future<void> _showFaqSheet(BuildContext context, {FaqEntry? faq}) {
+Future<void> _showFaqSheet(BuildContext context, {FaqEntry? faq}) async {
   // Captured before the sheet opens: its buttons run after awaits, by which
   // point the row that opened it may be gone from the list.
   final repository = context.read<SpendLogRepository>();
@@ -948,7 +948,10 @@ Future<void> _showFaqSheet(BuildContext context, {FaqEntry? faq}) {
   final answer = TextEditingController(text: faq?.answer ?? '');
   var published = faq == null || faq.status == 'published';
 
-  return showGlassSheet(
+  // A StatefulBuilder has no dispose, so the controllers are owned here and
+  // released once the sheet is gone.
+  try {
+    await showGlassSheet(
     context: context,
     isScrollControlled: true,
     builder: (sheetContext) => Padding(
@@ -1041,5 +1044,9 @@ Future<void> _showFaqSheet(BuildContext context, {FaqEntry? faq}) {
         ),
       ),
     ),
-  );
+    );
+  } finally {
+    question.dispose();
+    answer.dispose();
+  }
 }

@@ -49,9 +49,8 @@ class _ExpenseFormState extends State<_ExpenseForm> {
   final _newCategory = TextEditingController();
 
   late String? _categoryUuid = widget.expense?.category?.uuid;
-  late DateTime _spentOn = widget.expense?.spentOn != null
-      ? DateTime.parse(widget.expense!.spentOn!)
-      : DateTime.now();
+  late DateTime _spentOn =
+      DateTime.tryParse(widget.expense?.spentOn ?? '') ?? DateTime.now();
   String _currency = 'USD';
 
   /// A frequency from [recurringFrequencies], or null for a one-off. Only
@@ -143,6 +142,7 @@ class _ExpenseFormState extends State<_ExpenseForm> {
       if (_repeat != null) refreshRecurring();
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
+      if (!mounted) return;
       setState(
         () => _error = apiErrorMessage(
           e,

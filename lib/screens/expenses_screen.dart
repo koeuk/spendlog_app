@@ -312,7 +312,7 @@ class _FilterBar extends StatelessWidget {
                               : Theme.of(context).colorScheme.onSurface,
                         ),
                         label: Text(
-                          filters.from != null
+                          filters.from != null && filters.to != null
                               ? '${dayLabel(filters.from!)} – ${dayLabel(filters.to!)}'
                               : 'Dates',
                         ),

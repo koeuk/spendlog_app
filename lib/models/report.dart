@@ -98,7 +98,7 @@ class ReportSlice {
         color: json['color'] as String? ?? 'slate',
         icon: json['icon'] as String?,
         total: json['total']?.toString() ?? '0.00',
-        count: json['count'] as int? ?? 0,
+        count: (json['count'] as num?)?.toInt() ?? 0,
         average: json['average']?.toString() ?? '0.00',
         share: json['share'] as num? ?? 0,
       );
@@ -132,7 +132,7 @@ class ReportStats {
 
   factory ReportStats.fromJson(Map<String, dynamic> json) => ReportStats(
         total: json['total']?.toString() ?? '0.00',
-        count: json['count'] as int? ?? 0,
+        count: (json['count'] as num?)?.toInt() ?? 0,
         dailyAverage: json['daily_average']?.toString() ?? '0.00',
         previous: json['previous']?.toString() ?? '0.00',
         changePercent: json['change_percent'] as num?,

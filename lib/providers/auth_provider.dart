@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../api/api_client.dart';
@@ -86,9 +87,18 @@ class AuthNotifier extends ChangeNotifier {
 
     try {
       return AuthState(user: await _repository.me());
-    } catch (_) {
-      await ApiClient.instance.clearToken();
+    } on DioException catch (error) {
+      // Only a real 401 means the token is dead — the interceptor has already
+      // cleared it in that case. A timeout, a 500, or no connection says
+      // nothing about the session, so keep the token and land signed out for
+      // now; the next launch on a working connection restores it.
+      if (error.response?.statusCode == 401) {
+        await ApiClient.instance.clearToken();
+      }
 
+      return const AuthState();
+    } catch (_) {
+      // Non-Dio failure (e.g. a parse error). Leave the token in place.
       return const AuthState();
     }
   }

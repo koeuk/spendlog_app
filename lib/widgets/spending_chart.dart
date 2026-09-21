@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
@@ -188,8 +190,12 @@ class _ChartPainter extends CustomPainter {
       textDirection: TextDirection.ltr,
     )..layout();
 
-    // Clamped so the first and last labels stay inside the card.
-    final dx = (centre - painter.width / 2).clamp(0.0, maxWidth - painter.width);
+    // Clamped so the first and last labels stay inside the card. `max` guards
+    // the degenerate case where a label is wider than the chart: then the upper
+    // bound would fall below 0 and `clamp` would throw.
+    final dx = (centre - painter.width / 2)
+        .clamp(0.0, math.max(0.0, maxWidth - painter.width))
+        .toDouble();
 
     painter.paint(canvas, Offset(dx, top));
   }
