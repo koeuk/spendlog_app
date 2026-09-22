@@ -103,6 +103,7 @@ List<SingleChildWidget> appProviders() => [
   _bound(CategoriesNotifier.new),
   _bound(MoneySettingsNotifier.new),
   _bound(IncomeSourcesNotifier.new),
+  _bound(IncomeSourceCatalogNotifier.new),
   _bound(RecurringRulesNotifier.new),
   _bound(BorrowingSummaryNotifier.new),
   _bound(BorrowingLendersNotifier.new),

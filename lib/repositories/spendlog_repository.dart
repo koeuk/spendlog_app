@@ -125,11 +125,43 @@ class SpendLogRepository {
 
   /// The caller's sources, most used first — the picker's list. A new one
   /// is created by simply saving an income with it.
+  /// The names to offer in a picker, busiest first. The catalogue's, not the
+  /// income's — a name removed from the catalogue stops being offered even
+  /// where old income still carries it.
   Future<List<String>> incomeSources() async {
     final response = await _client.dio.get('/incomes/sources');
 
     return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>).cast<String>();
   }
+
+  /// The same names as rows to manage, with what is filed under each.
+  Future<List<IncomeSource>> incomeSourceCatalog() async {
+    final response = await _client.dio.get('/income-sources');
+
+    return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>)
+        .map((e) => IncomeSource.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> createIncomeSource(String name) =>
+      _client.dio.post('/income-sources', data: {'name': name});
+
+  /// [rewriteIncomes] carries the income filed under the old name across to
+  /// the new one; without it the catalogue changes and the history keeps what
+  /// it was entered with.
+  Future<void> renameIncomeSource(
+    String uuid, {
+    required String name,
+    required bool rewriteIncomes,
+  }) =>
+      _client.dio.patch(
+        '/income-sources/$uuid',
+        data: {'name': name, 'rewrite_incomes': rewriteIncomes},
+      );
+
+  /// Stops the name being offered. The income filed under it keeps it.
+  Future<void> deleteIncomeSource(String uuid) =>
+      _client.dio.delete('/income-sources/$uuid');
 
   Future<({List<Income> items, bool hasMore})> incomes({
     String? from,

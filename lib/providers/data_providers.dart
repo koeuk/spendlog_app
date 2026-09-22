@@ -235,6 +235,12 @@ class IncomeMonth extends ValueState<String> {
   IncomeMonth() : super(currentYm());
 }
 
+/// The catalogue as rows, for the Sources screen.
+class IncomeSourceCatalogNotifier extends AsyncNotifier<List<IncomeSource>> {
+  @override
+  Future<List<IncomeSource>> fetch() => repository.incomeSourceCatalog();
+}
+
 class IncomeSourcesNotifier extends AsyncNotifier<List<String>> {
   @override
   Future<List<String>> fetch() => repository.incomeSources();
@@ -531,6 +537,8 @@ VoidCallback incomeInvalidator(BuildContext context) => _all([
   context.read<IncomeSummaryNotifier>().invalidate,
   // A save can introduce a source the picker has not offered before.
   context.read<IncomeSourcesNotifier>().invalidate,
+  // ...and the catalogue it was added to, with one more use against it.
+  context.read<IncomeSourceCatalogNotifier>().invalidate,
   context.read<DashboardNotifier>().invalidate,
 ]);
 

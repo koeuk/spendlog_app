@@ -13,6 +13,7 @@ import 'screens/dashboard_screen.dart';
 import 'screens/expenses_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/income_screen.dart';
+import 'screens/income_sources_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/recurring_screen.dart';
@@ -177,6 +178,12 @@ GoRouter buildRouter(AuthNotifier auth) {
                   GoRoute(
                     path: 'activity',
                     builder: (context, state) => const ActivityScreen(),
+                  ),
+                  // The names income is filed under. Beside categories, for
+                  // the same reason: an occasional tidy-up, not a tab.
+                  GoRoute(
+                    path: 'income-sources',
+                    builder: (context, state) => const IncomeSourcesScreen(),
                   ),
                   GoRoute(
                     path: 'admin-users',

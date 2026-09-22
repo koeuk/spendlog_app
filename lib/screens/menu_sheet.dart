@@ -52,6 +52,12 @@ const _entries = <_Entry>[
     admin: false,
   ),
   (
+    icon: Icons.sell_outlined,
+    label: 'Sources',
+    path: '/profile/income-sources',
+    admin: false,
+  ),
+  (
     icon: Icons.history,
     label: 'Activity log',
     path: '/profile/activity',
