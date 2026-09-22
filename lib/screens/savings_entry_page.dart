@@ -9,7 +9,6 @@ import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
-import '../widgets/glass.dart';
 
 /// Put money aside, or take it back out. Pass [entry] to edit an existing
 /// movement; [type] preselects the toggle on a new one, and [amount] prefills
@@ -23,25 +22,19 @@ Future<void> showSavingsEntrySheet(
   String? amount,
   String? month,
 }) async {
-  final instead = await showGlassSheet<_AddInstead>(
-    context: context,
-    isScrollControlled: true,
-    builder: (context) => Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: _EntryForm(
-        entry: entry,
-        initialType: type,
-        initialAmount: amount,
-        month: month,
-      ),
+  final instead = await openFormPage<_AddInstead>(
+    context,
+    (_) => _EntryForm(
+      entry: entry,
+      initialType: type,
+      initialAmount: amount,
+      month: month,
     ),
   );
 
   // Someone flipped an entry's direction and chose to add the movement rather
   // than rewrite the one they were looking at. Opened from here, because the
-  // sheet that asked has gone and its context with it.
+  // page that asked has gone and its context with it.
   if (instead != null && context.mounted) {
     await showSavingsEntrySheet(
       context,
@@ -52,7 +45,7 @@ Future<void> showSavingsEntrySheet(
   }
 }
 
-/// A pop result asking for a fresh sheet in place of the one just closed.
+/// A pop result asking for a fresh page in place of the one just closed.
 class _AddInstead {
   const _AddInstead({required this.type, required this.amount});
 
@@ -365,187 +358,161 @@ class _EntryFormState extends State<_EntryForm> {
   Widget build(BuildContext context) {
     final withdrawing = _type == 'withdraw';
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                // Named, because the toggle below rewrites *this* row, and a
-                // sheet that says only "Edit entry" looks like the Add sheet.
-                _editing
-                    ? '${widget.entry!.isDeposit ? tr('Edit deposit') : tr('Edit withdrawal')}'
-                          ' · ${money(widget.entry!.amount)}'
-                    : tr('New savings entry'),
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w700),
+    return FormPage(
+      // Named, because the toggle below rewrites *this* row, and a page that
+      // says only "Edit entry" looks like the one that adds.
+      title: _editing
+          ? '${widget.entry!.isDeposit ? tr('Edit deposit') : tr('Edit withdrawal')}'
+                ' · ${money(widget.entry!.amount)}'
+          : tr('New savings entry'),
+      formKey: _formKey,
+      children: [
+        if (_error != null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppTheme.errorFill(context),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppTheme.errorInk(context), fontSize: 13),
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
+        Row(
+          children: [
+            Expanded(
+              child: PillSegment(
+                label: tr('Deposit'),
+                selected: !withdrawing,
+                onTap: () => setState(() => _type = 'deposit'),
               ),
-              const SizedBox(height: 18),
-              if (_error != null) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.errorFill(context),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    _error!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppTheme.errorInk(context),
-                      fontSize: 13,
-                    ),
-                  ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: PillSegment(
+                label: tr('Withdraw'),
+                selected: withdrawing,
+                onTap: () => setState(() => _type = 'withdraw'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _amount,
+                decoration: InputDecoration(
+                  hintText: tr('Amount'),
+                  prefixText: _currency == 'USD' ? '\$ ' : '៛ ',
                 ),
-                const SizedBox(height: 14),
-              ],
-              Row(
-                children: [
-                  Expanded(
-                    child: PillSegment(
-                      label: tr('Deposit'),
-                      selected: !withdrawing,
-                      onTap: () => setState(() => _type = 'deposit'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: PillSegment(
-                      label: tr('Withdraw'),
-                      selected: withdrawing,
-                      onTap: () => setState(() => _type = 'withdraw'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _amount,
-                      decoration: InputDecoration(
-                        hintText: tr('Amount'),
-                        prefixText: _currency == 'USD' ? '\$ ' : '៛ ',
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      autofocus: !_editing,
-                      validator: (v) {
-                        final parsed = double.tryParse(v?.trim() ?? '');
-                        if (parsed == null || parsed <= 0) {
-                          return 'Enter an amount.';
-                        }
-                        if (_currency == 'KHR' && parsed < 100) {
-                          return 'At least ៛100.';
-                        }
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                autofocus: !_editing,
+                validator: (v) {
+                  final parsed = double.tryParse(v?.trim() ?? '');
+                  if (parsed == null || parsed <= 0) {
+                    return 'Enter an amount.';
+                  }
+                  if (_currency == 'KHR' && parsed < 100) {
+                    return 'At least ៛100.';
+                  }
 
-                        return null;
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'USD', label: Text('\$')),
-                      ButtonSegment(value: 'KHR', label: Text('៛')),
-                    ],
-                    selected: {_currency},
-                    onSelectionChanged: (selection) {
-                      _switchCurrency(selection.first);
-                    },
-                    showSelectedIcon: false,
-                    style: const ButtonStyle(
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ),
-                ],
+                  return null;
+                },
               ),
-              if (_currency == 'KHR') ...[
-                const SizedBox(height: 8),
-                Text(
-                  tr('Entered in riel, stored in US dollars.'),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.faint(context, 0.5),
-                  ),
-                ),
+            ),
+            const SizedBox(width: 12),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'USD', label: Text('\$')),
+                ButtonSegment(value: 'KHR', label: Text('៛')),
               ],
-              if (!withdrawing) ...[
-                const SizedBox(height: 14),
-                _SourceField(controller: _source),
-              ],
-              const SizedBox(height: 14),
-              OutlinedButton.icon(
-                onPressed: _pickDate,
-                icon: const Icon(Icons.calendar_today_outlined, size: 18),
-                label: Text(
-                  '${_savedOn.day}/${_savedOn.month}/${_savedOn.year}',
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(52),
-                  shape: const StadiumBorder(),
-                  foregroundColor: Theme.of(context).colorScheme.onSurface,
-                  side: BorderSide(color: AppTheme.faint(context, 0.12)),
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: _note,
-                decoration: InputDecoration(hintText: tr('Note (optional)')),
-                textCapitalization: TextCapitalization.sentences,
-                maxLength: 500,
-                buildCounter: (
-                  _, {
-                  required currentLength,
-                  required isFocused,
-                  maxLength,
-                }) => null,
-              ),
-              const SizedBox(height: 18),
-              FilledButton(
-                onPressed: _busy ? null : _submit,
-                child: _busy
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(
-                        _editing
-                            ? tr('Save changes')
-                            : (withdrawing ? tr('Withdraw') : tr('Deposit')),
-                      ),
-              ),
-              if (_editing) ...[
-                const SizedBox(height: 4),
-                TextButton.icon(
-                  onPressed: _busy ? null : _delete,
-                  icon: const Icon(Icons.delete_outline, size: 18),
-                  style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFFDC2626),
-                    minimumSize: const Size.fromHeight(46),
-                  ),
-                  label: Text(tr('Delete entry')),
-                ),
-              ],
-            ],
+              selected: {_currency},
+              onSelectionChanged: (selection) {
+                _switchCurrency(selection.first);
+              },
+              showSelectedIcon: false,
+              style: const ButtonStyle(visualDensity: VisualDensity.compact),
+            ),
+          ],
+        ),
+        if (_currency == 'KHR') ...[
+          const SizedBox(height: 8),
+          Text(
+            tr('Entered in riel, stored in US dollars.'),
+            style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.5)),
+          ),
+        ],
+        if (!withdrawing) ...[
+          const SizedBox(height: 14),
+          _SourceField(controller: _source),
+        ],
+        const SizedBox(height: 14),
+        OutlinedButton.icon(
+          onPressed: _pickDate,
+          icon: const Icon(Icons.calendar_today_outlined, size: 18),
+          label: Text(
+            '${_savedOn.day}/${_savedOn.month}/${_savedOn.year}',
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(52),
+            shape: const StadiumBorder(),
+            foregroundColor: Theme.of(context).colorScheme.onSurface,
+            side: BorderSide(color: AppTheme.faint(context, 0.12)),
           ),
         ),
-      ),
+        const SizedBox(height: 14),
+        TextFormField(
+          controller: _note,
+          decoration: InputDecoration(hintText: tr('Note (optional)')),
+          textCapitalization: TextCapitalization.sentences,
+          maxLength: 500,
+          buildCounter: (
+            _, {
+            required currentLength,
+            required isFocused,
+            maxLength,
+          }) => null,
+        ),
+        const SizedBox(height: 18),
+        FilledButton(
+          onPressed: _busy ? null : _submit,
+          child: _busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  _editing
+                      ? tr('Save changes')
+                      : (withdrawing ? tr('Withdraw') : tr('Deposit')),
+                ),
+        ),
+        if (_editing) ...[
+          const SizedBox(height: 4),
+          TextButton.icon(
+            onPressed: _busy ? null : _delete,
+            icon: const Icon(Icons.delete_outline, size: 18),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFDC2626),
+              minimumSize: const Size.fromHeight(46),
+            ),
+            label: Text(tr('Delete entry')),
+          ),
+        ],
+      ],
     );
   }
 }

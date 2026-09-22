@@ -553,3 +553,101 @@ class SwatchPicker extends StatelessWidget {
     );
   }
 }
+
+/// The frame a form page sits in: a title with a close button over the fields,
+/// scrolling out from under the keyboard rather than being squeezed by it.
+///
+/// Replaces the bottom sheets these forms used to open in. A sheet holding an
+/// amount, a currency toggle, a date picker and a category list is a page
+/// wearing a sheet's clothes, and on a short screen the keyboard left it
+/// nowhere to go.
+class FormPage extends StatelessWidget {
+  const FormPage({
+    super.key,
+    required this.title,
+    required this.children,
+    this.subtitle,
+    this.formKey,
+    this.actions,
+  });
+
+  final String title;
+
+  /// A line under the title saying what the form is for, where the sheet had
+  /// one. Null where the title says it already.
+  final String? subtitle;
+
+  final List<Widget> children;
+
+  /// Wraps the fields in a [Form] when given, so validators run.
+  final GlobalKey<FormState>? formKey;
+
+  /// App-bar actions — Delete, where a row can be removed from its own page.
+  final List<Widget>? actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final body = ListView(
+      padding: EdgeInsets.fromLTRB(
+        AppTheme.pageInset,
+        8,
+        AppTheme.pageInset,
+        // The keyboard's own height, so the last field can always scroll clear
+        // of it rather than sitting behind it.
+        32 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      children: [
+        if (subtitle != null) ...[
+          Text(
+            subtitle!,
+            style: TextStyle(
+              fontSize: 12.5,
+              color: AppTheme.faint(context, 0.5),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+        ...children,
+      ],
+    );
+
+    return Scaffold(
+      appBar: AppBar(title: Text(title), actions: actions),
+      body: formKey == null ? body : Form(key: formKey, child: body),
+    );
+  }
+}
+
+/// Open a form as a page, fading in from the right.
+///
+/// A short slide rather than a full push: the page is not somewhere further
+/// in, it is the same row opened up, and a hundred-percent travel reads as
+/// navigation the back arrow then has to undo. The fade is what carries it —
+/// the movement only says which way.
+Future<T?> openFormPage<T>(BuildContext context, WidgetBuilder builder) {
+  return Navigator.of(context).push<T>(
+    PageRouteBuilder<T>(
+      pageBuilder: (context, _, _) => builder(context),
+      transitionDuration: const Duration(milliseconds: 260),
+      reverseTransitionDuration: const Duration(milliseconds: 190),
+      transitionsBuilder: (context, animation, _, child) {
+        final eased = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+
+        return FadeTransition(
+          opacity: eased,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.12, 0),
+              end: Offset.zero,
+            ).animate(eased),
+            child: child,
+          ),
+        );
+      },
+    ),
+  );
+}

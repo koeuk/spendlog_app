@@ -12,7 +12,7 @@ import '../providers/data_providers.dart';
 import '../theme.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
-import 'income_form_sheet.dart';
+import 'income_form_page.dart';
 
 /// One month of income: the total up top, every entry beneath it.
 class IncomeScreen extends StatelessWidget {

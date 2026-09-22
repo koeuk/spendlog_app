@@ -11,7 +11,7 @@ import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
-import 'savings_entry_sheet.dart';
+import 'savings_entry_page.dart';
 
 /// The month's savings plan and what has actually gone aside against it —
 /// budgets' twin on the other side of the ledger.

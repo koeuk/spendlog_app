@@ -17,16 +17,7 @@ import '../widgets/glass.dart';
 /// Add / edit one income entry in a bottom sheet. On save the month's rows,
 /// its summary and the dashboard (income and balance lines) are invalidated.
 Future<void> showIncomeForm(BuildContext context, {Income? income}) {
-  return showGlassSheet(
-    context: context,
-    isScrollControlled: true,
-    builder: (context) => Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: _IncomeForm(income: income),
-    ),
-  );
+  return openFormPage<void>(context, (_) => _IncomeForm(income: income));
 }
 
 class _IncomeForm extends StatefulWidget {
@@ -232,176 +223,150 @@ class _IncomeFormState extends State<_IncomeForm> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                _editing ? 'Edit income' : 'Add income',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 18),
-              if (_error != null) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.errorFill(context),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    _error!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppTheme.errorInk(context),
-                      fontSize: 13,
-                    ),
-                  ),
+    return FormPage(
+      title: _editing ? tr('Edit income') : tr('Add income'),
+      formKey: _formKey,
+      children: [
+        if (_error != null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppTheme.errorFill(context),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppTheme.errorInk(context), fontSize: 13),
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
+        // Picked from what this person has used before, or typed fresh
+        // — the same control the web's income form has.
+        _SourceField(
+          value: _source.text,
+          onChanged: (value) => setState(() => _source.text = value),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _amount,
+                decoration: InputDecoration(
+                  hintText: tr('Amount'),
+                  prefixText: _currency == 'USD' ? '\$ ' : '៛ ',
                 ),
-                const SizedBox(height: 14),
-              ],
-              // Picked from what this person has used before, or typed fresh
-              // — the same control the web's income form has.
-              _SourceField(
-                value: _source.text,
-                onChanged: (value) => setState(() => _source.text = value),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _amount,
-                      decoration: InputDecoration(
-                        hintText: tr('Amount'),
-                        prefixText: _currency == 'USD' ? '\$ ' : '៛ ',
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      validator: (v) {
-                        final parsed = double.tryParse(v?.trim() ?? '');
-                        if (parsed == null || parsed <= 0) {
-                          return 'Enter an amount.';
-                        }
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                validator: (v) {
+                  final parsed = double.tryParse(v?.trim() ?? '');
+                  if (parsed == null || parsed <= 0) {
+                    return 'Enter an amount.';
+                  }
 
-                        // Mirrors Currency::minimumInput — ៛100 is the smallest
-                        // note in circulation.
-                        if (_currency == 'KHR' && parsed < 100) {
-                          return 'At least ៛100.';
-                        }
+                  // Mirrors Currency::minimumInput — ៛100 is the smallest
+                  // note in circulation.
+                  if (_currency == 'KHR' && parsed < 100) {
+                    return 'At least ៛100.';
+                  }
 
-                        return null;
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'USD', label: Text('\$')),
-                      ButtonSegment(value: 'KHR', label: Text('៛')),
-                    ],
-                    selected: {_currency},
-                    onSelectionChanged: (selection) {
-                      _switchCurrency(selection.first);
-                    },
-                    showSelectedIcon: false,
-                    style: const ButtonStyle(
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ),
-                ],
+                  return null;
+                },
               ),
-              if (_currency == 'KHR') ...[
-                const SizedBox(height: 8),
-                Text(
-                  tr('Entered in riel, stored in US dollars.'),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.faint(context, 0.5),
-                  ),
-                ),
+            ),
+            const SizedBox(width: 12),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'USD', label: Text('\$')),
+                ButtonSegment(value: 'KHR', label: Text('៛')),
               ],
-              const SizedBox(height: 14),
-              OutlinedButton.icon(
-                onPressed: _pickDate,
-                icon: const Icon(Icons.calendar_today_outlined, size: 18),
-                label: Text(
-                  '${_receivedOn.day}/${_receivedOn.month}/${_receivedOn.year}',
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(52),
-                  shape: const StadiumBorder(),
-                  foregroundColor: Theme.of(context).colorScheme.onSurface,
-                  side: BorderSide(color: AppTheme.faint(context, 0.12)),
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: _note,
-                decoration: InputDecoration(hintText: tr('Note (optional)')),
-                textCapitalization: TextCapitalization.sentences,
-                maxLength: 500,
-                // The counter would sit oddly under a pill field; the limit
-                // still applies.
-                buildCounter: (
-                  _, {
-                  required currentLength,
-                  required isFocused,
-                  maxLength,
-                }) => null,
-              ),
-              if (!_editing) ...[
-                const SizedBox(height: 14),
-                RepeatRow(
-                  value: _repeat,
-                  onChanged: (value) => setState(() => _repeat = value),
-                ),
-              ],
-              const SizedBox(height: 18),
-              FilledButton(
-                onPressed: _busy ? null : _submit,
-                child: _busy
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(
-                        _editing
-                            ? 'Save changes'
-                            : _repeat != null
-                            ? tr('Add repeating income')
-                            : 'Add income',
-                      ),
-              ),
-              if (_editing) ...[
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: _busy ? null : _delete,
-                  style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFFDC2626),
-                  ),
-                  child: Text(tr('Delete income')),
-                ),
-              ],
-            ],
+              selected: {_currency},
+              onSelectionChanged: (selection) {
+                _switchCurrency(selection.first);
+              },
+              showSelectedIcon: false,
+              style: const ButtonStyle(visualDensity: VisualDensity.compact),
+            ),
+          ],
+        ),
+        if (_currency == 'KHR') ...[
+          const SizedBox(height: 8),
+          Text(
+            tr('Entered in riel, stored in US dollars.'),
+            style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.5)),
+          ),
+        ],
+        const SizedBox(height: 14),
+        OutlinedButton.icon(
+          onPressed: _pickDate,
+          icon: const Icon(Icons.calendar_today_outlined, size: 18),
+          label: Text(
+            '${_receivedOn.day}/${_receivedOn.month}/${_receivedOn.year}',
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(52),
+            shape: const StadiumBorder(),
+            foregroundColor: Theme.of(context).colorScheme.onSurface,
+            side: BorderSide(color: AppTheme.faint(context, 0.12)),
           ),
         ),
-      ),
+        const SizedBox(height: 14),
+        TextFormField(
+          controller: _note,
+          decoration: InputDecoration(hintText: tr('Note (optional)')),
+          textCapitalization: TextCapitalization.sentences,
+          maxLength: 500,
+          // The counter would sit oddly under a pill field; the limit
+          // still applies.
+          buildCounter: (
+            _, {
+            required currentLength,
+            required isFocused,
+            maxLength,
+          }) => null,
+        ),
+        if (!_editing) ...[
+          const SizedBox(height: 14),
+          RepeatRow(
+            value: _repeat,
+            onChanged: (value) => setState(() => _repeat = value),
+          ),
+        ],
+        const SizedBox(height: 18),
+        FilledButton(
+          onPressed: _busy ? null : _submit,
+          child: _busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  _editing
+                      ? 'Save changes'
+                      : _repeat != null
+                      ? tr('Add repeating income')
+                      : 'Add income',
+                ),
+        ),
+        if (_editing) ...[
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _busy ? null : _delete,
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFDC2626),
+            ),
+            child: Text(tr('Delete income')),
+          ),
+        ],
+      ],
     );
   }
 }
