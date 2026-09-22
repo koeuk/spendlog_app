@@ -78,10 +78,13 @@ class SavingsSummary {
   /// The month's plan, or "0.00" when none is set.
   final String planned;
 
-  /// What stayed aside out of the month: deposits less withdrawals dated
-  /// within it, floored at "0.00". Never negative — a month that gave back
-  /// more than it put in has saved nothing, and the entries below the card
-  /// are where the withdrawals that took it there are read.
+  /// How much of the month's plan is standing, after what came back out.
+  ///
+  /// A withdrawal spends the month's headroom — the part of [planned] the
+  /// deposits have not covered yet — before it touches the deposits
+  /// themselves, so $100 put against a $150 plan and $80 taken back out
+  /// leaves "70.00". See SavingsSummary in the backend for why. Floored at
+  /// "0.00", so never negative.
   final String savedThisMonth;
 
   /// planned − saved, floored at "0.00".

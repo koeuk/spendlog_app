@@ -44,8 +44,8 @@ class DashboardSavings {
   /// The month's plan, or "0.00" when none is set.
   final String planned;
 
-  /// Deposits less withdrawals dated within the month, floored at "0.00" and
-  /// so never negative. See SavingsSummary.savedThisMonth.
+  /// The month's plan after what came back out, floored at "0.00" and so
+  /// never negative. See SavingsSummary.savedThisMonth.
   final String savedThisMonth;
 
   /// 0..100, already capped.
