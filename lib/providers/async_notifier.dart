@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../repositories/spendlog_repository.dart';
 
@@ -79,7 +80,43 @@ class AsyncState<T> {
 /// "invalidate everything a write could move" helpers in `data_providers.dart`
 /// as cheap as they were under `autoDispose`: invalidating a notifier no
 /// screen is watching costs a boolean, not a request.
-abstract class AsyncNotifier<T> extends ChangeNotifier {
+/// Notifies listeners without ever doing it at a moment Flutter forbids.
+///
+/// Telling a widget to rebuild while Flutter is already building one throws
+/// "setState() or markNeedsBuild() called during build" — a crash, not a
+/// glitch. And *when* a value lands is not something a notifier gets to
+/// choose: a fetch started from a widget's initState emits its loading state
+/// before its first await, inside the very frame that is building that
+/// widget, and an `invalidate` from a provider's `update` runs mid-build by
+/// definition.
+///
+/// So the check lives here rather than at each call site, where it only has
+/// to be forgotten once. Outside a frame — the common case, a response
+/// arriving — listeners are told at once, as they always were.
+mixin _NotifiesSafely on ChangeNotifier {
+  bool get isDisposed;
+
+  void notifySafely() {
+    if (isDisposed || !hasListeners) return;
+
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    final midFrame =
+        phase == SchedulerPhase.persistentCallbacks ||
+        phase == SchedulerPhase.midFrameMicrotasks;
+
+    if (!midFrame) {
+      notifyListeners();
+      return;
+    }
+
+    // The frame finishes first; microtasks drain once it has.
+    scheduleMicrotask(() {
+      if (!isDisposed) notifyListeners();
+    });
+  }
+}
+
+abstract class AsyncNotifier<T> extends ChangeNotifier with _NotifiesSafely {
   AsyncState<T> _state = AsyncState<T>.loading();
 
   SpendLogRepository? _repository;
@@ -156,7 +193,7 @@ abstract class AsyncNotifier<T> extends ChangeNotifier {
   /// the fresh one. Free for a notifier nothing is watching.
   void invalidate() {
     _needsLoad = true;
-    _notifySoon();
+    notifySafely();
   }
 
   /// Fetch now, whatever the cache says, and complete when it lands — what a
@@ -202,19 +239,11 @@ abstract class AsyncNotifier<T> extends ChangeNotifier {
     if (_disposed) return;
 
     _state = next;
-    notifyListeners();
+    notifySafely();
   }
 
-  /// Notifications are deferred a microtask because [invalidate] is called
-  /// from build callbacks and provider `update`s, where notifying at once
-  /// would rebuild a widget in the middle of building it.
-  void _notifySoon() {
-    if (_disposed || !hasListeners) return;
-
-    scheduleMicrotask(() {
-      if (!_disposed) notifyListeners();
-    });
-  }
+  @override
+  bool get isDisposed => _disposed;
 
   @override
   void dispose() {
@@ -228,7 +257,8 @@ abstract class AsyncNotifier<T> extends ChangeNotifier {
 /// Stands in for Riverpod's `.family`. A single notifier rather than one per
 /// key because `provider` looks providers up by type — and the screens that
 /// use it show one key at a time anyway.
-abstract class FamilyAsyncNotifier<T, K> extends ChangeNotifier {
+abstract class FamilyAsyncNotifier<T, K> extends ChangeNotifier
+    with _NotifiesSafely {
   final Map<K, AsyncState<T>> _states = {};
   final Map<K, int> _generations = {};
   final Set<K> _stale = {};
@@ -272,11 +302,7 @@ abstract class FamilyAsyncNotifier<T, K> extends ChangeNotifier {
       _stale.add(key);
     }
 
-    if (_disposed || !hasListeners) return;
-
-    scheduleMicrotask(() {
-      if (!_disposed) notifyListeners();
-    });
+    notifySafely();
   }
 
   /// Fetch [key] now and complete when it lands. Never throws — see
@@ -321,8 +347,11 @@ abstract class FamilyAsyncNotifier<T, K> extends ChangeNotifier {
     if (_disposed) return;
 
     _states[key] = next;
-    notifyListeners();
+    notifySafely();
   }
+
+  @override
+  bool get isDisposed => _disposed;
 
   @override
   void dispose() {
@@ -336,7 +365,7 @@ abstract class FamilyAsyncNotifier<T, K> extends ChangeNotifier {
 ///
 /// Subclassed per value rather than used bare: `provider` resolves by type, so
 /// four `ValueState<String>`s in one tree would all be the same provider.
-abstract class ValueState<T> extends ChangeNotifier {
+abstract class ValueState<T> extends ChangeNotifier with _NotifiesSafely {
   ValueState(this._value);
 
   T _value;
@@ -348,12 +377,15 @@ abstract class ValueState<T> extends ChangeNotifier {
     if (next == _value || _disposed) return;
 
     _value = next;
-    notifyListeners();
+    notifySafely();
   }
 
   /// Rewrites the value from the current one, for the fields that are edited
   /// a piece at a time.
   void update(T Function(T current) change) => value = change(_value);
+
+  @override
+  bool get isDisposed => _disposed;
 
   @override
   void dispose() {
