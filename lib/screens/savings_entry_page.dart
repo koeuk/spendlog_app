@@ -366,6 +366,34 @@ class _EntryFormState extends State<_EntryForm> {
                 ' · ${money(widget.entry!.amount)}'
           : tr('New savings entry'),
       formKey: _formKey,
+      footer: [
+        FilledButton(
+          onPressed: _busy ? null : _submit,
+          child: _busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  _editing
+                      ? tr('Save changes')
+                      : (withdrawing ? tr('Withdraw') : tr('Deposit')),
+                ),
+        ),
+        if (_editing)
+          TextButton.icon(
+            onPressed: _busy ? null : _delete,
+            icon: const Icon(Icons.delete_outline, size: 18),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFDC2626),
+            ),
+            label: Text(tr('Delete entry')),
+          ),
+      ],
       children: [
         if (_error != null) ...[
           Container(
@@ -482,36 +510,6 @@ class _EntryFormState extends State<_EntryForm> {
             maxLength,
           }) => null,
         ),
-        const SizedBox(height: 18),
-        FilledButton(
-          onPressed: _busy ? null : _submit,
-          child: _busy
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : Text(
-                  _editing
-                      ? tr('Save changes')
-                      : (withdrawing ? tr('Withdraw') : tr('Deposit')),
-                ),
-        ),
-        if (_editing) ...[
-          const SizedBox(height: 4),
-          TextButton.icon(
-            onPressed: _busy ? null : _delete,
-            icon: const Icon(Icons.delete_outline, size: 18),
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFDC2626),
-              minimumSize: const Size.fromHeight(46),
-            ),
-            label: Text(tr('Delete entry')),
-          ),
-        ],
       ],
     );
   }

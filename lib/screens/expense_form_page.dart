@@ -268,6 +268,35 @@ class _ExpenseFormState extends State<_ExpenseForm> {
     return FormPage(
       title: _editing ? tr('Edit expense') : tr('Add an expense'),
       formKey: _formKey,
+      footer: [
+        FilledButton(
+          onPressed: _busy ? null : _submit,
+          child: _busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  _editing
+                      ? 'Save changes'
+                      : _repeat != null
+                      ? tr('Add repeating expense')
+                      : 'Add expense',
+                ),
+        ),
+        if (_editing)
+          TextButton(
+            onPressed: _busy ? null : _delete,
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFDC2626),
+            ),
+            child: Text(tr('Delete expense')),
+          ),
+      ],
       children: [
         if (_error != null) ...[
           Container(
@@ -395,37 +424,6 @@ class _ExpenseFormState extends State<_ExpenseForm> {
                 _categoryUuid = null;
               }
             }),
-          ),
-        ],
-        const SizedBox(height: 18),
-        FilledButton(
-          onPressed: _busy ? null : _submit,
-          child: _busy
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : Text(
-                  _editing
-                      ? 'Save changes'
-                      : _repeat != null
-                      ? tr('Add repeating expense')
-                      : 'Add expense',
-                ),
-        ),
-        if (_editing) ...[
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: _busy ? null : _delete,
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFDC2626),
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-            ),
-            child: Text(tr('Delete expense')),
           ),
         ],
       ],

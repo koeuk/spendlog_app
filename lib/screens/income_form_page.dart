@@ -226,6 +226,35 @@ class _IncomeFormState extends State<_IncomeForm> {
     return FormPage(
       title: _editing ? tr('Edit income') : tr('Add income'),
       formKey: _formKey,
+      footer: [
+        FilledButton(
+          onPressed: _busy ? null : _submit,
+          child: _busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  _editing
+                      ? 'Save changes'
+                      : _repeat != null
+                      ? tr('Add repeating income')
+                      : 'Add income',
+                ),
+        ),
+        if (_editing)
+          TextButton(
+            onPressed: _busy ? null : _delete,
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFDC2626),
+            ),
+            child: Text(tr('Delete income')),
+          ),
+      ],
       children: [
         if (_error != null) ...[
           Container(
@@ -334,36 +363,6 @@ class _IncomeFormState extends State<_IncomeForm> {
           RepeatRow(
             value: _repeat,
             onChanged: (value) => setState(() => _repeat = value),
-          ),
-        ],
-        const SizedBox(height: 18),
-        FilledButton(
-          onPressed: _busy ? null : _submit,
-          child: _busy
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : Text(
-                  _editing
-                      ? 'Save changes'
-                      : _repeat != null
-                      ? tr('Add repeating income')
-                      : 'Add income',
-                ),
-        ),
-        if (_editing) ...[
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: _busy ? null : _delete,
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFDC2626),
-            ),
-            child: Text(tr('Delete income')),
           ),
         ],
       ],

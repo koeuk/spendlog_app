@@ -569,6 +569,7 @@ class FormPage extends StatelessWidget {
     this.subtitle,
     this.formKey,
     this.actions,
+    this.footer,
   });
 
   final String title;
@@ -585,6 +586,11 @@ class FormPage extends StatelessWidget {
   /// App-bar actions — Delete, where a row can be removed from its own page.
   final List<Widget>? actions;
 
+  /// What the page is for — Save, and the delete beneath it — pinned to the
+  /// bottom rather than scrolling with the fields. On a long form the action
+  /// was off-screen exactly when someone had finished and reached for it.
+  final List<Widget>? footer;
+
   @override
   Widget build(BuildContext context) {
     final body = ListView(
@@ -592,9 +598,10 @@ class FormPage extends StatelessWidget {
         AppTheme.pageInset,
         8,
         AppTheme.pageInset,
-        // The keyboard's own height, so the last field can always scroll clear
-        // of it rather than sitting behind it.
-        32 + MediaQuery.viewInsetsOf(context).bottom,
+        // The keyboard is handled by the Scaffold, which shrinks the page and
+        // lifts the footer above it; this is only the last field's breathing
+        // room over whatever sits below.
+        24,
       ),
       children: [
         if (subtitle != null) ...[
@@ -618,6 +625,35 @@ class FormPage extends StatelessWidget {
         actions: actions,
       ),
       body: formKey == null ? body : Form(key: formKey, child: body),
+      // The Scaffold's own slot, so the keyboard lifts it rather than covering
+      // it, and the fields scroll behind the glass instead of under a button
+      // that is not there.
+      bottomNavigationBar: footer == null
+          ? null
+          : DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppTheme.glassFill(context, strong: true),
+                border: Border(
+                  top: BorderSide(color: AppTheme.glassBorder(context)),
+                ),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTheme.pageInset,
+                    12,
+                    AppTheme.pageInset,
+                    12,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: footer!,
+                  ),
+                ),
+              ),
+            ),
     );
   }
 }
@@ -673,7 +709,10 @@ Widget? glassBack(BuildContext context, {VoidCallback? onPressed}) {
 /// navigation the back arrow then has to undo. The fade is what carries it —
 /// the movement only says which way.
 Future<T?> openFormPage<T>(BuildContext context, WidgetBuilder builder) {
-  return Navigator.of(context).push<T>(
+  // The root navigator, not the tab's: a form is not a place inside the tab
+  // it was opened from, and leaving the nav bar under it invites a tap that
+  // walks away from half-entered work.
+  return Navigator.of(context, rootNavigator: true).push<T>(
     PageRouteBuilder<T>(
       pageBuilder: (context, _, _) => builder(context),
       transitionDuration: const Duration(milliseconds: 260),
