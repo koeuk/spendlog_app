@@ -113,6 +113,28 @@ void main() {
     await settle(tester);
   });
 
+  testWidgets('asking for the money settings from initState does not notify mid-build', (
+    tester,
+  ) async {
+    // Every amount field asks for the account's default currency as it is
+    // created, and creation happens inside the frame that is building the
+    // form. `_load` emits its loading state before its first await, so
+    // fetching straight away would notify listeners in the middle of that
+    // build and Flutter would throw.
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: appProviders(),
+        child: Builder(
+          builder: (context) => const _AsksForMoneySettings(),
+        ),
+      ),
+    );
+
+    await settle(tester);
+
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('a month change rebinds the notifier rather than replacing it', (
     tester,
   ) async {
@@ -132,4 +154,26 @@ void main() {
 
     await settle(tester);
   });
+}
+
+
+/// A form, as far as this test needs one: it asks for the settings the moment
+/// it is created, which is what the amount fields do.
+class _AsksForMoneySettings extends StatefulWidget {
+  const _AsksForMoneySettings();
+
+  @override
+  State<_AsksForMoneySettings> createState() => _AsksForMoneySettingsState();
+}
+
+class _AsksForMoneySettingsState extends State<_AsksForMoneySettings> {
+  @override
+  void initState() {
+    super.initState();
+    // Unawaited on purpose: the form does not block its own build on this.
+    context.read<MoneySettingsNotifier>().settings();
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox();
 }

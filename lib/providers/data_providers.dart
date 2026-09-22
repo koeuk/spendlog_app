@@ -250,6 +250,14 @@ class MoneySettingsNotifier extends AsyncNotifier<MoneySettings> {
     final loaded = current.valueOrNull;
     if (loaded != null) return loaded;
 
+    // Off the current synchronous run before fetching anything. A form asks
+    // for this from initState, and `_load` emits its loading state before its
+    // first await — notifying listeners in the middle of the frame that is
+    // building the form, which Flutter refuses. The lazy `state` getter
+    // schedules its own load on a microtask for the same reason.
+    await Future<void>.microtask(() {});
+    if (current.valueOrNull != null) return current.valueOrNull;
+
     await refresh();
 
     return current.valueOrNull;
