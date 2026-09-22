@@ -12,32 +12,65 @@ import '../widgets/common.dart';
 import '../widgets/glass.dart';
 
 /// Put money aside, or take it back out. Pass [entry] to edit an existing
-/// movement; [type] preselects the toggle on a new one. [month] only seeds the
-/// date, so adding from a month being browsed lands in that month rather than
-/// today — the entry itself belongs to whatever date is chosen.
+/// movement; [type] preselects the toggle on a new one, and [amount] prefills
+/// it. [month] only seeds the date, so adding from a month being browsed lands
+/// in that month rather than today — the entry itself belongs to whatever date
+/// is chosen.
 Future<void> showSavingsEntrySheet(
   BuildContext context, {
   SavingsEntry? entry,
   String type = 'deposit',
+  String? amount,
   String? month,
-}) {
-  return showGlassSheet(
+}) async {
+  final instead = await showGlassSheet<_AddInstead>(
     context: context,
     isScrollControlled: true,
     builder: (context) => Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      child: _EntryForm(entry: entry, initialType: type, month: month),
+      child: _EntryForm(
+        entry: entry,
+        initialType: type,
+        initialAmount: amount,
+        month: month,
+      ),
     ),
   );
+
+  // Someone flipped an entry's direction and chose to add the movement rather
+  // than rewrite the one they were looking at. Opened from here, because the
+  // sheet that asked has gone and its context with it.
+  if (instead != null && context.mounted) {
+    await showSavingsEntrySheet(
+      context,
+      type: instead.type,
+      amount: instead.amount,
+      month: month,
+    );
+  }
+}
+
+/// A pop result asking for a fresh sheet in place of the one just closed.
+class _AddInstead {
+  const _AddInstead({required this.type, required this.amount});
+
+  final String type;
+  final String amount;
 }
 
 class _EntryForm extends StatefulWidget {
-  const _EntryForm({this.entry, required this.initialType, this.month});
+  const _EntryForm({
+    this.entry,
+    required this.initialType,
+    this.initialAmount,
+    this.month,
+  });
 
   final SavingsEntry? entry;
   final String initialType;
+  final String? initialAmount;
   final String? month;
 
   @override
@@ -46,7 +79,9 @@ class _EntryForm extends StatefulWidget {
 
 class _EntryFormState extends State<_EntryForm> {
   final _formKey = GlobalKey<FormState>();
-  late final _amount = TextEditingController(text: widget.entry?.amount ?? '');
+  late final _amount = TextEditingController(
+    text: widget.entry?.amount ?? widget.initialAmount ?? '',
+  );
   late final _note = TextEditingController(text: widget.entry?.note ?? '');
   late final _source = TextEditingController(text: widget.entry?.source ?? '');
 
@@ -161,8 +196,65 @@ class _EntryFormState extends State<_EntryForm> {
     }
   }
 
+  /// Flipping a saved entry's direction rewrites that row; it does not add the
+  /// opposite movement. That is a correction — "I logged this the wrong way
+  /// round" — and rarely what someone reaching for Withdraw on a deposit they
+  /// just made meant, so it asks, and offers the other reading.
+  Future<_Flip?> _confirmFlip() {
+    final entry = widget.entry!;
+    final toWithdrawal = _type == 'withdraw';
+
+    return showDialog<_Flip>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(
+          toWithdrawal
+              ? tr('Turn this deposit into a withdrawal?')
+              : tr('Turn this withdrawal into a deposit?'),
+        ),
+        content: Text(
+          '${money(entry.amount)} · ${dayLabel(entry.savedOn)}\n\n'
+          '${tr('This replaces that entry. It does not add the opposite one.')}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(_Flip.cancel),
+            child: Text(tr('Cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(_Flip.addInstead),
+            child: Text(
+              toWithdrawal
+                  ? tr('Add a withdrawal instead')
+                  : tr('Add a deposit instead'),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(_Flip.replace),
+            child: Text(tr('Replace it')),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_editing && _type != widget.entry!.type) {
+      final choice = await _confirmFlip();
+      if (!mounted || choice == null || choice == _Flip.cancel) return;
+
+      if (choice == _Flip.addInstead) {
+        // The caller reopens a fresh sheet from this result — see
+        // showSavingsEntrySheet.
+        Navigator.of(context)
+            .pop(_AddInstead(type: _type, amount: _amount.text.trim()));
+
+        return;
+      }
+    }
 
     setState(() {
       _busy = true;
@@ -256,7 +348,12 @@ class _EntryFormState extends State<_EntryForm> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                _editing ? tr('Edit entry') : tr('New savings entry'),
+                // Named, because the toggle below rewrites *this* row, and a
+                // sheet that says only "Edit entry" looks like the Add sheet.
+                _editing
+                    ? '${widget.entry!.isDeposit ? tr('Edit deposit') : tr('Edit withdrawal')}'
+                          ' · ${money(widget.entry!.amount)}'
+                    : tr('New savings entry'),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleMedium
                     ?.copyWith(fontWeight: FontWeight.w700),
@@ -523,3 +620,6 @@ class _SourceFieldState extends State<_SourceField> {
     );
   }
 }
+
+/// What to do with an edit that turns a deposit into a withdrawal, or back.
+enum _Flip { cancel, replace, addInstead }
