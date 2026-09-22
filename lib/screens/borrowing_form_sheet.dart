@@ -214,12 +214,13 @@ class _BorrowingFormState extends State<_BorrowingForm> {
   /// Falls back to clearing only when the rate has not arrived, which is the
   /// one case where keeping the number would be a lie about how much money
   /// it is.
-  void _switchCurrency(String next) {
-    final rate = context
-        .read<MoneySettingsNotifier>()
-        .state
-        .valueOrNull
-        ?.khrPerUsd;
+  Future<void> _switchCurrency(String next) async {
+    // Awaited, not read: the rate may not have been fetched yet, and a toggle
+    // that blanks the amount because the answer had not arrived is worse than
+    // one that takes a moment. See MoneySettingsNotifier.khrPerUsd.
+    final rate = await context.read<MoneySettingsNotifier>().khrPerUsd();
+    if (!mounted) return;
+
     final converted = rate == null
         ? null
         : convertAmount(

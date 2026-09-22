@@ -217,12 +217,13 @@ class _ExpenseFormState extends State<_ExpenseForm> {
   /// number and swapping the prefix — "12.50" under a ៛ is three tenths of a
   /// cent, not twelve dollars fifty. Clears only when the rate is unknown,
   /// the one case where keeping the figure would be a lie.
-  void _switchCurrency(String next) {
-    final rate = context
-        .read<MoneySettingsNotifier>()
-        .state
-        .valueOrNull
-        ?.khrPerUsd;
+  Future<void> _switchCurrency(String next) async {
+    // Awaited, not read: the rate may not have been fetched yet, and a toggle
+    // that blanks the amount because the answer had not arrived is worse than
+    // one that takes a moment. See MoneySettingsNotifier.khrPerUsd.
+    final rate = await context.read<MoneySettingsNotifier>().khrPerUsd();
+    if (!mounted) return;
+
     final converted = rate == null
         ? null
         : convertAmount(

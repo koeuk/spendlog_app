@@ -229,6 +229,27 @@ class ExpensesNotifier extends AsyncNotifier<ExpensesState> {
 class MoneySettingsNotifier extends AsyncNotifier<MoneySettings> {
   @override
   Future<MoneySettings> fetch() => repository.moneySettings();
+
+  /// The riel rate, waiting for the first load when it has not landed yet.
+  ///
+  /// Every currency toggle in the app asks for this the moment it is tapped,
+  /// and these settings are fetched lazily — nothing on a form screen reads
+  /// them until then. Reading `state` alone would start that fetch and hand
+  /// back the empty value it starts from, so the first tap of a session
+  /// converted against no rate and blanked the field it was meant to convert.
+  ///
+  /// Null only when the fetch itself failed, which [refresh] swallows.
+  Future<double?> khrPerUsd() async {
+    // `current`, not `state`: reading `state` would kick off a load of its
+    // own and the refresh below would then be a second fetch of the same
+    // settings.
+    final loaded = current.valueOrNull;
+    if (loaded != null) return loaded.khrPerUsd;
+
+    await refresh();
+
+    return current.valueOrNull?.khrPerUsd;
+  }
 }
 
 class IncomeMonth extends ValueState<String> {

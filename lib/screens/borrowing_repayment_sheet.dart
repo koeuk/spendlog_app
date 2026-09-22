@@ -119,12 +119,13 @@ class _RepaymentFormState extends State<_RepaymentForm> {
 
   /// Rewrite the typed amount for the new currency rather than dropping it —
   /// see the other sheets for why.
-  void _switchCurrency(String next) {
-    final rate = context
-        .read<MoneySettingsNotifier>()
-        .state
-        .valueOrNull
-        ?.khrPerUsd;
+  Future<void> _switchCurrency(String next) async {
+    // Awaited, not read: the rate may not have been fetched yet, and a toggle
+    // that blanks the amount because the answer had not arrived is worse than
+    // one that takes a moment. See MoneySettingsNotifier.khrPerUsd.
+    final rate = await context.read<MoneySettingsNotifier>().khrPerUsd();
+    if (!mounted) return;
+
     final converted = rate == null
         ? null
         : convertAmount(
