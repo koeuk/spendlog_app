@@ -239,11 +239,137 @@ class PillSegment extends StatelessWidget {
   }
 }
 
-/// The "Repeat" line the expense and income forms share on create: Never
-/// plus the four frequencies. A dropdown rather than a row of pills — five
-/// labels beside an icon overflow a phone-width sheet, and the form already
-/// picks its category the same way. Choosing any frequency turns the save
-/// into a recurring rule rather than a single row.
+/// One row of [showOptionSheet].
+class SheetOption<T> {
+  const SheetOption({required this.value, required this.label, this.icon});
+
+  final T value;
+  final String label;
+  final IconData? icon;
+}
+
+/// A short list of choices, as a sheet from the bottom.
+///
+/// The menu a dropdown opens is an overlay pinned to the field, which on a
+/// form page lands wherever the field happens to be and covers whatever is
+/// under it. A sheet always arrives from the same edge, within reach of the
+/// thumb, and is dismissed the same way as every other sheet in the app.
+///
+/// Resolves to the chosen value, or null when dismissed.
+Future<T?> showOptionSheet<T>(
+  BuildContext context, {
+  required String title,
+  required List<SheetOption<T>> options,
+  T? current,
+}) {
+  return showGlassSheet<T>(
+    context: context,
+    builder: (context) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.pageInset,
+          14,
+          AppTheme.pageInset,
+          8,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 10),
+            for (final option in options)
+              ListTile(
+                leading: option.icon == null
+                    ? null
+                    : Icon(
+                        option.icon,
+                        size: 20,
+                        color: AppTheme.faint(context, 0.6),
+                      ),
+                title: Text(option.label),
+                trailing: option.value == current
+                    ? Icon(
+                        Icons.check,
+                        size: 18,
+                        color: AppTheme.accent(context),
+                      )
+                    : null,
+                onTap: () => Navigator.of(context).pop(option.value),
+              ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+/// A field that opens [showOptionSheet] and shows what was chosen — the
+/// dropdown's shape without the dropdown's menu.
+class OptionField<T> extends StatelessWidget {
+  const OptionField({
+    super.key,
+    required this.title,
+    required this.options,
+    required this.value,
+    required this.onChanged,
+    this.leading,
+  });
+
+  final String title;
+  final List<SheetOption<T>> options;
+  final T value;
+  final ValueChanged<T> onChanged;
+
+  /// An icon at the head of the field, where the dropdown had a prefix.
+  final IconData? leading;
+
+  @override
+  Widget build(BuildContext context) {
+    final chosen = options.where((o) => o.value == value).toList();
+    final label = chosen.isEmpty ? '' : chosen.first.label;
+
+    return InkWell(
+      onTap: () async {
+        final picked = await showOptionSheet<T>(
+          context,
+          title: title,
+          options: options,
+          current: value,
+        );
+
+        if (picked != null) onChanged(picked);
+      },
+      borderRadius: BorderRadius.circular(AppTheme.rowRadius),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          prefixIcon: leading == null
+              ? null
+              : Icon(leading, size: 20, color: AppTheme.faint(context, 0.5)),
+        ),
+        child: Row(
+          children: [
+            Expanded(child: Text(label, overflow: TextOverflow.ellipsis)),
+            Icon(
+              Icons.expand_more,
+              size: 20,
+              color: AppTheme.faint(context, 0.4),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The "Repeat" line the expense and income forms share on create: Never plus
+/// the four frequencies. Choosing any frequency turns the save into a
+/// recurring rule rather than a single row.
 class RepeatRow extends StatelessWidget {
   const RepeatRow({super.key, required this.value, required this.onChanged});
 
@@ -255,19 +381,14 @@ class RepeatRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButtonFormField<String>(
-      initialValue: value ?? _never,
-      decoration: InputDecoration(
-        prefixIcon: Icon(
-          Icons.repeat,
-          size: 20,
-          color: AppTheme.faint(context, 0.5),
-        ),
-      ),
-      items: [
-        DropdownMenuItem(value: _never, child: Text(tr('Never repeats'))),
+    return OptionField<String>(
+      title: tr('Repeat'),
+      leading: Icons.repeat,
+      value: value ?? _never,
+      options: [
+        SheetOption(value: _never, label: tr('Never repeats')),
         for (final f in recurringFrequencies)
-          DropdownMenuItem(value: f, child: Text(tr(frequencyLabel(f)))),
+          SheetOption(value: f, label: tr(frequencyLabel(f))),
       ],
       onChanged: (v) => onChanged(v == _never ? null : v),
     );
