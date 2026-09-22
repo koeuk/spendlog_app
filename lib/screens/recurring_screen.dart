@@ -32,7 +32,7 @@ class _RecurringScreenState extends State<RecurringScreen> {
     final rules = context.watch<RecurringRulesNotifier>().state;
 
     return Scaffold(
-      appBar: AppBar(title: Text(tr('Recurring'))),
+      appBar: AppBar(leading: glassBack(context), title: Text(tr('Recurring'))),
       floatingActionButton: AddPill(
         label: tr('New rule'),
         onPressed: () => showRecurringForm(context, kind: _kind ?? 'expense'),

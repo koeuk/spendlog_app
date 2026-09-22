@@ -50,7 +50,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
     final activity = context.watch<ActivityNotifier>().state;
 
     return Scaffold(
-      appBar: AppBar(title: Text(tr('Activity log'))),
+      appBar: AppBar(
+        leading: glassBack(context),
+        title: Text(tr('Activity log')),
+      ),
       body: Column(
         children: [
           if (isAdmin)

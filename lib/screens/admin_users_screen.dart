@@ -23,7 +23,7 @@ class AdminUsersScreen extends StatelessWidget {
     final users = context.watch<AdminUsersNotifier>().state;
 
     return Scaffold(
-      appBar: AppBar(title: Text(tr('Users'))),
+      appBar: AppBar(leading: glassBack(context), title: Text(tr('Users'))),
       floatingActionButton: AddPill(
         label: tr('Add'),
         icon: Icons.person_add_alt,
@@ -326,6 +326,7 @@ class _UserFormPageState extends State<_UserFormPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: glassBack(context),
         title: Text(_editing ? 'Edit user' : 'Add a user'),
         actions: [
           if (_editing)

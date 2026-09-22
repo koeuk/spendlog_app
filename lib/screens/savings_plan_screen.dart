@@ -141,11 +141,7 @@ class _SavingsPlanScreenState extends State<SavingsPlanScreen>
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
-        leading: IconButton(
-          onPressed: _back,
-          icon: const Icon(Icons.arrow_back),
-          tooltip: tr('Back'),
-        ),
+        leading: GlassBackButton(onPressed: _back),
         // Short on purpose: the month is a word too many beside a back button
         // at phone width, and the Plan tab names it in full anyway.
         title: Text(planning ? tr('Savings plan') : tr('Savings history')),

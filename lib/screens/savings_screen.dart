@@ -35,7 +35,11 @@ class SavingsScreen extends StatelessWidget {
     final entries = context.watch<SavingsEntriesNotifier>().state(month);
 
     return Scaffold(
-      appBar: AppBar(centerTitle: false, title: Text(tr('Savings'))),
+      appBar: AppBar(
+        leading: glassBack(context),
+        centerTitle: false,
+        title: Text(tr('Savings')),
+      ),
       floatingActionButton: AddPill(
         label: tr('Add'),
         onPressed: () => showSavingsEntrySheet(context, month: month),

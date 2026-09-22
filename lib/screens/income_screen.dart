@@ -25,7 +25,7 @@ class IncomeScreen extends StatelessWidget {
     final incomes = context.watch<IncomesNotifier>().state;
 
     return Scaffold(
-      appBar: AppBar(title: Text(tr('Income'))),
+      appBar: AppBar(leading: glassBack(context), title: Text(tr('Income'))),
       floatingActionButton: AddPill(
         label: tr('Add'),
         onPressed: () => showIncomeForm(context),

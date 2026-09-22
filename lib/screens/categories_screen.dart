@@ -30,7 +30,10 @@ class CategoriesScreen extends StatelessWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(title: Text(tr('Categories'))),
+      appBar: AppBar(
+        leading: glassBack(context),
+        title: Text(tr('Categories')),
+      ),
       floatingActionButton: canWrite
           ? AddPill(
               label: tr('New'),

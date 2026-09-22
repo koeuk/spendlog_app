@@ -26,7 +26,11 @@ class BorrowingsScreen extends StatelessWidget {
     final rows = context.watch<BorrowingsNotifier>().state;
 
     return Scaffold(
-      appBar: AppBar(centerTitle: false, title: Text(tr('Borrowing'))),
+      appBar: AppBar(
+        leading: glassBack(context),
+        centerTitle: false,
+        title: Text(tr('Borrowing')),
+      ),
       floatingActionButton: AddPill(
         label: tr('Add'),
         onPressed: () => showBorrowingForm(context),

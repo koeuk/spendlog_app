@@ -34,11 +34,7 @@ class ProfileScreen extends StatelessWidget {
         // A tab root, so nothing is beneath it to pop to — yet it is reached
         // from the Menu sheet like a pushed page, and reads as one. Back goes
         // home, which is where the sheet was most likely opened from.
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          tooltip: tr('Back'),
-          onPressed: () => context.go('/'),
-        ),
+        leading: GlassBackButton(onPressed: () => context.go('/')),
         title: Text(tr('Settings')),
       ),
       body: ListView(

@@ -52,7 +52,10 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     final colours = context.watch<ColorSettingsNotifier>().state;
 
     return Scaffold(
-      appBar: AppBar(title: Text(tr('App settings'))),
+      appBar: AppBar(
+        leading: glassBack(context),
+        title: Text(tr('App settings')),
+      ),
       body: Column(
         children: [
           // Five tabs do not fit a phone as equal shares, so the row scrolls
@@ -952,75 +955,57 @@ Future<void> _showFaqSheet(BuildContext context, {FaqEntry? faq}) async {
   // released once the sheet is gone.
   try {
     await showGlassSheet(
-    context: context,
-    isScrollControlled: true,
-    builder: (sheetContext) => Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
-      ),
-      child: StatefulBuilder(
-        builder: (sheetContext, setSheetState) => SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  faq == null ? 'Add an FAQ' : 'Edit FAQ',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(sheetContext).textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: question,
-                  decoration: InputDecoration(hintText: tr('Question')),
-                  textCapitalization: TextCapitalization.sentences,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: answer,
-                  decoration: InputDecoration(hintText: tr('Answer')),
-                  textCapitalization: TextCapitalization.sentences,
-                  maxLines: 3,
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  activeThumbColor: AppTheme.accent(context),
-                  title: Text(tr('Published')),
-                  value: published,
-                  onChanged: (value) => setSheetState(() => published = value),
-                ),
-                FilledButton(
-                  onPressed: () async {
-                    try {
-                      await repository.saveFaq(
-                        uuid: faq?.uuid,
-                        question: question.text.trim(),
-                        answer: answer.text.trim(),
-                        status: published ? 'published' : 'draft',
-                      );
-
-                      refreshFaqs();
-                      if (sheetContext.mounted) {
-                        Navigator.of(sheetContext).pop();
-                      }
-                    } catch (e) {
-                      if (sheetContext.mounted) {
-                        ScaffoldMessenger.of(sheetContext).showSnackBar(
-                          SnackBar(content: Text(apiErrorMessage(e))),
-                        );
-                      }
-                    }
-                  },
-                  child: Text(tr('Save')),
-                ),
-                if (faq != null)
-                  TextButton(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+        ),
+        child: StatefulBuilder(
+          builder: (sheetContext, setSheetState) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    faq == null ? 'Add an FAQ' : 'Edit FAQ',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(sheetContext).textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: question,
+                    decoration: InputDecoration(hintText: tr('Question')),
+                    textCapitalization: TextCapitalization.sentences,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: answer,
+                    decoration: InputDecoration(hintText: tr('Answer')),
+                    textCapitalization: TextCapitalization.sentences,
+                    maxLines: 3,
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    activeThumbColor: AppTheme.accent(context),
+                    title: Text(tr('Published')),
+                    value: published,
+                    onChanged: (value) =>
+                        setSheetState(() => published = value),
+                  ),
+                  FilledButton(
                     onPressed: () async {
                       try {
-                        await repository.deleteFaq(faq.uuid);
+                        await repository.saveFaq(
+                          uuid: faq?.uuid,
+                          question: question.text.trim(),
+                          answer: answer.text.trim(),
+                          status: published ? 'published' : 'draft',
+                        );
+
                         refreshFaqs();
                         if (sheetContext.mounted) {
                           Navigator.of(sheetContext).pop();
@@ -1033,17 +1018,36 @@ Future<void> _showFaqSheet(BuildContext context, {FaqEntry? faq}) async {
                         }
                       }
                     },
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFFDC2626),
-                    ),
-                    child: Text(tr('Delete')),
+                    child: Text(tr('Save')),
                   ),
-              ],
+                  if (faq != null)
+                    TextButton(
+                      onPressed: () async {
+                        try {
+                          await repository.deleteFaq(faq.uuid);
+                          refreshFaqs();
+                          if (sheetContext.mounted) {
+                            Navigator.of(sheetContext).pop();
+                          }
+                        } catch (e) {
+                          if (sheetContext.mounted) {
+                            ScaffoldMessenger.of(sheetContext).showSnackBar(
+                              SnackBar(content: Text(apiErrorMessage(e))),
+                            );
+                          }
+                        }
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFFDC2626),
+                      ),
+                      child: Text(tr('Delete')),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ),
     );
   } finally {
     question.dispose();

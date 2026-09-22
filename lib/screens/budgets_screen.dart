@@ -24,6 +24,7 @@ class BudgetsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: glassBack(context),
         // A tab root with no back arrow: the title starts the line, the way
         // a list heading does. Pushed pages centre theirs between the arrow
         // and the actions.

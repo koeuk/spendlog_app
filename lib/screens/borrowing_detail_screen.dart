@@ -31,7 +31,7 @@ class BorrowingDetailScreen extends StatelessWidget {
     final lender = detail.valueOrNull?.lender ?? tr('Borrowing');
 
     return Scaffold(
-      appBar: AppBar(title: Text(lender)),
+      appBar: AppBar(leading: glassBack(context), title: Text(lender)),
       body: detail.when(
         loading: () => Center(
           child: CircularProgressIndicator(color: AppTheme.accent(context)),

@@ -612,10 +612,58 @@ class FormPage extends StatelessWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(title: Text(title), actions: actions),
+      appBar: AppBar(
+        leading: glassBack(context),
+        title: Text(title),
+        actions: actions,
+      ),
       body: formKey == null ? body : Form(key: formKey, child: body),
     );
   }
+}
+
+/// The back arrow a page wears in its bar: a circle of the same glass the
+/// cards and sheets are made of, so it reads as part of the surface rather
+/// than an icon dropped on top of it.
+class GlassBackButton extends StatelessWidget {
+  const GlassBackButton({super.key, this.onPressed});
+
+  /// Defaults to popping the route, which is what a back arrow means.
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Material(
+        color: AppTheme.glassFill(context),
+        shape: CircleBorder(
+          side: BorderSide(color: AppTheme.glassBorder(context)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onPressed ?? () => Navigator.of(context).maybePop(),
+          child: SizedBox(
+            width: 40,
+            height: 40,
+            child: Icon(
+              Icons.arrow_back,
+              size: 20,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// [GlassBackButton] for an `AppBar`'s `leading`, or null where there is
+/// nothing to go back to — so the bar does not keep a slot for a button it
+/// would not show, and a tab root stays flush against its title.
+Widget? glassBack(BuildContext context, {VoidCallback? onPressed}) {
+  if (onPressed == null && !Navigator.of(context).canPop()) return null;
+
+  return GlassBackButton(onPressed: onPressed);
 }
 
 /// Open a form as a page, fading in from the right.

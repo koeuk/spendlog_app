@@ -28,7 +28,11 @@ class IncomeSourcesScreen extends StatelessWidget {
     final sources = context.watch<IncomeSourceCatalogNotifier>().state;
 
     return Scaffold(
-      appBar: AppBar(centerTitle: false, title: Text(tr('Sources'))),
+      appBar: AppBar(
+        leading: glassBack(context),
+        centerTitle: false,
+        title: Text(tr('Sources')),
+      ),
       floatingActionButton: AddPill(
         label: tr('Add'),
         onPressed: () => showIncomeSourceSheet(context),
