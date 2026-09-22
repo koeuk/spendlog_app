@@ -44,8 +44,8 @@ class DashboardSavings {
   /// The month's plan, or "0.00" when none is set.
   final String planned;
 
-  /// The month's deposits, never negative — withdrawals move [totalSaved],
-  /// not the month's contribution. See SavingsSummary.savedThisMonth.
+  /// Deposits less withdrawals dated within the month, floored at "0.00" and
+  /// so never negative. See SavingsSummary.savedThisMonth.
   final String savedThisMonth;
 
   /// 0..100, already capped.
