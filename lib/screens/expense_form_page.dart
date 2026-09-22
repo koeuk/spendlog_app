@@ -277,7 +277,7 @@ class _ExpenseFormState extends State<_ExpenseForm> {
                   height: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
+                    color: Color.fromARGB(255, 163, 27, 27),
                   ),
                 )
               : Text(
@@ -288,14 +288,12 @@ class _ExpenseFormState extends State<_ExpenseForm> {
                       : 'Add expense',
                 ),
         ),
-        if (_editing)
-          TextButton(
-            onPressed: _busy ? null : _delete,
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFDC2626),
-            ),
-            child: Text(tr('Delete expense')),
-          ),
+        if (_editing) const SizedBox(height: 10),
+        TextButton(
+          onPressed: _busy ? null : _delete,
+          style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
+          child: Text(tr('Delete expense')),
+        ),
       ],
       children: [
         if (_error != null) ...[
