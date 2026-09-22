@@ -5,18 +5,20 @@ import '../l10n/l10n.dart';
 import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
+import '../models/category.dart';
 import '../models/expense.dart';
 import '../models/recurring.dart';
 import '../providers/data_providers.dart';
 import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/glass.dart';
 import '../utils/format.dart';
 import '../utils/category_style.dart';
 
-/// Add / edit an expense in a bottom sheet. On save the sheet closes and
-/// every money figure on screen is invalidated — expenses, dashboard,
-/// budgets all shift with one write.
+/// Add / edit an expense on its own page. On save the page closes and every
+/// money figure on screen is invalidated — expenses, dashboard, budgets all
+/// shift with one write.
 Future<void> showExpenseForm(BuildContext context, {Expense? expense}) {
   return openFormPage<void>(context, (_) => _ExpenseForm(expense: expense));
 }
@@ -345,49 +347,13 @@ class _ExpenseFormState extends State<_ExpenseForm> {
             ),
           ),
           error: (e, _) => Text(apiErrorMessage(e)),
-          data: (list) => DropdownButtonFormField<String>(
-            // Rebuilt when the repeat toggles: the "new category" item
-            // comes and goes with it, and a dropdown must never hold a
-            // value its items no longer contain.
-            key: ValueKey(_repeat == null),
-            initialValue: _categoryUuid,
-            decoration: InputDecoration(hintText: tr('Category')),
-            items: [
-              for (final category in list)
-                DropdownMenuItem(
-                  value: category.uuid,
-                  child: Row(
-                    children: [
-                      Icon(
-                        CategoryStyle.icon(category.icon),
-                        size: 18,
-                        color: CategoryStyle.color(category.color),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(category.name),
-                    ],
-                  ),
-                ),
-              // A rule needs an existing category; the inline path is
-              // for one-off rows only.
-              if (!_editing && _repeat == null)
-                DropdownMenuItem(
-                  value: _newCategoryMarker,
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.add,
-                        size: 18,
-                        color: AppTheme.accent(context),
-                      ),
-                      SizedBox(width: 10),
-                      Text(tr('New category…')),
-                    ],
-                  ),
-                ),
-            ],
+          data: (list) => _CategoryField(
+            categories: list,
+            value: _categoryUuid,
+            // A rule needs an existing category; the inline path is for
+            // one-off rows only.
+            allowNew: !_editing && _repeat == null,
             onChanged: (value) => setState(() => _categoryUuid = value),
-            validator: (v) => v == null ? 'Pick a category.' : null,
           ),
         ),
         if (_categoryUuid == _newCategoryMarker) ...[
@@ -463,6 +429,248 @@ class _ExpenseFormState extends State<_ExpenseForm> {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// The category, as a pick-from-a-list field.
+///
+/// A sheet with a search box rather than a dropdown: an account's categories
+/// run to twenty or more, and a dropdown that long is a list you scroll past
+/// what you are looking for.
+class _CategoryField extends StatelessWidget {
+  const _CategoryField({
+    required this.categories,
+    required this.value,
+    required this.allowNew,
+    required this.onChanged,
+  });
+
+  final List<Category> categories;
+  final String? value;
+
+  /// Whether the sheet offers naming a category that does not exist yet.
+  final bool allowNew;
+
+  final ValueChanged<String?> onChanged;
+
+  Future<void> _open(BuildContext context) async {
+    final chosen = await showGlassSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => _CategoryPickerSheet(
+        categories: categories,
+        current: value,
+        allowNew: allowNew,
+      ),
+    );
+
+    if (chosen != null) onChanged(chosen);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final found = value == null || value == _newCategoryMarker
+        ? const <Category>[]
+        : categories.where((c) => c.uuid == value).toList();
+    final picked = found.isEmpty ? null : found.first;
+    final naming = value == _newCategoryMarker;
+
+    return FormField<String>(
+      // Keyed on the selection so a pick clears the error it just fixed, and
+      // so validate() is never asked about a value that has been replaced.
+      key: ValueKey(value),
+      validator: (_) => value == null ? 'Pick a category.' : null,
+      builder: (field) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            onTap: () => _open(context),
+            borderRadius: BorderRadius.circular(AppTheme.rowRadius),
+            child: InputDecorator(
+              decoration: InputDecoration(
+                errorText: field.errorText,
+                // The row below carries the message, so the decorator only
+                // needs the red edge the error state gives it.
+                errorStyle: const TextStyle(height: 0, fontSize: 0),
+              ),
+              child: Row(
+                children: [
+                  if (picked != null) ...[
+                    Icon(
+                      CategoryStyle.icon(picked.icon),
+                      size: 18,
+                      color: CategoryStyle.color(picked.color),
+                    ),
+                    const SizedBox(width: 10),
+                  ] else if (naming) ...[
+                    Icon(Icons.add, size: 18, color: AppTheme.accent(context)),
+                    const SizedBox(width: 10),
+                  ],
+                  Expanded(
+                    child: Text(
+                      picked?.name ??
+                          (naming ? tr('New category…') : tr('Category')),
+                      overflow: TextOverflow.ellipsis,
+                      style: picked == null && !naming
+                          ? TextStyle(color: AppTheme.faint(context, 0.5))
+                          : null,
+                    ),
+                  ),
+                  Icon(
+                    Icons.expand_more,
+                    size: 20,
+                    color: AppTheme.faint(context, 0.4),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (field.hasError) ...[
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.only(left: 12),
+              child: Text(
+                field.errorText!,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.errorInk(context),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The list behind [_CategoryField], filtered as you type.
+class _CategoryPickerSheet extends StatefulWidget {
+  const _CategoryPickerSheet({
+    required this.categories,
+    required this.current,
+    required this.allowNew,
+  });
+
+  final List<Category> categories;
+  final String? current;
+  final bool allowNew;
+
+  @override
+  State<_CategoryPickerSheet> createState() => _CategoryPickerSheetState();
+}
+
+class _CategoryPickerSheetState extends State<_CategoryPickerSheet> {
+  final _search = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final query = _search.text.trim().toLowerCase();
+    final matches = query.isEmpty
+        ? widget.categories
+        : widget.categories
+              .where((c) => c.name.toLowerCase().contains(query))
+              .toList();
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppTheme.pageInset,
+            14,
+            AppTheme.pageInset,
+            16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                tr('Category'),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _search,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: tr('Search categories…'),
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                ),
+                onChanged: (_) => setState(() {}),
+                // Enter takes the only thing left, which is what a search
+                // narrowed to one result is asking for.
+                onSubmitted: (_) => matches.length == 1
+                    ? Navigator.of(context).pop(matches.single.uuid)
+                    : null,
+              ),
+              const SizedBox(height: 10),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(context).height * 0.45,
+                ),
+                child: matches.isEmpty && !widget.allowNew
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 28),
+                        child: Text(
+                          tr('Nothing matches that.'),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: AppTheme.faint(context, 0.5)),
+                        ),
+                      )
+                    : ListView(
+                        shrinkWrap: true,
+                        children: [
+                          for (final category in matches)
+                            ListTile(
+                              dense: true,
+                              leading: Icon(
+                                CategoryStyle.icon(category.icon),
+                                size: 20,
+                                color: CategoryStyle.color(category.color),
+                              ),
+                              title: Text(category.name),
+                              trailing: category.uuid == widget.current
+                                  ? Icon(
+                                      Icons.check,
+                                      size: 18,
+                                      color: AppTheme.accent(context),
+                                    )
+                                  : null,
+                              onTap: () =>
+                                  Navigator.of(context).pop(category.uuid),
+                            ),
+                          if (widget.allowNew)
+                            ListTile(
+                              dense: true,
+                              leading: Icon(
+                                Icons.add,
+                                size: 20,
+                                color: AppTheme.accent(context),
+                              ),
+                              title: Text(tr('New category…')),
+                              onTap: () =>
+                                  Navigator.of(context).pop(_newCategoryMarker),
+                            ),
+                        ],
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
