@@ -106,6 +106,7 @@ List<SingleChildWidget> appProviders() => [
   _bound(RecurringRulesNotifier.new),
   _bound(BorrowingSummaryNotifier.new),
   _bound(BorrowingLendersNotifier.new),
+  _bound(SavingsHistoryNotifier.new),
 
   // Keyed by month, so a sheet can ask about a month the screen is not on.
   _boundFamily(SavingsSummaryNotifier.new),

@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 
 import 'providers/auth_provider.dart';
+import 'utils/format.dart';
 import 'screens/activity_screen.dart';
 import 'screens/admin_settings_screen.dart';
 import 'screens/admin_users_screen.dart';
@@ -18,6 +19,7 @@ import 'screens/recurring_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/reports_screen.dart';
 import 'screens/reset_password_screen.dart';
+import 'screens/savings_plan_screen.dart';
 import 'screens/savings_screen.dart';
 import 'screens/shell_screen.dart';
 import 'screens/splash_screen.dart';
@@ -104,6 +106,18 @@ GoRouter buildRouter(AuthNotifier auth) {
                   GoRoute(
                     path: 'savings',
                     builder: (context, state) => const SavingsScreen(),
+                    // The month's plan and the savings history, behind the
+                    // month card. Nested so back returns to Savings.
+                    routes: [
+                      GoRoute(
+                        path: 'plan',
+                        builder: (context, state) => SavingsPlanScreen(
+                          month:
+                              state.uri.queryParameters['month'] ?? currentYm(),
+                          planned: state.uri.queryParameters['planned'],
+                        ),
+                      ),
+                    ],
                   ),
                   GoRoute(
                     path: 'borrowings',

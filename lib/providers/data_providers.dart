@@ -304,6 +304,22 @@ class SavingsPlanNotifier extends FamilyAsyncNotifier<SavingsPlan?, String> {
   Future<SavingsPlan?> fetch(String month) => repository.savingsPlan(month);
 }
 
+/// What has been done to the savings figures, newest first — the History tab
+/// on the month card.
+///
+/// Not keyed by month: the activity log records *when a change was made*, not
+/// which month it was about, so there is nothing to filter a month out by. One
+/// unkeyed list is the honest shape, and it also answers "when did I last
+/// touch this" for a month whose own plan row has since been cleared.
+class SavingsHistoryNotifier extends AsyncNotifier<List<ActivityEntry>> {
+  /// The two kinds the Savings screen writes: the plan, and the money.
+  static const subjects = ['savings_plan', 'savings_entry'];
+
+  @override
+  Future<List<ActivityEntry>> fetch() async =>
+      (await repository.activity(subjects: subjects)).items;
+}
+
 // --------------------------------------------------------------- borrowings
 
 /// Which segment of the list is showing: still owed, paid back, or both.
@@ -498,6 +514,10 @@ VoidCallback savingsInvalidator(BuildContext context) => _all([
   context.read<SavingsSummaryNotifier>().invalidate,
   context.read<SavingsEntriesNotifier>().invalidate,
   context.read<SavingsPlanNotifier>().invalidate,
+  // Every savings write is a line in the log, so the History tab is stale the
+  // moment one lands.
+  context.read<SavingsHistoryNotifier>().invalidate,
+  context.read<ActivityNotifier>().invalidate,
   context.read<DashboardNotifier>().invalidate,
 ]);
 

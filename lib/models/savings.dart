@@ -78,7 +78,9 @@ class SavingsSummary {
   /// The month's plan, or "0.00" when none is set.
   final String planned;
 
-  /// Deposits minus withdrawals dated within the month; may be negative.
+  /// The month's deposits. Withdrawals are not netted off: they spend the
+  /// balance rather than undo the month's saving, so they move [totalSaved]
+  /// and leave this alone. Never negative.
   final String savedThisMonth;
 
   /// planned − saved, floored at "0.00".
@@ -87,7 +89,8 @@ class SavingsSummary {
   /// 0..100, already capped, so it can drive a bar directly.
   final num percent;
 
-  /// The uncapped figure, which may exceed 100.
+  /// The uncapped figure, which may exceed 100 — what the caption shows,
+  /// while [percent] drives the bar.
   final num percentRaw;
 
   /// ok | close (>=80) | met (>=100)

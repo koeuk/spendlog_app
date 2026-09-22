@@ -256,7 +256,7 @@ class _MoneyRow extends StatelessWidget {
               detail: savings == null
                   ? ''
                   : savings.hasPlan
-                  ? '${moneySigned(savings.savedThisMonth)} of ${money(savings.planned)} ${tr('this month')}'
+                  ? '${money(savings.savedThisMonth)} of ${money(savings.planned)} ${tr('this month')}'
                   : tr('No plan'),
               onTap: () => context.go('/savings'),
             ),

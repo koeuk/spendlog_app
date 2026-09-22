@@ -681,9 +681,14 @@ class SpendLogRepository {
 
   /// The caller's own log, or everyone's when [everyone] (admins only —
   /// the server refuses it otherwise).
+  ///
+  /// [subjects] narrows to particular kinds — `savings_plan`, `expense` and
+  /// the rest of ActivityLog::SUBJECTS. A kind the server does not know is a
+  /// 422, not a quietly empty page.
   Future<({List<ActivityEntry> items, bool hasMore})> activity({
     int page = 1,
     bool everyone = false,
+    List<String> subjects = const [],
   }) async {
     final response = await _client.dio.get(
       '/activity',
@@ -691,6 +696,7 @@ class SpendLogRepository {
         'page': page,
         'per_page': 50,
         if (everyone) 'scope': 'all',
+        if (subjects.isNotEmpty) 'subject': subjects.join(','),
       },
     );
 

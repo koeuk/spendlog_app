@@ -142,7 +142,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                             );
                           }
 
-                          return _ActivityTile(
+                          return ActivityTile(
                             entry: data.items[index],
                             showUser: everyone,
                           );
@@ -157,8 +157,11 @@ class _ActivityScreenState extends State<ActivityScreen> {
   }
 }
 
-class _ActivityTile extends StatelessWidget {
-  const _ActivityTile({required this.entry, required this.showUser});
+/// One line of the log, as the Activity screen and the Savings history tab
+/// both draw it — shared so the two cannot drift into describing the same
+/// record differently.
+class ActivityTile extends StatelessWidget {
+  const ActivityTile({super.key, required this.entry, this.showUser = false});
 
   final ActivityEntry entry;
   final bool showUser;

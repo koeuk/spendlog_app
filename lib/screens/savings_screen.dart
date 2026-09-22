@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
@@ -11,7 +12,6 @@ import '../theme.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
 import 'savings_entry_sheet.dart';
-import 'savings_plan_sheet.dart';
 
 /// The month's savings plan and what has actually gone aside against it —
 /// budgets' twin on the other side of the ledger.
@@ -19,6 +19,12 @@ class SavingsScreen extends StatelessWidget {
   const SavingsScreen({super.key});
 
   static const _danger = Color(0xFFDC2626);
+
+  /// "This month" only while it really is this month. The stepper can sit on
+  /// any month, and a label that goes on claiming the present while August is
+  /// on screen is worse than no label at all.
+  static String _monthEyebrow(String month) =>
+      month == currentYm() ? tr('This month') : monthLabel(month);
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +81,7 @@ class SavingsScreen extends StatelessWidget {
               const SizedBox(height: 20),
               Padding(
                 padding: const EdgeInsets.only(left: 4),
-                child: Eyebrow(tr('This month')),
+                child: Eyebrow('${tr('Entries')} · ${monthLabel(month)}'),
               ),
               const SizedBox(height: 10),
               ..._entryRows(context, month, entries),
@@ -128,7 +134,10 @@ class SavingsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    tr('Nothing put aside this month yet.'),
+                    month == currentYm()
+                        ? tr('Nothing put aside this month yet.')
+                        : '${tr('Nothing put aside in')} ${monthLabel(month)}.',
+                    textAlign: TextAlign.center,
                     style: TextStyle(color: AppTheme.faint(context, 0.5)),
                   ),
                 ],
@@ -280,10 +289,13 @@ class _MonthCard extends StatelessWidget {
 
     return Card(
       child: InkWell(
-        onTap: () => showSavingsPlanSheet(
-          context,
-          month: month,
-          planned: summary.planned,
+        // A screen, not a sheet: the plan sits beside a history list that
+        // wants the whole height.
+        onTap: () => context.push(
+          Uri(
+            path: '/savings/plan',
+            queryParameters: {'month': month, 'planned': summary.planned},
+          ).toString(),
         ),
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         child: Padding(
@@ -294,7 +306,7 @@ class _MonthCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Expanded(child: Eyebrow(tr('This month'))),
+                  Expanded(child: Eyebrow(SavingsScreen._monthEyebrow(month))),
                   Icon(
                     Icons.edit_outlined,
                     size: 16,
@@ -307,7 +319,7 @@ class _MonthCard extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  moneySigned(summary.savedThisMonth),
+                  money(summary.savedThisMonth),
                   style: Theme.of(context).textTheme.headlineSmall
                       ?.copyWith(fontWeight: FontWeight.w800),
                 ),
@@ -317,7 +329,10 @@ class _MonthCard extends StatelessWidget {
                 ProgressTrack(percent: summary.percent, status: summary.status),
                 const SizedBox(height: 6),
                 Text(
-                  '${summary.percent}% ${tr('of')} ${money(summary.planned)}',
+                  // `percent` is capped at 100 for the track above; the
+                  // caption carries `percentRaw`, so a month that beat its
+                  // plan is not flattened to a flat 100%.
+                  '${summary.percentRaw}% ${tr('of')} ${money(summary.planned)}',
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: faint, fontSize: 12),
                 ),
