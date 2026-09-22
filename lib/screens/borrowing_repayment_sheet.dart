@@ -48,6 +48,30 @@ class _RepaymentFormState extends State<_RepaymentForm> {
   /// What the *entered* amount is denominated in; storage is always USD.
   String _currency = 'USD';
 
+  /// Set the moment the person moves the toggle, so a default landing late
+  /// cannot overrule a currency they picked themselves.
+  bool _currencyChosen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startOnDefaultCurrency();
+  }
+
+  /// Start on the account's default currency rather than always on dollars.
+  ///
+  /// Applied when the settings land rather than at build: they are fetched
+  /// lazily and a form can open before anything has asked for them. Skipped
+  /// once there is an amount in the box — a stored figure is in dollars, and
+  /// a default arriving behind someone's typing would relabel their number as
+  /// money it is not.
+  Future<void> _startOnDefaultCurrency() async {
+    final settings = await context.read<MoneySettingsNotifier>().settings();
+    if (!mounted || _currencyChosen || _amount.text.trim().isNotEmpty) return;
+
+    setState(() => _currency = settings?.defaultCurrency ?? 'USD');
+  }
+
   bool _busy = false;
   String? _error;
 
@@ -120,6 +144,8 @@ class _RepaymentFormState extends State<_RepaymentForm> {
   /// Rewrite the typed amount for the new currency rather than dropping it —
   /// see the other sheets for why.
   Future<void> _switchCurrency(String next) async {
+    _currencyChosen = true;
+
     // Awaited, not read: the rate may not have been fetched yet, and a toggle
     // that blanks the amount because the answer had not arrived is worse than
     // one that takes a moment. See MoneySettingsNotifier.khrPerUsd.

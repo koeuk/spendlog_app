@@ -239,16 +239,20 @@ class MoneySettingsNotifier extends AsyncNotifier<MoneySettings> {
   /// converted against no rate and blanked the field it was meant to convert.
   ///
   /// Null only when the fetch itself failed, which [refresh] swallows.
-  Future<double?> khrPerUsd() async {
+  Future<double?> khrPerUsd() async => (await settings())?.khrPerUsd;
+
+  /// The account's money settings, waiting for the first load when one has
+  /// not happened yet. Null only when the fetch failed.
+  Future<MoneySettings?> settings() async {
     // `current`, not `state`: reading `state` would kick off a load of its
     // own and the refresh below would then be a second fetch of the same
     // settings.
     final loaded = current.valueOrNull;
-    if (loaded != null) return loaded.khrPerUsd;
+    if (loaded != null) return loaded;
 
     await refresh();
 
-    return current.valueOrNull?.khrPerUsd;
+    return current.valueOrNull;
   }
 }
 
