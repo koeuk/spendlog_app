@@ -78,10 +78,9 @@ class SavingsSummary {
   /// The month's plan, or "0.00" when none is set.
   final String planned;
 
-  /// What stayed aside out of the month: deposits less withdrawals dated
-  /// within it, floored at "0.00". Never negative — a month that gave back
-  /// more than it put in has saved nothing, and the entries below the card
-  /// are where the withdrawals that took it there are read.
+  /// The month's deposits. Withdrawals are not netted off: they spend the
+  /// balance rather than undo the month's saving, so they move [totalSaved]
+  /// and leave this alone. Never negative.
   final String savedThisMonth;
 
   /// planned − saved, floored at "0.00".
