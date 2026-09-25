@@ -55,6 +55,7 @@ class GlassPanel extends StatelessWidget {
     ),
     this.blur = 22,
     this.strong = false,
+    this.lifted = false,
   });
 
   final Widget child;
@@ -64,9 +65,16 @@ class GlassPanel extends StatelessWidget {
   /// A more opaque tint, for panels that carry forms.
   final bool strong;
 
+  /// A soft shadow beneath, for a pane that floats clear of every edge rather
+  /// than meeting one. Without it a capsule over a pale ground has nothing to
+  /// separate it from the content passing behind.
+  final bool lifted;
+
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final panel = ClipRRect(
       borderRadius: borderRadius,
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
@@ -79,6 +87,23 @@ class GlassPanel extends StatelessWidget {
           child: child,
         ),
       ),
+    );
+
+    if (!lifted) return panel;
+
+    // Cast outside the clip, so the blur is not asked to render it.
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: borderRadius,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.44 : 0.10),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: panel,
     );
   }
 }
@@ -104,4 +129,71 @@ Future<T?> showGlassSheet<T>({
       child: builder(context),
     ),
   );
+}
+
+/// A segmented control on glass, for an `AppBar`'s `bottom` over a
+/// [TabBarView].
+///
+/// A sliding capsule rather than Material's underline: the bar it sits in is
+/// transparent, so an underline had nothing to rule off against, and the
+/// shape matches the nav bar at the other end of the screen.
+class GlassTabBar extends StatelessWidget implements PreferredSizeWidget {
+  const GlassTabBar({super.key, required this.controller, required this.tabs});
+
+  final TabController controller;
+
+  /// The labels, already translated.
+  final List<String> tabs;
+
+  static const _height = 44.0;
+  static const _gap = 10.0;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(_height + _gap);
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(99);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.pageInset,
+        0,
+        AppTheme.pageInset,
+        _gap,
+      ),
+      child: GlassPanel(
+        strong: true,
+        blur: 24,
+        borderRadius: radius,
+        child: SizedBox(
+          height: _height,
+          child: TabBar(
+            controller: controller,
+            indicator: BoxDecoration(
+              color: AppTheme.accent(context),
+              borderRadius: radius,
+            ),
+            indicatorSize: TabBarIndicatorSize.tab,
+            // Inset, so the capsule sits inside the track rather than
+            // covering its edge.
+            indicatorPadding: const EdgeInsets.all(4),
+            dividerColor: Colors.transparent,
+            splashBorderRadius: radius,
+            labelColor: Colors.white,
+            unselectedLabelColor: AppTheme.faint(context, 0.55),
+            labelStyle: const TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+            ),
+            tabs: [for (final label in tabs) Tab(height: _height, text: label)],
+          ),
+        ),
+      ),
+    );
+  }
 }

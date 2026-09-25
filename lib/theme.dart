@@ -35,7 +35,11 @@ abstract final class AppTheme {
   /// Room a scrollable must leave at its bottom so its last row clears the
   /// floating nav bar, which the tabs' content now runs underneath. Also where
   /// the tabs' add button comes to rest: a clear gap above the bar.
-  static const navBarClearance = 84.0;
+  ///
+  /// Covers the capsule itself — roughly 63 — plus the 10 it floats above the
+  /// safe area by, plus a gap, so a last row stops short of the glass rather
+  /// than sliding under it and half-showing through.
+  static const navBarClearance = 96.0;
 
   /// A tab's Scaffold is nested inside the shell's, whose body extends under
   /// the nav bar — so its FAB would otherwise come to rest behind the glass.

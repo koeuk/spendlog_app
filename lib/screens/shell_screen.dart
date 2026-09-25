@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/l10n.dart';
+
 import 'package:go_router/go_router.dart';
 
 import '../theme.dart';
+import '../widgets/glass.dart';
 import 'menu_sheet.dart';
 
 /// The signed-in frame: one bottom bar, five tabs, each tab keeping its own
@@ -72,9 +75,21 @@ const _iconSize = 24.0;
 
 const _motion = Duration(milliseconds: 200);
 
-/// A flat white bar holding the five tabs, each an icon over its label.
-/// Nothing sits behind the active tab — it is simply drawn in ink while the
-/// rest fall back to grey, so the bar stays calm and reads at a glance.
+/// Near enough to half the bar's height to read as a capsule at phone width,
+/// without rounding so far that the outer tabs sit on the curve.
+const _barRadius = 28.0;
+
+/// The tab's own pill, sitting inside the bar's curve.
+const _itemRadius = 22.0;
+
+/// A frosted capsule holding the five tabs, floating clear of all four edges
+/// with the content passing behind it.
+///
+/// A capsule rather than the full-width shelf it used to be: the bar is the
+/// one piece of chrome on every screen, and letting the ground show around it
+/// keeps it reading as something laid over the app rather than a floor the
+/// app stands on. The blur is what sells it — a translucent bar with nothing
+/// moving behind it is just a paler bar.
 class _FloatingNavBar extends StatelessWidget {
   const _FloatingNavBar({required this.currentIndex, required this.onSelected});
 
@@ -83,32 +98,33 @@ class _FloatingNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    // A plain rectangle, like the reference: no rounding anywhere, just a
-    // hairline along the top where the bar meets the frosted shelf. The safe
-    // area sits inside, so the bar's colour fills the home-indicator strip.
-    return Material(
-      color: AppTheme.surface(context),
-      shape: Border(
-        top: BorderSide(color: AppTheme.faint(context, isDark ? 0.12 : 0.08)),
-      ),
-      elevation: 0,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-          child: Row(
-            children: [
-              for (var i = 0; i < _destinations.length; i++)
-                Expanded(
-                  child: _NavItem(
-                    destination: _destinations[i],
-                    selected: i == currentIndex,
-                    onTap: () => onSelected(i),
+    // Outside the panel, so the capsule floats above the home indicator
+    // rather than stretching its glass down into that strip.
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+        child: GlassPanel(
+          strong: true,
+          // Heavier than a sheet's: this sits over moving content the whole
+          // time, and a light blur leaves it legible only on plain stretches.
+          blur: 30,
+          lifted: true,
+          borderRadius: BorderRadius.circular(_barRadius),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
+            child: Row(
+              children: [
+                for (var i = 0; i < _destinations.length; i++)
+                  Expanded(
+                    child: _NavItem(
+                      destination: _destinations[i],
+                      selected: i == currentIndex,
+                      onTap: () => onSelected(i),
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -129,8 +145,10 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final color = selected ? scheme.onSurface : AppTheme.faint(context, 0.50);
+    final accent = AppTheme.accent(context);
+    // The active tab takes the accent rather than plain ink: over frosted
+    // glass, weight alone stopped telling the five apart.
+    final color = selected ? accent : AppTheme.faint(context, 0.50);
 
     return Semantics(
       button: true,
@@ -138,9 +156,20 @@ class _NavItem extends StatelessWidget {
       label: destination.label,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
+        borderRadius: BorderRadius.circular(_itemRadius),
+        child: AnimatedContainer(
+          duration: _motion,
+          curve: Curves.easeOut,
           padding: const EdgeInsets.symmetric(vertical: 4),
+          decoration: BoxDecoration(
+            // A wash of the accent, not the accent itself: a solid pill on
+            // glass reads as a button sitting on the bar rather than the tab
+            // the bar is showing.
+            color: selected
+                ? accent.withValues(alpha: 0.13)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(_itemRadius),
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

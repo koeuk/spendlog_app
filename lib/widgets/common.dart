@@ -205,23 +205,46 @@ class PillSegment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = AppTheme.accent(context);
+    final radius = BorderRadius.circular(99);
+
     return Material(
-      color: selected ? AppTheme.accent(context) : AppTheme.glassFill(context),
-      borderRadius: BorderRadius.circular(99),
+      // Translucent when idle, so the ground tints it the way the nav bar's
+      // glass is tinted; solid accent once picked, which is what tells the
+      // row apart at a glance.
+      color: selected
+          ? accent
+          : AppTheme.glassFill(context).withValues(
+              alpha: Theme.of(context).brightness == Brightness.dark
+                  ? 0.55
+                  : 0.70,
+            ),
+      borderRadius: radius,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(99),
-        child: Container(
+        borderRadius: radius,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
           height: height,
           padding: padding,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(99),
+            borderRadius: radius,
             border: Border.all(
-              color: selected
-                  ? AppTheme.accent(context)
-                  : AppTheme.faint(context, 0.10),
+              color: selected ? accent : AppTheme.glassBorder(context),
             ),
+            // Lifts the chosen pill off the row, the way the nav bar's
+            // capsule sits off the ground.
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: accent.withValues(alpha: 0.28),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
           ),
           child: Text(
             label,

@@ -9,6 +9,7 @@ import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
+import '../widgets/glass.dart';
 import 'activity_screen.dart';
 
 /// The month card's screen: set the plan, or look back at what has been done
@@ -145,16 +146,9 @@ class _SavingsPlanScreenState extends State<SavingsPlanScreen>
         // Short on purpose: the month is a word too many beside a back button
         // at phone width, and the Plan tab names it in full anyway.
         title: Text(planning ? tr('Savings plan') : tr('Savings history')),
-        bottom: TabBar(
+        bottom: GlassTabBar(
           controller: _tabs,
-          labelColor: AppTheme.accent(context),
-          indicatorColor: AppTheme.accent(context),
-          unselectedLabelColor: AppTheme.faint(context, 0.55),
-          dividerColor: Colors.transparent,
-          tabs: [
-            Tab(text: tr('Plan')),
-            Tab(text: tr('History')),
-          ],
+          tabs: [tr('Plan'), tr('History')],
         ),
       ),
       body: TabBarView(
