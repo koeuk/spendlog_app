@@ -24,8 +24,9 @@ class SpendLogApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The admin's look, restored from the last run and refreshed on launch.
-    final branding = context.watch<BrandingNotifier>().state;
+    // The admin's look, restored from the last run and refreshed on launch,
+    // under the account's own colours when it has chosen some.
+    final branding = watchLook(context);
     final locale = context.watch<LocaleNotifier>().value;
 
     return MaterialApp.router(

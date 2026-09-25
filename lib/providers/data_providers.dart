@@ -12,6 +12,7 @@ import '../models/expense.dart';
 import '../models/expense_filters.dart';
 import '../models/income.dart';
 import '../models/money_settings.dart';
+import '../models/preferences.dart';
 import '../models/recurring.dart';
 import '../models/report.dart';
 import '../models/savings.dart';
@@ -500,6 +501,13 @@ class BrandingSettingsNotifier extends AsyncNotifier<BrandingSettings> {
 class ColorSettingsNotifier extends AsyncNotifier<ColorSettings> {
   @override
   Future<ColorSettings> fetch() => repository.colorSettings();
+}
+
+/// The signed-in account's own currency and colours. Any account, not only
+/// admins: these change the app for the person choosing, no one else.
+class PreferencesNotifier extends AsyncNotifier<Preferences> {
+  @override
+  Future<Preferences> fetch() => repository.preferences();
 }
 
 // ------------------------------------------------------------------- writes

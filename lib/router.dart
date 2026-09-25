@@ -15,6 +15,7 @@ import 'screens/forgot_password_screen.dart';
 import 'screens/income_screen.dart';
 import 'screens/income_sources_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/preferences_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/recurring_screen.dart';
 import 'screens/register_screen.dart';
@@ -188,6 +189,17 @@ GoRouter buildRouter(AuthNotifier auth) {
                   GoRoute(
                     path: 'admin-users',
                     builder: (context, state) => const AdminUsersScreen(),
+                  ),
+                  // The account's own currency and colours, for everyone.
+                  GoRoute(
+                    path: 'currency',
+                    builder: (context, state) =>
+                        const CurrencyPreferenceScreen(),
+                  ),
+                  GoRoute(
+                    path: 'colours',
+                    builder: (context, state) =>
+                        const ColourPreferenceScreen(),
                   ),
                   // The app-wide settings, one page per subject rather than
                   // one page of tabs. Settings lists them; these are where

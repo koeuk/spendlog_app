@@ -503,5 +503,12 @@
   "Who lent it?": "អ្នកណាឱ្យខ្ចី?",
   "open": "នៅជំពាក់",
   "overdue": "ហួសកំណត់",
-  "the amount cannot go below it.": "ចំនួនទឹកប្រាក់មិនអាចតិចជាងនេះបានទេ។"
+  "the amount cannot go below it.": "ចំនួនទឹកប្រាក់មិនអាចតិចជាងនេះបានទេ។",
+  "Currency": "រូបិយប័ណ្ណ",
+  "App colours": "ពណ៌កម្មវិធី",
+  "App default": "លំនាំដើមកម្មវិធី",
+  "Your own": "ផ្ទាល់ខ្លួន",
+  "Amount fields start on this currency. Riel still converts at :rate per dollar.": "ប្រអប់ចំនួនទឹកប្រាក់ចាប់ផ្តើមដោយរូបិយប័ណ្ណនេះ។ ប្រាក់រៀលនៅតែប្តូរតាមអត្រា :rate ក្នុងមួយដុល្លារ។",
+  "Your own colours, for you only. Everyone else keeps the app’s.": "ពណ៌ផ្ទាល់ខ្លួនរបស់អ្នក សម្រាប់តែអ្នកប៉ុណ្ណោះ។ អ្នកផ្សេងទៀតនៅតែប្រើពណ៌របស់កម្មវិធី។",
+  "Use the app’s colours": "ប្រើពណ៌របស់កម្មវិធី"
 }

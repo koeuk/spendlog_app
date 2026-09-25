@@ -1,10 +1,13 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:provider/provider.dart';
 
 import '../models/branding.dart';
+import '../models/preferences.dart';
 import '../repositories/spendlog_repository.dart';
+import 'auth_provider.dart';
 
 /// The look the admin chose, driving the theme. Restored from the last run
 /// first so a cold start does not flash the stock look, then refreshed from
@@ -70,4 +73,16 @@ class BrandingNotifier extends ChangeNotifier {
     _disposed = true;
     super.dispose();
   }
+}
+
+/// The look to paint with: the admin's branding, with the signed-in account's
+/// own colours laid over it. Watches both, so saving a preference or signing
+/// in as someone else re-themes at once.
+Branding watchLook(BuildContext context) {
+  final branding = context.watch<BrandingNotifier>().state;
+  final own = context.select<AuthNotifier, UserPreferences>(
+    (auth) => auth.state.user?.preferences ?? UserPreferences.none,
+  );
+
+  return branding.withOwn(own);
 }

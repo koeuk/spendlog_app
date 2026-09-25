@@ -13,6 +13,7 @@ import '../models/borrowing.dart';
 import '../models/branding.dart';
 import '../models/income.dart';
 import '../models/money_settings.dart';
+import '../models/preferences.dart';
 import '../models/recurring.dart';
 import '../models/report.dart';
 import '../models/savings.dart';
@@ -117,6 +118,25 @@ class SpendLogRepository {
     final response = await _client.dio.get('/settings/money');
 
     return MoneySettings.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
+  /// The account's own currency and colours, with the swatches to offer.
+  Future<Preferences> preferences() async {
+    final response = await _client.dio.get('/preferences');
+
+    return Preferences.fromJson(
+      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
+    );
+  }
+
+  /// Only the keys given are sent, and so only they change; a key given as
+  /// null goes back to following the app.
+  Future<Preferences> updatePreferences(Map<String, String?> fields) async {
+    final response = await _client.dio.put('/preferences', data: fields);
+
+    return Preferences.fromJson(
       (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
     );
   }

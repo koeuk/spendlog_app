@@ -155,7 +155,7 @@ class ColourSettingsScreen extends StatelessWidget {
     final notifier = context.read<ColorSettingsNotifier>();
 
     return _AppSettingsPage<ColorSettings>(
-      title: tr('Colours'),
+      title: tr('App colours'),
       state: context.watch<ColorSettingsNotifier>().state,
       onRetry: notifier.invalidate,
       onRefresh: notifier.refresh,
@@ -206,6 +206,9 @@ class _SettingsFormState extends State<_SettingsForm> {
     // await, and the stale figures must drop whether or not this page is left.
     final repository = context.read<SpendLogRepository>();
     final refresh = context.read<SpendingSettingsNotifier>().invalidate;
+    // The rate and default currency every amount field reads come from here
+    // too, so they drop with it rather than waiting for the next launch.
+    final refreshMoney = context.read<MoneySettingsNotifier>().invalidate;
 
     try {
       await repository.updateSpendingSettings(
@@ -217,6 +220,7 @@ class _SettingsFormState extends State<_SettingsForm> {
       );
 
       refresh();
+      refreshMoney();
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(tr('Settings saved.'))));

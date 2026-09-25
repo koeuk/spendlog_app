@@ -57,6 +57,8 @@ void main() {
     '/profile/activity': '/profile',
     '/profile/income-sources': '/profile',
     '/profile/admin-users': '/profile',
+    '/profile/currency': '/profile',
+    '/profile/colours': '/profile',
     '/profile/app/spending': '/profile',
     '/profile/app/guidance': '/profile',
     '/profile/app/faqs': '/profile',

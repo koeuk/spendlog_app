@@ -61,6 +61,21 @@ class ProfileScreen extends StatelessWidget {
                 value: L10n.label(context.watch<LocaleNotifier>().value),
                 onTap: () => _chooseLanguage(context),
               ),
+              // This account's own; the admin's app-wide pair is under App.
+              _SettingsRow(
+                icon: Icons.currency_exchange,
+                label: tr('Currency'),
+                value: user?.preferences.currency ?? tr('App default'),
+                onTap: () => context.go('/profile/currency'),
+              ),
+              _SettingsRow(
+                icon: Icons.palette_outlined,
+                label: tr('Colours'),
+                value: user?.preferences.hasOwnColours ?? false
+                    ? tr('Your own')
+                    : tr('App default'),
+                onTap: () => context.go('/profile/colours'),
+              ),
             ],
           ),
           // The app-wide settings, one row per page. Admin-only; the server
@@ -94,7 +109,8 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 _SettingsRow(
                   icon: Icons.palette_outlined,
-                  label: tr('Colours'),
+                  // "App colours": General already has this account's own.
+                  label: tr('App colours'),
                   onTap: () => context.go('/profile/app/colours'),
                 ),
               ],

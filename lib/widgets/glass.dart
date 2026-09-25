@@ -1,7 +1,6 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../models/branding.dart';
 import '../providers/branding_provider.dart';
@@ -27,7 +26,7 @@ class GlassBackdrop extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final branding = context.watch<BrandingNotifier>().state;
+    final branding = watchLook(context);
 
     // A chosen background paints flat, as on the web. Light mode only: an
     // admin picking Cream should not switch dark mode off for everyone.
