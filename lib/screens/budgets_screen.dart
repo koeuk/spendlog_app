@@ -9,7 +9,6 @@ import '../models/budget_summary.dart';
 import '../providers/data_providers.dart';
 import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
-import '../widgets/glass.dart';
 import '../utils/category_style.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
@@ -219,7 +218,7 @@ class _CategoryRow extends StatelessWidget {
   }
 }
 
-/// Set / change / remove one budget slot. The POST is an upsert, so the sheet
+/// Set / change / remove one budget slot. The POST is an upsert, so the page
 /// never needs to know whether the slot already exists — except for Remove,
 /// which needs the row's uuid from GET /budgets.
 Future<void> showBudgetSheet(
@@ -228,19 +227,13 @@ Future<void> showBudgetSheet(
   required BudgetLine line,
   bool overall = false,
 }) {
-  return showGlassSheet(
-    context: context,
-    isScrollControlled: true,
-    builder: (context) => Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: _BudgetForm(month: month, line: line, overall: overall),
-    ),
+  return openFormPage<void>(
+    context,
+    (_) => _BudgetForm(month: month, line: line, overall: overall),
   );
 }
 
-/// A widget rather than a bare builder so the sheet owns its controller, its
+/// A widget rather than a bare builder so the page owns its controller, its
 /// form state and — crucially — its own `BuildContext`. Borrowing the tapped
 /// row's context would outlive that row whenever the list rebuilt underneath.
 class _BudgetForm extends StatefulWidget {
@@ -398,112 +391,96 @@ class _BudgetFormState extends State<_BudgetForm> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                widget.overall
-                    ? 'Overall budget — ${monthLabel(widget.month)}'
-                    : '${widget.line.name} — ${monthLabel(widget.month)}',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _amount,
-                      decoration: InputDecoration(
-                        hintText: tr('Amount'),
-                        prefixText: _currency == 'USD' ? '\$ ' : '៛ ',
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      autofocus: true,
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _save(),
-                      validator: (v) {
-                        final parsed = double.tryParse(v?.trim() ?? '');
-                        if (parsed == null || parsed < 0) {
-                          return 'Enter an amount.';
-                        }
-
-                        // Mirrors Currency::minimumInput — ៛100 is the smallest
-                        // note in circulation, so anything under it is not an
-                        // amount that can be paid. The server rejects it too;
-                        // this just says so before the round trip.
-                        if (_currency == 'KHR' && parsed < 100) {
-                          return 'At least ៛100.';
-                        }
-
-                        return null;
-                      },
-                    ),
+    return FormPage(
+      // A category line always carries its name; the overall slot has none,
+      // which is what `overall` is for.
+      title: widget.overall
+          ? tr('Overall budget')
+          : widget.line.name ?? tr('Budget'),
+      subtitle: monthLabel(widget.month),
+      formKey: _formKey,
+      footer: [
+        FilledButton(
+          onPressed: _busy ? null : _save,
+          child: _busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
                   ),
-                  const SizedBox(width: 12),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'USD', label: Text('\$')),
-                      ButtonSegment(value: 'KHR', label: Text('៛')),
-                    ],
-                    selected: {_currency},
-                    onSelectionChanged: (selection) {
-                      _switchCurrency(selection.first);
-                    },
-                    showSelectedIcon: false,
-                    style: const ButtonStyle(
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ),
-                ],
-              ),
-              if (_currency == 'KHR') ...[
-                const SizedBox(height: 8),
-                Text(
-                  tr('Entered in riel, stored in US dollars.'),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.faint(context, 0.5),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 18),
-              FilledButton(
-                onPressed: _busy ? null : _save,
-                child: _busy
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(tr('Save budget')),
-              ),
-              if (widget.line.budget != null) ...[
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: _busy ? null : _remove,
-                  style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFFDC2626),
-                  ),
-                  child: Text(tr('Remove budget')),
-                ),
-              ],
-            ],
-          ),
+                )
+              : Text(tr('Save budget')),
         ),
-      ),
+        if (widget.line.budget != null) ...[
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _busy ? null : _remove,
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFDC2626),
+            ),
+            child: Text(tr('Remove budget')),
+          ),
+        ],
+      ],
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _amount,
+                decoration: InputDecoration(
+                  hintText: tr('Amount'),
+                  prefixText: _currency == 'USD' ? '\$ ' : '៛ ',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                autofocus: true,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _save(),
+                validator: (v) {
+                  final parsed = double.tryParse(v?.trim() ?? '');
+                  if (parsed == null || parsed < 0) {
+                    return 'Enter an amount.';
+                  }
+
+                  // Mirrors Currency::minimumInput — ៛100 is the smallest
+                  // note in circulation, so anything under it is not an
+                  // amount that can be paid. The server rejects it too;
+                  // this just says so before the round trip.
+                  if (_currency == 'KHR' && parsed < 100) {
+                    return 'At least ៛100.';
+                  }
+
+                  return null;
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'USD', label: Text('\$')),
+                ButtonSegment(value: 'KHR', label: Text('៛')),
+              ],
+              selected: {_currency},
+              onSelectionChanged: (selection) {
+                _switchCurrency(selection.first);
+              },
+              showSelectedIcon: false,
+              style: const ButtonStyle(visualDensity: VisualDensity.compact),
+            ),
+          ],
+        ),
+        if (_currency == 'KHR') ...[
+          const SizedBox(height: 8),
+          Text(
+            tr('Entered in riel, stored in US dollars.'),
+            style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.5)),
+          ),
+        ],
+      ],
     );
   }
 }

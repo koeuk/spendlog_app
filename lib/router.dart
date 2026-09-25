@@ -189,9 +189,31 @@ GoRouter buildRouter(AuthNotifier auth) {
                     path: 'admin-users',
                     builder: (context, state) => const AdminUsersScreen(),
                   ),
+                  // The app-wide settings, one page per subject rather than
+                  // one page of tabs. Settings lists them; these are where
+                  // the rows land.
                   GoRoute(
-                    path: 'admin-settings',
-                    builder: (context, state) => const AdminSettingsScreen(),
+                    path: 'app/spending',
+                    builder: (context, state) =>
+                        const SpendingSettingsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'app/guidance',
+                    builder: (context, state) =>
+                        const GuidanceSettingsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'app/faqs',
+                    builder: (context, state) => const FaqSettingsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'app/branding',
+                    builder: (context, state) =>
+                        const BrandingSettingsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'app/colours',
+                    builder: (context, state) => const ColourSettingsScreen(),
                   ),
                 ],
               ),

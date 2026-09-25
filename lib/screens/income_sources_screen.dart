@@ -9,7 +9,6 @@ import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
-import '../widgets/glass.dart';
 
 /// The names income is filed under, and what the income and savings forms
 /// offer.
@@ -236,21 +235,12 @@ class _SourceRow extends StatelessWidget {
   }
 }
 
-/// Add a name, or rename one. Pass [source] to edit.
+/// Add a name, or rename one, on its own page. Pass [source] to edit.
 Future<void> showIncomeSourceSheet(
   BuildContext context, {
   IncomeSource? source,
 }) {
-  return showGlassSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    builder: (context) => Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: _SourceForm(source: source),
-    ),
-  );
+  return openFormPage<void>(context, (_) => _SourceForm(source: source));
 }
 
 class _SourceForm extends StatefulWidget {
@@ -325,107 +315,79 @@ class _SourceFormState extends State<_SourceForm> {
     final source = widget.source;
     final renaming = _editing && _name.text.trim() != source!.name;
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                _editing ? tr('Rename source') : tr('New source'),
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                tr('Offered when you say where money came from.'),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  color: AppTheme.faint(context, 0.5),
-                ),
-              ),
-              const SizedBox(height: 18),
-              if (_error != null) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 12,
+    return FormPage(
+      title: _editing ? tr('Rename source') : tr('New source'),
+      subtitle: tr('Offered when you say where money came from.'),
+      formKey: _formKey,
+      footer: [
+        FilledButton(
+          onPressed: _busy ? null : _save,
+          child: _busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
                   ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.errorFill(context),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    _error!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppTheme.errorInk(context),
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-              ],
-              TextFormField(
-                controller: _name,
-                decoration: InputDecoration(hintText: tr('Name')),
-                autofocus: true,
-                textCapitalization: TextCapitalization.sentences,
-                maxLength: 255,
-                textInputAction: TextInputAction.done,
-                onFieldSubmitted: (_) => _save(),
-                // Only to show or hide the switch below; the field's own text
-                // is read from the controller when it is saved.
-                onChanged: (_) => setState(() {}),
-                validator: (v) =>
-                    (v?.trim().isEmpty ?? true) ? 'Enter a name.' : null,
-              ),
-              // Only worth asking where there is history to carry, and only
-              // once the name has actually changed.
-              if (renaming && source.uses > 0) ...[
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  value: _rewrite,
-                  onChanged: (value) => setState(() => _rewrite = value),
-                  title: Text(
-                    source.uses == 1
-                        ? tr('Rename the 1 entry filed under it')
-                        : '${tr('Rename the')} ${source.uses} ${tr('entries filed under it')}',
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                  subtitle: Text(
-                    tr('Leave this off to keep what was entered at the time.'),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.faint(context, 0.5),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-              ] else
-                const SizedBox(height: 8),
-              FilledButton(
-                onPressed: _busy ? null : _save,
-                child: _busy
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(tr('Save')),
-              ),
-            ],
-          ),
+                )
+              : Text(tr('Save')),
         ),
-      ),
+      ],
+      children: [
+        if (_error != null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppTheme.errorFill(context),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppTheme.errorInk(context), fontSize: 13),
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
+        TextFormField(
+          controller: _name,
+          decoration: InputDecoration(hintText: tr('Name')),
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+          maxLength: 255,
+          textInputAction: TextInputAction.done,
+          onFieldSubmitted: (_) => _save(),
+          // Only to show or hide the switch below; the field's own text
+          // is read from the controller when it is saved.
+          onChanged: (_) => setState(() {}),
+          validator: (v) =>
+              (v?.trim().isEmpty ?? true) ? 'Enter a name.' : null,
+        ),
+        // Only worth asking where there is history to carry, and only
+        // once the name has actually changed.
+        if (renaming && source.uses > 0) ...[
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            value: _rewrite,
+            onChanged: (value) => setState(() => _rewrite = value),
+            title: Text(
+              source.uses == 1
+                  ? tr('Rename the 1 entry filed under it')
+                  : '${tr('Rename the')} ${source.uses} ${tr('entries filed under it')}',
+              style: const TextStyle(fontSize: 14),
+            ),
+            subtitle: Text(
+              tr('Leave this off to keep what was entered at the time.'),
+              style: TextStyle(
+                fontSize: 12,
+                color: AppTheme.faint(context, 0.5),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+        ],
+      ],
     );
   }
 }

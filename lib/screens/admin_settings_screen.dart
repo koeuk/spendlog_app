@@ -8,182 +8,174 @@ import 'package:image_picker/image_picker.dart';
 
 import '../api/api_client.dart';
 import '../models/admin.dart';
+import '../providers/async_notifier.dart';
 import '../providers/branding_provider.dart';
 import '../providers/data_providers.dart';
 import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 
-/// The web's admin Settings pages, for admins, as tabs: the currency
+/// The web's admin Settings pages, for admins, one page each: the currency
 /// settings, the dashboard guidance, the help-page FAQs, the app's name and
 /// marks, and its colours.
-class AdminSettingsScreen extends StatefulWidget {
-  const AdminSettingsScreen({super.key});
+///
+/// Five pages rather than one screen of five tabs. Each is reached from its
+/// own row under Settings → App, so the list there is the index and a page
+/// carries one subject; the back arrow returns to the list rather than to a
+/// tab bar the page has to keep in view.
 
-  @override
-  State<AdminSettingsScreen> createState() => _AdminSettingsScreenState();
-}
+/// The frame the five share: the bar, a pull-to-refresh bound to this page's
+/// own notifier, and the three-state render. Generic over the fetched value
+/// so each page names its own notifier and form, and nothing else.
+class _AppSettingsPage<T> extends StatelessWidget {
+  const _AppSettingsPage({
+    required this.title,
+    required this.state,
+    required this.onRetry,
+    required this.onRefresh,
+    required this.builder,
+  });
 
-enum _Tab { spending, guidance, faqs, appearance, colours }
-
-extension on _Tab {
-  String get label => switch (this) {
-    _Tab.spending => 'Spending',
-    _Tab.guidance => 'Guidance',
-    _Tab.faqs => 'FAQs',
-    _Tab.appearance => 'Appearance',
-    _Tab.colours => 'Colours',
-  };
-
-  /// Spending and Guidance edit one settings row through one endpoint, so
-  /// they share a form that stays mounted across both.
-  bool get sharesSpendingForm => this == _Tab.spending || this == _Tab.guidance;
-}
-
-class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
-  _Tab _tab = _Tab.spending;
+  final String title;
+  final AsyncState<T> state;
+  final VoidCallback onRetry;
+  final Future<void> Function() onRefresh;
+  final Widget Function(T data) builder;
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<SpendingSettingsNotifier>().state;
-    final faqs = context.watch<FaqsNotifier>().state;
-    final branding = context.watch<BrandingSettingsNotifier>().state;
-    final colours = context.watch<ColorSettingsNotifier>().state;
-
     return Scaffold(
-      appBar: AppBar(
-        leading: glassBack(context),
-        title: Text(tr('App settings')),
-      ),
-      body: Column(
-        children: [
-          // Five tabs do not fit a phone as equal shares, so the row scrolls
-          // and every pill keeps the same width.
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(
-              AppTheme.pageInset,
-              4,
-              AppTheme.pageInset - 6,
-              12,
-            ),
-            child: Row(
-              children: [
-                for (final tab in _Tab.values)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: SizedBox(
-                      width: 104,
-                      child: PillSegment(
-                        label: tr(tab.label),
-                        selected: tab == _tab,
-                        onTap: () => setState(() => _tab = tab),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+      appBar: AppBar(leading: glassBack(context), title: Text(title)),
+      body: RefreshIndicator(
+        color: AppTheme.accent(context),
+        // `refresh` never throws — see AsyncNotifier.refresh.
+        onRefresh: onRefresh,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            AppTheme.pageInset,
+            8,
+            AppTheme.pageInset,
+            AppTheme.navBarClearance,
           ),
-          Expanded(
-            child: RefreshIndicator(
-              color: AppTheme.accent(context),
-              // None of the four throws — see AsyncNotifier.refresh — so one
-              // failing tab cannot abandon the other three mid-pull.
-              onRefresh: () => Future.wait([
-                context.read<SpendingSettingsNotifier>().refresh(),
-                context.read<FaqsNotifier>().refresh(),
-                context.read<BrandingSettingsNotifier>().refresh(),
-                context.read<ColorSettingsNotifier>().refresh(),
-              ]),
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(
-                  AppTheme.pageInset,
-                  0,
-                  AppTheme.pageInset,
-                  AppTheme.navBarClearance,
-                ),
-                children: [
-                  // The form stays in the tree on every tab (rendering nothing
-                  // on FAQs) so half-typed edits survive a switch between the
-                  // two tabs that share it — both save through one endpoint.
-                  settings.when(
-                    loading: () => !_tab.sharesSpendingForm
-                        ? const SizedBox.shrink()
-                        : SizedBox(
-                            height: 100,
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.4,
-                                color: AppTheme.accent(context),
-                              ),
-                            ),
-                          ),
-                    error: (e, _) => !_tab.sharesSpendingForm
-                        ? const SizedBox.shrink()
-                        : LoadFailed(
-                            message: apiErrorMessage(e),
-                            onRetry: () => context
-                                .read<SpendingSettingsNotifier>()
-                                .invalidate(),
-                          ),
-                    data: (data) => _SettingsForm(settings: data, tab: _tab),
-                  ),
-                  if (_tab == _Tab.appearance)
-                    branding.when(
-                      loading: () => const _Loading(),
-                      error: (e, _) => LoadFailed(
-                        message: apiErrorMessage(e),
-                        onRetry: () => context
-                            .read<BrandingSettingsNotifier>()
-                            .invalidate(),
-                      ),
-                      data: (data) => _BrandingForm(settings: data),
-                    ),
-                  if (_tab == _Tab.colours)
-                    colours.when(
-                      loading: () => const _Loading(),
-                      error: (e, _) => LoadFailed(
-                        message: apiErrorMessage(e),
-                        onRetry: () =>
-                            context.read<ColorSettingsNotifier>().invalidate(),
-                      ),
-                      data: (data) => _ColoursForm(settings: data),
-                    ),
-                  if (_tab == _Tab.faqs)
-                    faqs.when(
-                      loading: () => SizedBox(
-                        height: 100,
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.4,
-                            color: AppTheme.accent(context),
-                          ),
-                        ),
-                      ),
-                      error: (e, _) => LoadFailed(
-                        message: apiErrorMessage(e),
-                        onRetry: () =>
-                            context.read<FaqsNotifier>().invalidate(),
-                      ),
-                      data: (list) => _FaqCard(faqs: list),
-                    ),
-                ],
-              ),
+          children: [
+            state.when(
+              loading: () => const _Loading(),
+              error: (e, _) =>
+                  LoadFailed(message: apiErrorMessage(e), onRetry: onRetry),
+              data: builder,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-/// The spending and guidance tabs. One widget, because the server takes the
-/// whole settings row in a single PUT: saving from either tab sends both.
+/// Settings → App → Spending: the riel rate and the currency amounts start on.
+class SpendingSettingsScreen extends StatelessWidget {
+  const SpendingSettingsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final notifier = context.read<SpendingSettingsNotifier>();
+
+    return _AppSettingsPage<SpendingSettings>(
+      title: tr('Spending'),
+      state: context.watch<SpendingSettingsNotifier>().state,
+      onRetry: notifier.invalidate,
+      onRefresh: notifier.refresh,
+      builder: (data) => _SettingsForm(settings: data, pane: _Pane.spending),
+    );
+  }
+}
+
+/// Settings → App → Guidance: the advice card every dashboard shows.
+class GuidanceSettingsScreen extends StatelessWidget {
+  const GuidanceSettingsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final notifier = context.read<SpendingSettingsNotifier>();
+
+    return _AppSettingsPage<SpendingSettings>(
+      title: tr('Guidance'),
+      state: context.watch<SpendingSettingsNotifier>().state,
+      onRetry: notifier.invalidate,
+      onRefresh: notifier.refresh,
+      builder: (data) => _SettingsForm(settings: data, pane: _Pane.guidance),
+    );
+  }
+}
+
+/// Settings → App → FAQs: the help page's questions.
+class FaqSettingsScreen extends StatelessWidget {
+  const FaqSettingsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final notifier = context.read<FaqsNotifier>();
+
+    return _AppSettingsPage<List<FaqEntry>>(
+      title: tr('FAQs'),
+      state: context.watch<FaqsNotifier>().state,
+      onRetry: notifier.invalidate,
+      onRefresh: notifier.refresh,
+      builder: (list) => _FaqCard(faqs: list),
+    );
+  }
+}
+
+/// Settings → App → Branding: the app's name and marks.
+///
+/// Named for what it edits rather than "Appearance", which the row above it
+/// in the same list already uses for the light/dark choice.
+class BrandingSettingsScreen extends StatelessWidget {
+  const BrandingSettingsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final notifier = context.read<BrandingSettingsNotifier>();
+
+    return _AppSettingsPage<BrandingSettings>(
+      title: tr('Branding'),
+      state: context.watch<BrandingSettingsNotifier>().state,
+      onRetry: notifier.invalidate,
+      onRefresh: notifier.refresh,
+      builder: (data) => _BrandingForm(settings: data),
+    );
+  }
+}
+
+/// Settings → App → Colours: the button colour and the page background.
+class ColourSettingsScreen extends StatelessWidget {
+  const ColourSettingsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final notifier = context.read<ColorSettingsNotifier>();
+
+    return _AppSettingsPage<ColorSettings>(
+      title: tr('Colours'),
+      state: context.watch<ColorSettingsNotifier>().state,
+      onRetry: notifier.invalidate,
+      onRefresh: notifier.refresh,
+      builder: (data) => _ColoursForm(settings: data),
+    );
+  }
+}
+
+/// Which half of the settings row a [_SettingsForm] is showing.
+enum _Pane { spending, guidance }
+
+/// The Spending and Guidance pages. One widget, because the server takes the
+/// whole settings row in a single PUT: saving from either page sends both,
+/// which is why each seeds every field from the loaded value and not only
+/// the ones it draws.
 class _SettingsForm extends StatefulWidget {
-  const _SettingsForm({required this.settings, required this.tab});
+  const _SettingsForm({required this.settings, required this.pane});
 
   final SpendingSettings settings;
-  final _Tab tab;
+  final _Pane pane;
 
   @override
   State<_SettingsForm> createState() => _SettingsFormState();
@@ -241,12 +233,10 @@ class _SettingsFormState extends State<_SettingsForm> {
 
   @override
   Widget build(BuildContext context) {
-    final fields = switch (widget.tab) {
-      _Tab.spending => _spendingFields(),
-      _Tab.guidance => _guidanceFields(),
-      _ => null,
+    final fields = switch (widget.pane) {
+      _Pane.spending => _spendingFields(),
+      _Pane.guidance => _guidanceFields(),
     };
-    if (fields == null) return const SizedBox.shrink();
 
     // The fields sit straight on the page, like the FAQ list beside them:
     // a panel around a two-field form was a box for the sake of a box.

@@ -146,12 +146,9 @@ class _UserFormPage extends StatefulWidget {
   final AdminUser? user;
 
   static Future<void> open(BuildContext context, {AdminUser? user}) {
-    return Navigator.of(context).push(
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (context) => _UserFormPage(user: user),
-      ),
-    );
+    // The same fade-from-the-right every other form here opens with, rather
+    // than a full-screen dialog's slide up from the bottom.
+    return openFormPage<void>(context, (_) => _UserFormPage(user: user));
   }
 
   @override

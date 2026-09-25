@@ -12,7 +12,7 @@ import '../theme.dart';
 import '../utils/category_style.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
-import 'recurring_form_sheet.dart';
+import 'recurring_form_page.dart';
 
 /// Every recurring rule — the templates the server turns into expense and
 /// income rows on schedule. Filtered by kind on-screen; the list is one call.

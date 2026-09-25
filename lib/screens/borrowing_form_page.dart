@@ -9,29 +9,26 @@ import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
-import '../widgets/glass.dart';
 import 'borrowings_screen.dart';
 
-/// What the sheet did, for the page that opened it: the detail page leaves
+/// What the form did, for the page that opened it: the detail page leaves
 /// once the borrowing it was showing has been deleted.
 enum BorrowingFormResult { saved, deleted }
 
-/// Add / edit one borrowing in a bottom sheet. Pass [borrowing] to edit.
+/// Add / edit one borrowing on its own page. Pass [borrowing] to edit.
 /// On save the list, the summary, every open detail page and the lender
 /// picker are invalidated.
+///
+/// A page rather than a sheet, like the expense and income forms: eight
+/// fields and a date picker each is more than a sheet can hold above a
+/// keyboard, and the Save button stays pinned instead of scrolling away.
 Future<BorrowingFormResult?> showBorrowingForm(
   BuildContext context, {
   Borrowing? borrowing,
 }) {
-  return showGlassSheet<BorrowingFormResult>(
-    context: context,
-    isScrollControlled: true,
-    builder: (context) => Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: _BorrowingForm(borrowing: borrowing),
-    ),
+  return openFormPage<BorrowingFormResult>(
+    context,
+    (_) => _BorrowingForm(borrowing: borrowing),
   );
 }
 
@@ -272,209 +269,175 @@ class _BorrowingFormState extends State<_BorrowingForm> {
   Widget build(BuildContext context) {
     final dueOn = _dueOn;
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  _editing ? tr('Edit borrowing') : tr('Add borrowing'),
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 18),
-                if (_error != null) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.errorFill(context),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      _error!,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppTheme.errorInk(context),
-                        fontSize: 13,
-                      ),
-                    ),
+    return FormPage(
+      title: _editing ? tr('Edit borrowing') : tr('Add borrowing'),
+      formKey: _formKey,
+      footer: [
+        FilledButton(
+          onPressed: _busy ? null : _submit,
+          child: _busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
                   ),
-                  const SizedBox(height: 14),
-                ],
-                // Typed freely, with the names used before offered as you
-                // go — a lender is only ever the string on each row.
-                _LenderField(controller: _lender),
-                const SizedBox(height: 14),
-                // Five pills, wrapping: the same control as the deposit /
-                // withdraw toggle, so the app has one way to pick one of a few.
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final type in lenderTypes)
-                      IntrinsicWidth(
-                        child: PillSegment(
-                          label: tr(lenderTypeLabel(type)),
-                          selected: _lenderType == type,
-                          height: 36,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          onTap: () => setState(() => _lenderType = type),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _amount,
-                        decoration: InputDecoration(
-                          hintText: tr('Amount'),
-                          prefixText: _currency == 'USD' ? '\$ ' : '៛ ',
-                        ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        validator: (v) {
-                          final parsed = double.tryParse(v?.trim() ?? '');
-                          if (parsed == null || parsed <= 0) {
-                            return 'Enter an amount.';
-                          }
-
-                          // Mirrors Currency::minimumInput — ៛100 is the
-                          // smallest note in circulation.
-                          if (_currency == 'KHR' && parsed < 100) {
-                            return 'At least ៛100.';
-                          }
-
-                          // The server refuses this too; saying it here
-                          // spares the round trip. Only checked in dollars,
-                          // where the two figures are in the same unit.
-                          if (_currency == 'USD' && parsed < _repaid) {
-                            return '${tr('Already repaid')}: ${money(widget.borrowing!.repaid)}';
-                          }
-
-                          return null;
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(value: 'USD', label: Text('\$')),
-                        ButtonSegment(value: 'KHR', label: Text('៛')),
-                      ],
-                      selected: {_currency},
-                      onSelectionChanged: (selection) {
-                        _switchCurrency(selection.first);
-                      },
-                      showSelectedIcon: false,
-                      style: const ButtonStyle(
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    ),
-                  ],
-                ),
-                if (_currency == 'KHR') ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    tr('Entered in riel, stored in US dollars.'),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.faint(context, 0.5),
-                    ),
-                  ),
-                ],
-                if (_editing && _repaid > 0) ...[
-                  const SizedBox(height: 8),
-                  // The floor for the amount: it cannot drop below what has
-                  // already been paid back against it.
-                  Text(
-                    '${tr('Already repaid')}: ${money(widget.borrowing!.repaid)} — '
-                    '${tr('the amount cannot go below it.')}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.faint(context, 0.5),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 14),
-                _DateButton(
-                  icon: Icons.calendar_today_outlined,
-                  label: '${tr('Borrowed on')} · ${_dateLabel(_borrowedOn)}',
-                  onTap: _pickBorrowedOn,
-                ),
-                const SizedBox(height: 10),
-                _DateButton(
-                  icon: Icons.event_outlined,
-                  label: dueOn == null
-                      ? tr('Due date (optional)')
-                      : '${tr('Due on')} · ${_dateLabel(dueOn)}',
-                  muted: dueOn == null,
-                  onTap: _pickDueOn,
-                  // Cleared with the ×, since a picker cannot pick "none".
-                  onClear: dueOn == null
-                      ? null
-                      : () => setState(() => _dueOn = null),
-                ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _note,
-                  decoration: InputDecoration(hintText: tr('Note (optional)')),
-                  textCapitalization: TextCapitalization.sentences,
-                  maxLength: 500,
-                  // The counter would sit oddly under a pill field; the limit
-                  // still applies.
-                  buildCounter: (
-                    _, {
-                    required currentLength,
-                    required isFocused,
-                    maxLength,
-                  }) => null,
-                ),
-                const SizedBox(height: 18),
-                FilledButton(
-                  onPressed: _busy ? null : _submit,
-                  child: _busy
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          _editing ? tr('Save changes') : tr('Add borrowing'),
-                        ),
-                ),
-                if (_editing) ...[
-                  const SizedBox(height: 4),
-                  TextButton.icon(
-                    onPressed: _busy ? null : _delete,
-                    icon: const Icon(Icons.delete_outline, size: 18),
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFFDC2626),
-                      minimumSize: const Size.fromHeight(46),
-                    ),
-                    label: Text(tr('Delete borrowing')),
-                  ),
-                ],
-              ],
+                )
+              : Text(_editing ? tr('Save changes') : tr('Add borrowing')),
+        ),
+        if (_editing) ...[
+          const SizedBox(height: 4),
+          TextButton.icon(
+            onPressed: _busy ? null : _delete,
+            icon: const Icon(Icons.delete_outline, size: 18),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFDC2626),
+              minimumSize: const Size.fromHeight(46),
+            ),
+            label: Text(tr('Delete borrowing')),
+          ),
+        ],
+      ],
+      children: [
+        if (_error != null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppTheme.errorFill(context),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppTheme.errorInk(context), fontSize: 13),
             ),
           ),
+          const SizedBox(height: 14),
+        ],
+        // Typed freely, with the names used before offered as you
+        // go — a lender is only ever the string on each row.
+        _LenderField(controller: _lender),
+        const SizedBox(height: 14),
+        // Five pills, wrapping: the same control as the deposit /
+        // withdraw toggle, so the app has one way to pick one of a few.
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final type in lenderTypes)
+              IntrinsicWidth(
+                child: PillSegment(
+                  label: tr(lenderTypeLabel(type)),
+                  selected: _lenderType == type,
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  onTap: () => setState(() => _lenderType = type),
+                ),
+              ),
+          ],
         ),
-      ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _amount,
+                decoration: InputDecoration(
+                  hintText: tr('Amount'),
+                  prefixText: _currency == 'USD' ? '\$ ' : '៛ ',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                validator: (v) {
+                  final parsed = double.tryParse(v?.trim() ?? '');
+                  if (parsed == null || parsed <= 0) {
+                    return 'Enter an amount.';
+                  }
+
+                  // Mirrors Currency::minimumInput — ៛100 is the
+                  // smallest note in circulation.
+                  if (_currency == 'KHR' && parsed < 100) {
+                    return 'At least ៛100.';
+                  }
+
+                  // The server refuses this too; saying it here
+                  // spares the round trip. Only checked in dollars,
+                  // where the two figures are in the same unit.
+                  if (_currency == 'USD' && parsed < _repaid) {
+                    return '${tr('Already repaid')}: ${money(widget.borrowing!.repaid)}';
+                  }
+
+                  return null;
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'USD', label: Text('\$')),
+                ButtonSegment(value: 'KHR', label: Text('៛')),
+              ],
+              selected: {_currency},
+              onSelectionChanged: (selection) {
+                _switchCurrency(selection.first);
+              },
+              showSelectedIcon: false,
+              style: const ButtonStyle(visualDensity: VisualDensity.compact),
+            ),
+          ],
+        ),
+        if (_currency == 'KHR') ...[
+          const SizedBox(height: 8),
+          Text(
+            tr('Entered in riel, stored in US dollars.'),
+            style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.5)),
+          ),
+        ],
+        if (_editing && _repaid > 0) ...[
+          const SizedBox(height: 8),
+          // The floor for the amount: it cannot drop below what has
+          // already been paid back against it.
+          Text(
+            '${tr('Already repaid')}: ${money(widget.borrowing!.repaid)} — '
+            '${tr('the amount cannot go below it.')}',
+            style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.5)),
+          ),
+        ],
+        const SizedBox(height: 14),
+        _DateButton(
+          icon: Icons.calendar_today_outlined,
+          label: '${tr('Borrowed on')} · ${_dateLabel(_borrowedOn)}',
+          onTap: _pickBorrowedOn,
+        ),
+        const SizedBox(height: 10),
+        _DateButton(
+          icon: Icons.event_outlined,
+          label: dueOn == null
+              ? tr('Due date (optional)')
+              : '${tr('Due on')} · ${_dateLabel(dueOn)}',
+          muted: dueOn == null,
+          onTap: _pickDueOn,
+          // Cleared with the ×, since a picker cannot pick "none".
+          onClear: dueOn == null ? null : () => setState(() => _dueOn = null),
+        ),
+        const SizedBox(height: 14),
+        TextFormField(
+          controller: _note,
+          decoration: InputDecoration(hintText: tr('Note (optional)')),
+          textCapitalization: TextCapitalization.sentences,
+          maxLength: 500,
+          // The counter would sit oddly under a pill field; the limit
+          // still applies.
+          buildCounter: (
+            _, {
+            required currentLength,
+            required isFocused,
+            maxLength,
+          }) => null,
+        ),
+      ],
     );
   }
 }

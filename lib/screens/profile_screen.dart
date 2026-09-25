@@ -61,23 +61,52 @@ class ProfileScreen extends StatelessWidget {
                 value: L10n.label(context.watch<LocaleNotifier>().value),
                 onTap: () => _chooseLanguage(context),
               ),
-              // App-wide settings (exchange rate, FAQ) are admin-only; the
-              // server gates the page too, this just keeps the row honest.
-              if (isAdmin)
-                _SettingsRow(
-                  icon: Icons.tune,
-                  label: tr('App settings'),
-                  onTap: () => context.go('/profile/admin-settings'),
-                ),
             ],
           ),
+          // The app-wide settings, one row per page. Admin-only; the server
+          // gates every page too, so this just keeps the list honest.
+          if (isAdmin)
+            _Section(
+              title: tr('App'),
+              rows: [
+                _SettingsRow(
+                  icon: Icons.payments_outlined,
+                  label: tr('Spending'),
+                  onTap: () => context.go('/profile/app/spending'),
+                ),
+                _SettingsRow(
+                  icon: Icons.lightbulb_outline,
+                  label: tr('Guidance'),
+                  onTap: () => context.go('/profile/app/guidance'),
+                ),
+                _SettingsRow(
+                  icon: Icons.help_outline,
+                  label: tr('FAQs'),
+                  onTap: () => context.go('/profile/app/faqs'),
+                ),
+                // "Branding", not "Appearance": the row above already uses
+                // that word for the light/dark choice, and this one edits the
+                // app's name and marks.
+                _SettingsRow(
+                  icon: Icons.badge_outlined,
+                  label: tr('Branding'),
+                  onTap: () => context.go('/profile/app/branding'),
+                ),
+                _SettingsRow(
+                  icon: Icons.palette_outlined,
+                  label: tr('Colours'),
+                  onTap: () => context.go('/profile/app/colours'),
+                ),
+              ],
+            ),
           _Section(
             title: tr('Account'),
             rows: [
               _SettingsRow(
                 icon: Icons.key_outlined,
                 label: tr('Change password'),
-                onTap: () => _showSheet(context, const _PasswordSheet()),
+                onTap: () =>
+                    openFormPage<void>(context, (_) => const _PasswordForm()),
               ),
             ],
           ),
@@ -300,7 +329,8 @@ class _HeaderState extends State<_Header> {
                   side: BorderSide(color: AppTheme.glassBorder(context)),
                 ),
                 child: InkWell(
-                  onTap: () => _showSheet(context, const _ProfileSheet()),
+                  onTap: () =>
+                      openFormPage<void>(context, (_) => const _ProfileForm()),
                   customBorder: const CircleBorder(),
                   child: Padding(
                     padding: const EdgeInsets.all(7),
@@ -686,14 +716,14 @@ class _AppearanceSheet extends StatelessWidget {
 
 /// Owns its controllers and its own `BuildContext` so it survives the list
 /// rebuilding under it.
-class _ProfileSheet extends StatefulWidget {
-  const _ProfileSheet();
+class _ProfileForm extends StatefulWidget {
+  const _ProfileForm();
 
   @override
-  State<_ProfileSheet> createState() => _ProfileSheetState();
+  State<_ProfileForm> createState() => _ProfileFormState();
 }
 
-class _ProfileSheetState extends State<_ProfileSheet> {
+class _ProfileFormState extends State<_ProfileForm> {
   final _formKey = GlobalKey<FormState>();
 
   User? get _user => context.read<AuthNotifier>().state.user;
@@ -773,102 +803,94 @@ class _ProfileSheetState extends State<_ProfileSheet> {
     // Watched, not read: the box below must repaint the moment a photo lands.
     final user = context.select<AuthNotifier, User?>((auth) => auth.state.user);
 
-    return _SheetFrame(
+    return FormPage(
       title: tr('Edit profile'),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      formKey: _formKey,
+      footer: [
+        FilledButton(
+          onPressed: _saving ? null : _save,
+          child: _saving ? const _Spinner() : Text(tr('Save changes')),
+        ),
+      ],
+      children: [
+        Row(
           children: [
-            Row(
-              children: [
-                UserAvatar(user: user, size: 64),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Wrap(
-                    spacing: 4,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      TextButton.icon(
-                        onPressed: _photoBusy ? null : _changePhoto,
-                        icon: _photoBusy
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.photo_outlined, size: 18),
-                        label: Text(
-                          user?.avatarUrl == null
-                              ? 'Add photo'
-                              : 'Change photo',
-                        ),
-                      ),
-                      if (user?.avatarUrl != null)
-                        TextButton(
-                          onPressed: _photoBusy ? null : _removePhotoFromSheet,
-                          style: TextButton.styleFrom(
-                            foregroundColor: ProfileScreen._danger,
-                          ),
-                          child: Text(tr('Remove')),
-                        ),
-                    ],
+            UserAvatar(user: user, size: 64),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Wrap(
+                spacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  TextButton.icon(
+                    onPressed: _photoBusy ? null : _changePhoto,
+                    icon: _photoBusy
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.photo_outlined, size: 18),
+                    label: Text(
+                      user?.avatarUrl == null ? 'Add photo' : 'Change photo',
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _name,
-              decoration: InputDecoration(hintText: tr('Name')),
-              textCapitalization: TextCapitalization.words,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Enter your name.' : null,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _username,
-              decoration: InputDecoration(hintText: tr('Username (optional)')),
-              autocorrect: false,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _email,
-              decoration: InputDecoration(hintText: tr('Email')),
-              keyboardType: TextInputType.emailAddress,
-              autocorrect: false,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Enter your email.' : null,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _phone,
-              decoration: InputDecoration(hintText: tr('Phone (optional)')),
-              keyboardType: TextInputType.phone,
-              autocorrect: false,
-            ),
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: _saving ? null : _save,
-              child: _saving ? const _Spinner() : Text(tr('Save changes')),
+                  if (user?.avatarUrl != null)
+                    TextButton(
+                      onPressed: _photoBusy ? null : _removePhotoFromSheet,
+                      style: TextButton.styleFrom(
+                        foregroundColor: ProfileScreen._danger,
+                      ),
+                      child: Text(tr('Remove')),
+                    ),
+                ],
+              ),
             ),
           ],
         ),
-      ),
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: _name,
+          decoration: InputDecoration(hintText: tr('Name')),
+          textCapitalization: TextCapitalization.words,
+          validator: (v) =>
+              (v == null || v.trim().isEmpty) ? 'Enter your name.' : null,
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _username,
+          decoration: InputDecoration(hintText: tr('Username (optional)')),
+          autocorrect: false,
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _email,
+          decoration: InputDecoration(hintText: tr('Email')),
+          keyboardType: TextInputType.emailAddress,
+          autocorrect: false,
+          validator: (v) =>
+              (v == null || v.trim().isEmpty) ? 'Enter your email.' : null,
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _phone,
+          decoration: InputDecoration(hintText: tr('Phone (optional)')),
+          keyboardType: TextInputType.phone,
+          autocorrect: false,
+        ),
+      ],
     );
   }
 }
 
-class _PasswordSheet extends StatefulWidget {
-  const _PasswordSheet();
+class _PasswordForm extends StatefulWidget {
+  const _PasswordForm();
 
   @override
-  State<_PasswordSheet> createState() => _PasswordSheetState();
+  State<_PasswordForm> createState() => _PasswordFormState();
 }
 
-class _PasswordSheetState extends State<_PasswordSheet> {
+class _PasswordFormState extends State<_PasswordForm> {
   final _formKey = GlobalKey<FormState>();
   final _password = TextEditingController();
   final _confirm = TextEditingController();
@@ -917,47 +939,43 @@ class _PasswordSheetState extends State<_PasswordSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return _SheetFrame(
+    return FormPage(
       title: tr('Change password'),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextFormField(
-              controller: _password,
-              obscureText: !_show,
-              decoration: InputDecoration(
-                hintText: tr('New password'),
-                suffixIcon: IconButton(
-                  onPressed: () => setState(() => _show = !_show),
-                  icon: Icon(
-                    _show
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    size: 20,
-                  ),
-                ),
-              ),
-              validator: (v) =>
-                  (v == null || v.length < 8) ? 'At least 8 characters.' : null,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _confirm,
-              obscureText: !_show,
-              decoration: InputDecoration(hintText: tr('Confirm new password')),
-              validator: (v) =>
-                  v != _password.text ? 'Passwords do not match.' : null,
-            ),
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: _saving ? null : _save,
-              child: _saving ? const _Spinner() : Text(tr('Change password')),
-            ),
-          ],
+      formKey: _formKey,
+      footer: [
+        FilledButton(
+          onPressed: _saving ? null : _save,
+          child: _saving ? const _Spinner() : Text(tr('Change password')),
         ),
-      ),
+      ],
+      children: [
+        TextFormField(
+          controller: _password,
+          obscureText: !_show,
+          decoration: InputDecoration(
+            hintText: tr('New password'),
+            suffixIcon: IconButton(
+              onPressed: () => setState(() => _show = !_show),
+              icon: Icon(
+                _show
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
+                size: 20,
+              ),
+            ),
+          ),
+          validator: (v) =>
+              (v == null || v.length < 8) ? 'At least 8 characters.' : null,
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _confirm,
+          obscureText: !_show,
+          decoration: InputDecoration(hintText: tr('Confirm new password')),
+          validator: (v) =>
+              v != _password.text ? 'Passwords do not match.' : null,
+        ),
+      ],
     );
   }
 }

@@ -10,8 +10,8 @@ import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
-import 'borrowing_form_sheet.dart';
-import 'borrowing_repayment_sheet.dart';
+import 'borrowing_form_page.dart';
+import 'borrowing_repayment_page.dart';
 import 'borrowings_screen.dart';
 
 /// One borrowing: what is still owed, the terms, and the ledger of

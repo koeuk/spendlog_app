@@ -10,7 +10,6 @@ import '../providers/auth_provider.dart';
 import '../providers/data_providers.dart';
 import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
-import '../widgets/glass.dart';
 import '../utils/category_style.dart';
 import '../widgets/common.dart';
 
@@ -153,18 +152,9 @@ class _CategoryTile extends StatelessWidget {
   }
 }
 
-/// Create or edit one category.
+/// Create or edit one category, on its own page.
 Future<void> showCategoryForm(BuildContext context, {Category? category}) {
-  return showGlassSheet(
-    context: context,
-    isScrollControlled: true,
-    builder: (context) => Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: _CategoryForm(category: category),
-    ),
-  );
+  return openFormPage<void>(context, (_) => _CategoryForm(category: category));
 }
 
 class _CategoryForm extends StatefulWidget {
@@ -288,96 +278,74 @@ class _CategoryFormState extends State<_CategoryForm> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                _editing ? 'Edit category' : 'New category',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 18),
-              if (_error != null) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 12,
+    return FormPage(
+      title: _editing ? tr('Edit category') : tr('New category'),
+      formKey: _formKey,
+      footer: [
+        FilledButton(
+          onPressed: _busy ? null : _submit,
+          child: _busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
                   ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.errorFill(context),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    _error!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppTheme.errorInk(context),
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-              ],
-              TextFormField(
-                controller: _name,
-                decoration: InputDecoration(hintText: tr('Name')),
-                textCapitalization: TextCapitalization.words,
-                autofocus: !_editing,
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? 'Name the category.'
-                    : null,
-              ),
-              const SizedBox(height: 18),
-              Eyebrow(tr('Colour')),
-              const SizedBox(height: 10),
-              SwatchPicker(
-                selected: _color,
-                onSelected: (value) => setState(() => _color = value),
-              ),
-              const SizedBox(height: 18),
-              Eyebrow(tr('Icon')),
-              const SizedBox(height: 10),
-              _IconPicker(
-                selected: _icon,
-                color: CategoryStyle.color(_color),
-                onSelected: (value) => setState(() => _icon = value),
-              ),
-              const SizedBox(height: 10),
-              FilledButton(
-                onPressed: _busy ? null : _submit,
-                child: _busy
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(_editing ? 'Save changes' : 'Create category'),
-              ),
-              if (_editing) ...[
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: _busy ? null : _delete,
-                  style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFFDC2626),
-                  ),
-                  child: Text(tr('Delete category')),
-                ),
-                // const SizedBox(height: 5)
-              ],
-            ],
-          ),
+                )
+              : Text(_editing ? tr('Save changes') : tr('Create category')),
         ),
-      ),
+        if (_editing) ...[
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _busy ? null : _delete,
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFDC2626),
+            ),
+            child: Text(tr('Delete category')),
+          ),
+        ],
+      ],
+      children: [
+        if (_error != null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppTheme.errorFill(context),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppTheme.errorInk(context), fontSize: 13),
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
+        TextFormField(
+          controller: _name,
+          decoration: InputDecoration(hintText: tr('Name')),
+          textCapitalization: TextCapitalization.words,
+          autofocus: !_editing,
+          validator: (v) =>
+              (v == null || v.trim().isEmpty) ? 'Name the category.' : null,
+        ),
+        const SizedBox(height: 18),
+        Eyebrow(tr('Colour')),
+        const SizedBox(height: 10),
+        SwatchPicker(
+          selected: _color,
+          onSelected: (value) => setState(() => _color = value),
+        ),
+        const SizedBox(height: 18),
+        Eyebrow(tr('Icon')),
+        const SizedBox(height: 10),
+        _IconPicker(
+          selected: _icon,
+          color: CategoryStyle.color(_color),
+          onSelected: (value) => setState(() => _icon = value),
+        ),
+      ],
     );
   }
 }
@@ -395,41 +363,39 @@ class _IconPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Thirty icons would push the form's buttons off screen, so the grid gets a
-    // fixed height and scrolls within itself.
-    return SizedBox(
-      height: 140,
-      child: GridView.count(
-        crossAxisCount: 6,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-        padding: EdgeInsets.zero,
-        children: [
-          for (final name in CategoryStyle.iconNames)
-            GestureDetector(
-              onTap: () => onSelected(name),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: name == selected
-                      ? color.withValues(alpha: 0.16)
-                      : AppTheme.faint(context, 0.03),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: name == selected ? color : Colors.transparent,
-                    width: 1.6,
-                  ),
-                ),
-                child: Icon(
-                  CategoryStyle.icon(name),
-                  size: 19,
-                  color: name == selected
-                      ? color
-                      : AppTheme.faint(context, 0.55),
+    // Laid out in full rather than scrolled within itself: the form is a page
+    // whose Save button is pinned below, so nothing is pushed off screen and a
+    // grid that scrolled inside the page's own scroll only fought it.
+    return GridView.count(
+      crossAxisCount: 6,
+      mainAxisSpacing: 8,
+      crossAxisSpacing: 8,
+      padding: EdgeInsets.zero,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        for (final name in CategoryStyle.iconNames)
+          GestureDetector(
+            onTap: () => onSelected(name),
+            child: Container(
+              decoration: BoxDecoration(
+                color: name == selected
+                    ? color.withValues(alpha: 0.16)
+                    : AppTheme.faint(context, 0.03),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: name == selected ? color : Colors.transparent,
+                  width: 1.6,
                 ),
               ),
+              child: Icon(
+                CategoryStyle.icon(name),
+                size: 19,
+                color: name == selected ? color : AppTheme.faint(context, 0.55),
+              ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }

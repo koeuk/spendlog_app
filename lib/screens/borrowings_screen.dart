@@ -11,7 +11,7 @@ import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
-import 'borrowing_form_sheet.dart';
+import 'borrowing_form_page.dart';
 
 /// Money owed to a friend, family or a bank: what is still outstanding up
 /// top, every debt beneath it. All time, not a month — a debt does not
