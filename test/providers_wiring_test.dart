@@ -62,7 +62,7 @@ void main() {
     expect(context.read<BorrowingStatus>(), isNotNull);
     expect(context.read<ReportPeriodNotifier>(), isNotNull);
     expect(context.read<ExpenseFiltersNotifier>(), isNotNull);
-    expect(context.read<ActivityEveryone>(), isNotNull);
+    expect(context.read<ActivityFilterState>(), isNotNull);
 
     // Data.
     expect(context.read<DashboardNotifier>(), isNotNull);

@@ -406,8 +406,9 @@ class RecurringRulesNotifier extends AsyncNotifier<List<RecurringRule>> {
 // ----------------------------------------------------------------- activity
 
 /// Whether an admin is looking at everyone's log rather than their own.
-class ActivityEveryone extends ValueState<bool> {
-  ActivityEveryone() : super(false);
+/// Whose log the Activity screen shows, and over when.
+class ActivityFilterState extends ValueState<ActivityFilter> {
+  ActivityFilterState() : super(ActivityFilter.mine);
 }
 
 class ActivityState {
@@ -423,20 +424,32 @@ class ActivityState {
 }
 
 class ActivityNotifier extends AsyncNotifier<ActivityState> {
-  ActivityNotifier(this._everyone);
+  ActivityNotifier(this._filter);
 
-  final ActivityEveryone _everyone;
+  final ActivityFilterState _filter;
 
   bool _loadingMore = false;
 
-  /// Depended on, so flipping the scope rebuilds from page one.
+  /// Depended on, so changing a filter rebuilds from page one.
   @override
-  List<Object?> get dependencies => [_everyone.value];
+  List<Object?> get dependencies => [_filter.value];
+
+  Future<({List<ActivityEntry> items, bool hasMore})> _page(int page) {
+    final filter = _filter.value;
+
+    return repository.activity(
+      page: page,
+      everyone: filter.everyone,
+      user: filter.personUuid,
+      from: filter.from?.param,
+      to: filter.to?.param,
+    );
+  }
 
   @override
   Future<ActivityState> fetch() async {
     _loadingMore = false;
-    final first = await repository.activity(everyone: _everyone.value);
+    final first = await _page(1);
 
     return ActivityState(items: first.items, hasMore: first.hasMore, page: 1);
   }
@@ -451,10 +464,7 @@ class ActivityNotifier extends AsyncNotifier<ActivityState> {
     final startGeneration = generation;
 
     try {
-      final next = await repository.activity(
-        page: loaded.page + 1,
-        everyone: _everyone.value,
-      );
+      final next = await _page(loaded.page + 1);
 
       if (generation != startGeneration) return;
 

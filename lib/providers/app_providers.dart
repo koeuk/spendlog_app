@@ -84,7 +84,7 @@ List<SingleChildWidget> appProviders() => [
   ChangeNotifierProvider(create: (_) => BorrowingStatus()),
   ChangeNotifierProvider(create: (_) => ReportPeriodNotifier()),
   ChangeNotifierProvider(create: (_) => ExpenseFiltersNotifier()),
-  ChangeNotifierProvider(create: (_) => ActivityEveryone()),
+  ChangeNotifierProvider(create: (_) => ActivityFilterState()),
 
   // ------------------------------------------------------------ money data
   _boundTo<DashboardMonth, DashboardNotifier>(DashboardNotifier.new),
@@ -97,7 +97,7 @@ List<SingleChildWidget> appProviders() => [
   _boundTo<ExpenseFiltersNotifier, ExpensesNotifier>(ExpensesNotifier.new),
   _boundTo<IncomeMonth, IncomeSummaryNotifier>(IncomeSummaryNotifier.new),
   _boundTo<IncomeMonth, IncomesNotifier>(IncomesNotifier.new),
-  _boundTo<ActivityEveryone, ActivityNotifier>(ActivityNotifier.new),
+  _boundTo<ActivityFilterState, ActivityNotifier>(ActivityNotifier.new),
   _boundTo<BorrowingStatus, BorrowingsNotifier>(BorrowingsNotifier.new),
 
   _bound(CategoriesNotifier.new),

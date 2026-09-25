@@ -510,5 +510,19 @@
   "Your own": "ផ្ទាល់ខ្លួន",
   "Amount fields start on this currency. Riel still converts at :rate per dollar.": "ប្រអប់ចំនួនទឹកប្រាក់ចាប់ផ្តើមដោយរូបិយប័ណ្ណនេះ។ ប្រាក់រៀលនៅតែប្តូរតាមអត្រា :rate ក្នុងមួយដុល្លារ។",
   "Your own colours, for you only. Everyone else keeps the app’s.": "ពណ៌ផ្ទាល់ខ្លួនរបស់អ្នក សម្រាប់តែអ្នកប៉ុណ្ណោះ។ អ្នកផ្សេងទៀតនៅតែប្រើពណ៌របស់កម្មវិធី។",
-  "Use the app’s colours": "ប្រើពណ៌របស់កម្មវិធី"
+  "Use the app’s colours": "ប្រើពណ៌របស់កម្មវិធី",
+  "Person": "មនុស្ស",
+  "Only me": "តែខ្ញុំ",
+  "From": "ពី",
+  "To": "ដល់",
+  "Any time": "គ្រប់ពេល",
+  "Apply": "អនុវត្ត",
+  "Reset": "កំណត់ឡើងវិញ",
+  "Search by name or email": "ស្វែងរកតាមឈ្មោះ ឬអ៊ីមែល",
+  "The end cannot come before the start.": "ចុងបញ្ចប់មិនអាចមុនការចាប់ផ្តើមបានទេ។",
+  "From :date": "ពី :date",
+  "Until :date": "រហូតដល់ :date",
+  "Clear filters": "សម្អាតតម្រង",
+  "Nothing matches these filters.": "គ្មានអ្វីត្រូវនឹងតម្រងទាំងនេះទេ។",
+  "Filters": "តម្រង"
 }

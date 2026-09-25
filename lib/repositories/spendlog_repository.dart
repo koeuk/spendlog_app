@@ -741,6 +741,9 @@ class SpendLogRepository {
     int page = 1,
     bool everyone = false,
     List<String> subjects = const [],
+    String? user,
+    String? from,
+    String? to,
   }) async {
     final response = await _client.dio.get(
       '/activity',
@@ -749,6 +752,11 @@ class SpendLogRepository {
         'per_page': 50,
         if (everyone) 'scope': 'all',
         if (subjects.isNotEmpty) 'subject': subjects.join(','),
+        // One person's log (admin-only), and the window: a bare day covers
+        // all of it, a `…THH:mm` is exact.
+        'user': ?user,
+        'from': ?from,
+        'to': ?to,
       },
     );
 
@@ -767,10 +775,14 @@ class SpendLogRepository {
   /// The admin desk. Every call is double-gated server-side: the token needs
   /// the users:*/settings:write abilities (which only admin permissions can
   /// grant), and the policies rule again per row.
-  Future<List<AdminUser>> adminUsers() async {
+  Future<List<AdminUser>> adminUsers({String? search}) async {
     final response = await _client.dio.get(
       '/admin/users',
-      queryParameters: {'per_page': 100},
+      // `search` narrows to names, usernames and emails containing it.
+      queryParameters: {
+        'per_page': 100,
+        if (search != null && search.isNotEmpty) 'search': search,
+      },
     );
 
     return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>)
