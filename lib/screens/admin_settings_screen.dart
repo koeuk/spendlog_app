@@ -12,7 +12,6 @@ import '../providers/branding_provider.dart';
 import '../providers/data_providers.dart';
 import '../repositories/spendlog_repository.dart';
 import '../theme.dart';
-import '../widgets/glass.dart';
 import '../widgets/common.dart';
 
 /// The web's admin Settings pages, for admins, as tabs: the currency
@@ -839,7 +838,7 @@ class _FaqCard extends StatelessWidget {
             children: [
               Expanded(child: Eyebrow(tr('Help page FAQs'))),
               TextButton.icon(
-                onPressed: () => _showFaqSheet(context),
+                onPressed: () => _showFaqForm(context),
                 icon: const Icon(Icons.add, size: 16),
                 label: Text(tr('Add')),
               ),
@@ -893,7 +892,7 @@ class _FaqRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => _showFaqSheet(context, faq: faq),
+      onTap: () => _showFaqForm(context, faq: faq),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         child: Row(
@@ -941,116 +940,169 @@ class _FaqRow extends StatelessWidget {
   }
 }
 
-Future<void> _showFaqSheet(BuildContext context, {FaqEntry? faq}) async {
-  // Captured before the sheet opens: its buttons run after awaits, by which
-  // point the row that opened it may be gone from the list.
-  final repository = context.read<SpendLogRepository>();
-  final refreshFaqs = context.read<FaqsNotifier>().invalidate;
+/// Add or edit one help-page FAQ, on its own page.
+///
+/// A page rather than a sheet: the answer is a paragraph, and a sheet holding
+/// a multi-line field has the keyboard over most of it.
+Future<void> _showFaqForm(BuildContext context, {FaqEntry? faq}) {
+  return openFormPage<void>(context, (_) => _FaqFormPage(faq: faq));
+}
 
-  final question = TextEditingController(text: faq?.question ?? '');
-  final answer = TextEditingController(text: faq?.answer ?? '');
-  var published = faq == null || faq.status == 'published';
+class _FaqFormPage extends StatefulWidget {
+  const _FaqFormPage({this.faq});
 
-  // A StatefulBuilder has no dispose, so the controllers are owned here and
-  // released once the sheet is gone.
-  try {
-    await showGlassSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
-        ),
-        child: StatefulBuilder(
-          builder: (sheetContext, setSheetState) => SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    faq == null ? 'Add an FAQ' : 'Edit FAQ',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(sheetContext).textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: question,
-                    decoration: InputDecoration(hintText: tr('Question')),
-                    textCapitalization: TextCapitalization.sentences,
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: answer,
-                    decoration: InputDecoration(hintText: tr('Answer')),
-                    textCapitalization: TextCapitalization.sentences,
-                    maxLines: 3,
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    activeThumbColor: AppTheme.accent(context),
-                    title: Text(tr('Published')),
-                    value: published,
-                    onChanged: (value) =>
-                        setSheetState(() => published = value),
-                  ),
-                  FilledButton(
-                    onPressed: () async {
-                      try {
-                        await repository.saveFaq(
-                          uuid: faq?.uuid,
-                          question: question.text.trim(),
-                          answer: answer.text.trim(),
-                          status: published ? 'published' : 'draft',
-                        );
+  /// The row being edited, or null to add one.
+  final FaqEntry? faq;
 
-                        refreshFaqs();
-                        if (sheetContext.mounted) {
-                          Navigator.of(sheetContext).pop();
-                        }
-                      } catch (e) {
-                        if (sheetContext.mounted) {
-                          ScaffoldMessenger.of(sheetContext).showSnackBar(
-                            SnackBar(content: Text(apiErrorMessage(e))),
-                          );
-                        }
-                      }
-                    },
-                    child: Text(tr('Save')),
-                  ),
-                  if (faq != null)
-                    TextButton(
-                      onPressed: () async {
-                        try {
-                          await repository.deleteFaq(faq.uuid);
-                          refreshFaqs();
-                          if (sheetContext.mounted) {
-                            Navigator.of(sheetContext).pop();
-                          }
-                        } catch (e) {
-                          if (sheetContext.mounted) {
-                            ScaffoldMessenger.of(sheetContext).showSnackBar(
-                              SnackBar(content: Text(apiErrorMessage(e))),
-                            );
-                          }
-                        }
-                      },
-                      style: TextButton.styleFrom(
-                        foregroundColor: const Color(0xFFDC2626),
-                      ),
-                      child: Text(tr('Delete')),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
+  @override
+  State<_FaqFormPage> createState() => _FaqFormPageState();
+}
+
+class _FaqFormPageState extends State<_FaqFormPage> {
+  final _formKey = GlobalKey<FormState>();
+  late final _question = TextEditingController(
+    text: widget.faq?.question ?? '',
+  );
+  late final _answer = TextEditingController(text: widget.faq?.answer ?? '');
+
+  /// New entries go up published; an edit keeps whatever it had.
+  late bool _published =
+      widget.faq == null || widget.faq!.status == 'published';
+
+  bool _busy = false;
+
+  bool get _editing => widget.faq != null;
+
+  @override
+  void dispose() {
+    _question.dispose();
+    _answer.dispose();
+    super.dispose();
+  }
+
+  /// Both captured before the write: `context` must not be touched across an
+  /// await, and the refresh must still land if this page is gone by then.
+  Future<void> _run(Future<void> Function(SpendLogRepository repo) call) async {
+    if (_busy) return;
+
+    setState(() => _busy = true);
+
+    final repository = context.read<SpendLogRepository>();
+    final refresh = context.read<FaqsNotifier>().invalidate;
+
+    try {
+      await call(repository);
+      refresh();
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
+    }
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    await _run(
+      (repo) => repo.saveFaq(
+        uuid: widget.faq?.uuid,
+        question: _question.text.trim(),
+        answer: _answer.text.trim(),
+        status: _published ? 'published' : 'draft',
       ),
     );
-  } finally {
-    question.dispose();
-    answer.dispose();
+  }
+
+  Future<void> _delete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(tr('Delete this FAQ?')),
+        content: Text(widget.faq!.question),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(tr('Cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFDC2626),
+            ),
+            child: Text(tr('Delete')),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    await _run((repo) => repo.deleteFaq(widget.faq!.uuid));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FormPage(
+      title: _editing ? tr('Edit FAQ') : tr('Add an FAQ'),
+      formKey: _formKey,
+      footer: [
+        FilledButton(
+          onPressed: _busy ? null : _save,
+          child: _busy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(tr('Save')),
+        ),
+        if (_editing)
+          TextButton(
+            onPressed: _busy ? null : _delete,
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFDC2626),
+            ),
+            child: Text(tr('Delete')),
+          ),
+      ],
+      children: [
+        TextFormField(
+          controller: _question,
+          decoration: InputDecoration(hintText: tr('Question')),
+          textCapitalization: TextCapitalization.sentences,
+          autofocus: !_editing,
+          validator: (v) =>
+              (v?.trim().isEmpty ?? true) ? 'Ask a question.' : null,
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _answer,
+          decoration: InputDecoration(hintText: tr('Answer')),
+          textCapitalization: TextCapitalization.sentences,
+          // Room to read a paragraph back, which is what the answer is.
+          minLines: 4,
+          maxLines: 10,
+          validator: (v) => (v?.trim().isEmpty ?? true) ? 'Answer it.' : null,
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          activeThumbColor: AppTheme.accent(context),
+          title: Text(tr('Published')),
+          subtitle: Text(
+            tr('Draft entries stay off the help page.'),
+            style: TextStyle(fontSize: 12, color: AppTheme.faint(context, 0.5)),
+          ),
+          value: _published,
+          onChanged: (value) => setState(() => _published = value),
+        ),
+      ],
+    );
   }
 }
