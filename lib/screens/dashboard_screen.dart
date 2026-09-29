@@ -1,3 +1,5 @@
+import 'dart:ui' show lerpDouble;
+
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
@@ -15,6 +17,7 @@ import '../theme.dart';
 import '../utils/category_style.dart';
 import '../utils/format.dart';
 import '../widgets/common.dart';
+import '../widgets/glass.dart';
 import '../widgets/spending_chart.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -49,45 +52,61 @@ class DashboardScreen extends StatelessWidget {
             // future handed back here cannot surface as an unhandled error.
             return context.read<DashboardNotifier>().refresh();
           },
-          child: ListView(
-            padding: EdgeInsets.fromLTRB(
-              AppTheme.pageInset,
-              MediaQuery.paddingOf(context).top + 12,
-              AppTheme.pageInset,
-              AppTheme.navBarClearance,
-            ),
-            children: [
-              _GreetingHeader(user: user),
-              const SizedBox(height: 8),
-              // The month being viewed sits with the card it governs rather
-              // than in the header, where it would squeeze the greeting.
-              Align(
-                alignment: Alignment.centerRight,
-                child: MonthStepper(
-                  month: month,
-                  onChanged: (ym) => context.read<DashboardMonth>().value = ym,
+          // Slivers rather than a ListView: the greeting is a header that
+          // collapses into a frosted bar as the cards pass under it, and only
+          // a persistent header can be told how far it has been scrolled.
+          child: CustomScrollView(
+            slivers: [
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _GreetingHeader(
+                  user: user,
+                  topInset: MediaQuery.paddingOf(context).top,
                 ),
               ),
-              const SizedBox(height: 4),
-              _MonthCard(data: data),
-              const SizedBox(height: 16),
-              _TodayCard(total: data.todayTotal),
-              // Hidden entirely against a server that predates income and
-              // savings, rather than showing two cards of zeros.
-              if (data.incomeTotal != null || data.savings != null) ...[
-                const SizedBox(height: 16),
-                _MoneyRow(data: data),
-              ],
-              const SizedBox(height: 16),
-              const _SpendingCard(),
-              if (data.breakdown.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                _BreakdownCard(data: data),
-              ],
-              if (data.recent.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                _RecentCard(data: data),
-              ],
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppTheme.pageInset,
+                  4,
+                  AppTheme.pageInset,
+                  AppTheme.navBarClearance,
+                ),
+                sliver: SliverList.list(
+                  children: [
+                    // The month being viewed sits with the card it governs
+                    // rather than in the header, where it would squeeze the
+                    // greeting.
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: MonthStepper(
+                        month: month,
+                        onChanged: (ym) =>
+                            context.read<DashboardMonth>().value = ym,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    _MonthCard(data: data),
+                    const SizedBox(height: 16),
+                    _TodayCard(total: data.todayTotal),
+                    // Hidden entirely against a server that predates income
+                    // and savings, rather than showing two cards of zeros.
+                    if (data.incomeTotal != null || data.savings != null) ...[
+                      const SizedBox(height: 16),
+                      _MoneyRow(data: data),
+                    ],
+                    const SizedBox(height: 16),
+                    const _SpendingCard(),
+                    if (data.breakdown.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      _BreakdownCard(data: data),
+                    ],
+                    if (data.recent.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      _RecentCard(data: data),
+                    ],
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -96,13 +115,35 @@ class DashboardScreen extends StatelessWidget {
   }
 }
 
-/// Who is signed in, the way the reference app opens: photo on the left, a
-/// time-of-day greeting in small grey over the name in bold. Tapping it goes
-/// to Settings, where the photo and name are changed.
-class _GreetingHeader extends StatelessWidget {
-  const _GreetingHeader({required this.user});
+/// Who is signed in: photo on the left, a time-of-day greeting in small grey
+/// over the name in bold. Tapping it goes to Settings, where the photo and
+/// name are changed.
+///
+/// A header that collapses rather than a row that scrolls away, the way an
+/// iOS large title does: at rest it is the tall greeting on the bare ground,
+/// and as the cards rise under it the greeting line fades, the photo shrinks
+/// and a frosted bar comes up behind the name. The person's name stays on
+/// screen the whole way down, which is the point — a header that leaves takes
+/// the only thing saying whose money this is with it.
+class _GreetingHeader extends SliverPersistentHeaderDelegate {
+  const _GreetingHeader({required this.user, required this.topInset});
 
   final User? user;
+
+  /// The status bar, which the header draws its glass up behind.
+  final double topInset;
+
+  /// The compact bar: an avatar and the name, at the usual bar height.
+  static const _collapsedBody = 56.0;
+
+  /// The greeting at rest, with room for both lines beside a 46pt photo.
+  static const _expandedBody = 74.0;
+
+  @override
+  double get minExtent => topInset + _collapsedBody;
+
+  @override
+  double get maxExtent => topInset + _expandedBody;
 
   static String _greeting() {
     final hour = DateTime.now().hour;
@@ -112,45 +153,100 @@ class _GreetingHeader extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => context.go('/profile'),
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-        child: Row(
-          children: [
-            UserAvatar(user: user, size: 46, circle: true),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context, double shrinkOffset, bool overlaps) {
+    // 0 at rest, 1 once fully collapsed. Everything below reads off this one
+    // number, so the pieces cannot fall out of step with each other.
+    final t = (shrinkOffset / (maxExtent - minExtent)).clamp(0.0, 1.0);
+
+    final avatar = lerpDouble(46, 34, t)!;
+    final greetingHeight = lerpDouble(16, 0, t)!;
+
+    // No explicit height: the delegate is handed a box of exactly the right
+    // extent already, and sizing it again from `shrinkOffset` hands the child
+    // a smaller box than it was laid out in — which a pinned header, held at
+    // `minExtent` while `shrinkOffset` keeps climbing, overflows.
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Fades in as it collapses: at rest the greeting sits on the bare
+        // ground like a large title, with nothing ruled off behind it.
+        if (t > 0)
+          Opacity(
+            opacity: t,
+            child: GlassPanel(
+              strong: true,
+              blur: 26,
+              borderRadius: BorderRadius.zero,
+              child: const SizedBox.expand(),
+            ),
+          ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppTheme.pageInset,
+            topInset,
+            AppTheme.pageInset,
+            0,
+          ),
+          child: InkWell(
+            onTap: () => context.go('/profile'),
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(
                 children: [
-                  Text(
-                    _greeting(),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.faint(context, 0.55),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    user?.name ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
+                  UserAvatar(user: user, size: avatar, circle: true),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Height animated to nothing rather than only faded,
+                        // so the name rises into the bar's centre instead of
+                        // leaving a gap where the greeting was.
+                        SizedBox(
+                          height: greetingHeight,
+                          child: OverflowBox(
+                            alignment: Alignment.topLeft,
+                            maxHeight: 16,
+                            child: Opacity(
+                              opacity: 1 - t,
+                              child: Text(
+                                tr(_greeting()),
+                                maxLines: 1,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  height: 1.2,
+                                  color: AppTheme.faint(context, 0.55),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Text(
+                          user?.name ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: lerpDouble(20, 17, t),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
+
+  @override
+  bool shouldRebuild(_GreetingHeader old) =>
+      old.user != user || old.topInset != topInset;
 }
 
 class _MonthCard extends StatelessWidget {
@@ -163,8 +259,34 @@ class _MonthCard extends StatelessWidget {
     final overall = data.summary.overall;
     final textTheme = Theme.of(context).textTheme;
 
-    return Card(
-      color: AppTheme.accent(context),
+    final accent = AppTheme.accent(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        // A shallow gradient rather than a flat fill: the card is the one
+        // block of colour on the screen, and a single tone that size reads as
+        // printed on. Two stops of the same hue give it a surface.
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color.lerp(accent, Colors.white, 0.12)!,
+            accent,
+            Color.lerp(accent, Colors.black, 0.10)!,
+          ],
+          stops: const [0, 0.55, 1],
+        ),
+        // Tinted, not grey: a neutral shadow under a coloured card looks like
+        // dirt under it.
+        boxShadow: [
+          BoxShadow(
+            color: accent.withValues(alpha: 0.30),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -504,11 +626,8 @@ class _BreakdownCard extends StatelessWidget {
                   ),
                 ],
               ),
-              if (slice != data.breakdown.last) 
-              Divider(
-                height:16,
-                color: AppTheme.faint(context,0.06)
-              )
+              if (slice != data.breakdown.last)
+                Divider(height: 16, color: AppTheme.faint(context, 0.06)),
             ],
           ],
         ),
