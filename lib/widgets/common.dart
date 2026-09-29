@@ -833,12 +833,18 @@ class GlassBackButton extends StatelessWidget {
         child: InkWell(
           onTap: onPressed ?? () => Navigator.of(context).maybePop(),
           child: SizedBox(
-            width: 40,
-            height: 40,
-            child: Icon(
-              Icons.arrow_back,
-              size: 20,
-              color: Theme.of(context).colorScheme.onSurface,
+            width: 38,
+            height: 38,
+            // A chevron's mass sits to its right, so centring it by its box
+            // leaves it looking a shade late. A hair back is where the eye
+            // expects it.
+            child: Transform.translate(
+              offset: const Offset(-1.5, 0),
+              child: Icon(
+                Icons.arrow_back_ios_new,
+                size: 17,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
           ),
         ),
