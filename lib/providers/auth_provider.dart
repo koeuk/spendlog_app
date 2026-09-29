@@ -19,6 +19,10 @@ class AuthState {
   final bool restoring;
 
   bool get signedIn => user != null;
+
+  /// Signed in, but the email is not confirmed yet — the router keeps the
+  /// user on the verify screen until it is.
+  bool get needsEmailVerification => user != null && !user!.emailVerified;
 }
 
 class AuthNotifier extends ChangeNotifier {
@@ -121,10 +125,39 @@ class AuthNotifier extends ChangeNotifier {
         passwordConfirmation: passwordConfirmation,
       ),
     ));
+    // The server mailed the first code with the registration.
+    verificationCodeSentAt = DateTime.now();
+  }
+
+  /// When this session last had a verification code mailed, so the verify
+  /// screen can hold "Resend" for the server's one-minute wait. Null when
+  /// unknown (signed in or restored with an unverified account).
+  DateTime? verificationCodeSentAt;
+
+  /// Confirms the email with [code]. On success the returned user — now
+  /// verified — replaces the current one, and the router moves on into the
+  /// app. Returns the server's message; throws the DioException on a 422.
+  Future<String> verifyEmail(String code) async {
+    final result = await _repository.verifyEmail(code);
+
+    verificationCodeSentAt = null;
+    _set(AuthState(user: result.user));
+
+    return result.message;
+  }
+
+  /// Mails a new verification code; returns the server's message.
+  Future<String> resendVerificationCode() async {
+    final message = await _repository.resendVerificationCode();
+
+    verificationCodeSentAt = DateTime.now();
+
+    return message;
   }
 
   Future<void> signOut() async {
     await _repository.logout();
+    verificationCodeSentAt = null;
     _set(const AuthState());
   }
 

@@ -25,6 +25,7 @@ import 'screens/savings_plan_screen.dart';
 import 'screens/savings_screen.dart';
 import 'screens/shell_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/verify_email_screen.dart';
 
 /// The app's one router, built once and handed [auth] as its
 /// `refreshListenable`.
@@ -55,8 +56,17 @@ GoRouter buildRouter(AuthNotifier auth) {
         return state.matchedLocation == '/splash' ? null : '/splash';
       }
       if (!session.signedIn && !onAuthPages) return '/login';
+      // Signed in with an unconfirmed email: the verify screen and nothing
+      // else, until the code is accepted.
+      if (session.needsEmailVerification) {
+        return state.matchedLocation == '/verify-email'
+            ? null
+            : '/verify-email';
+      }
       if (session.signedIn &&
-          (onAuthPages || state.matchedLocation == '/splash')) {
+          (onAuthPages ||
+              state.matchedLocation == '/splash' ||
+              state.matchedLocation == '/verify-email')) {
         return '/';
       }
 
@@ -81,6 +91,10 @@ GoRouter buildRouter(AuthNotifier auth) {
         builder: (context, state) => ResetPasswordScreen(
           email: state.uri.queryParameters['email'] ?? '',
         ),
+      ),
+      GoRoute(
+        path: '/verify-email',
+        builder: (context, state) => const VerifyEmailScreen(),
       ),
       // The signed-in app: five tabs behind one bottom bar, each branch
       // keeping its own state when you switch away and back.

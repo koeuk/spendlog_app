@@ -524,5 +524,11 @@
   "Until :date": "រហូតដល់ :date",
   "Clear filters": "សម្អាតតម្រង",
   "Nothing matches these filters.": "គ្មានអ្វីត្រូវនឹងតម្រងទាំងនេះទេ។",
-  "Filters": "តម្រង"
+  "Filters": "តម្រង",
+  "Verify your email": "ផ្ទៀងផ្ទាត់អ៊ីមែលរបស់អ្នក",
+  "We sent a 6-digit code to :email. Enter it below to confirm your email.": "យើងបានផ្ញើលេខកូដ ៦ ខ្ទង់ទៅ :email។ បញ្ចូលវានៅខាងក្រោម ដើម្បីបញ្ជាក់អ៊ីមែលរបស់អ្នក។",
+  "Verify": "ផ្ទៀងផ្ទាត់",
+  "Resend code": "ផ្ញើលេខកូដម្តងទៀត",
+  "Resend code in :seconds s": "ផ្ញើលេខកូដម្តងទៀតក្នុងរយៈពេល :seconds វិនាទី",
+  "Enter the 6-digit code.": "បញ្ចូលលេខកូដ ៦ ខ្ទង់។"
 }

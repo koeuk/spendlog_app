@@ -75,6 +75,31 @@ class AuthRepository {
     await _client.clearToken();
   }
 
+  /// Confirms the signed-in account's email with the 6-digit code the server
+  /// mailed at sign-up (or on a resend). Returns the server's message and the
+  /// user, now carrying `email_verified_at`. A wrong, expired or out-of-guesses
+  /// code is a 422 on `code`.
+  Future<({String message, User user})> verifyEmail(String code) async {
+    final response = await _client.dio.post('/email/verify', data: {
+      'code': code,
+    });
+
+    final data = response.data as Map<String, dynamic>;
+
+    return (
+      message: data['message'] as String? ?? '',
+      user: User.fromJson(data['user'] as Map<String, dynamic>),
+    );
+  }
+
+  /// Mails a fresh verification code. Asked again within a minute it is a 422
+  /// on `code`; returns the server's message otherwise.
+  Future<String> resendVerificationCode() async {
+    final response = await _client.dio.post('/email/verification-notification');
+
+    return (response.data as Map<String, dynamic>)['message'] as String? ?? '';
+  }
+
   Future<void> requestResetCode(String email) async {
     await _client.dio.post('/forgot-password', data: {'email': email});
   }

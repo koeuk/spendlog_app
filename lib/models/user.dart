@@ -9,6 +9,7 @@ class User {
     this.username,
     this.phone,
     this.avatarUrl,
+    this.emailVerifiedAt,
     this.preferences = UserPreferences.none,
   });
 
@@ -24,6 +25,13 @@ class User {
   /// Absolute, cache-busted by the server; null when there is no photo.
   final String? avatarUrl;
 
+  /// ISO timestamp of when the email was confirmed; null until the user types
+  /// the 6-digit code the server mailed them. The router holds an unverified
+  /// account on the verify screen.
+  final String? emailVerifiedAt;
+
+  bool get emailVerified => emailVerifiedAt != null;
+
   /// The account's own currency and colours; see [UserPreferences].
   final UserPreferences preferences;
 
@@ -35,6 +43,7 @@ class User {
     username: username,
     phone: phone,
     avatarUrl: avatarUrl,
+    emailVerifiedAt: emailVerifiedAt,
     preferences: preferences ?? this.preferences,
   );
 
@@ -46,6 +55,7 @@ class User {
     username: json['username'] as String?,
     phone: json['phone'] as String?,
     avatarUrl: json['avatar_url'] as String?,
+    emailVerifiedAt: json['email_verified_at'] as String?,
     preferences: UserPreferences.fromJson(
       json['preferences'] as Map<String, dynamic>?,
     ),
