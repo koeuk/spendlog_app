@@ -30,49 +30,65 @@ setting monthly budgets, and seeing where money goes. It targets everyday users
 in Cambodia first: amounts can be entered in **US dollars or Khmer riel**, with
 an admin-set exchange rate (default 4,100 KHR per USD) used for conversion.
 
-It ships as **one backend and two clients**:
+It ships as **one Laravel API with four faces**:
 
 - A **web app** (Laravel + Vue with Inertia) that also serves as the admin
   panel.
 - A **cross-platform app** built with Flutter that runs on **Android, iOS,
   Linux, macOS, Windows and the web** from a single codebase.
+- An **Expo / React Native** app.
+- The **JSON API** itself.
 
-Both clients speak to the same JSON API, so every feature exists once on the
+Every client speaks to the same JSON API, so every feature exists once on the
 server and is reused everywhere.
 
 ### 2. Features (as built)
 
 **For every user**
 
-- Sign in with email or username and password; forgot-password and reset flows;
-  Google sign-in on the web.
+- **Auth**: register, log in and out with per-device tokens; forgot and reset
+  password, including a six-digit code path.
 - **Expenses**: add, edit and delete items with a price, date and category.
-  Quick-add from a bottom sheet. Search by text, filter by category and date
-  range, infinite-scroll list grouped by day, long-press to delete.
-- **Categories**: colour and icon per category (10 colours, 16 icons). Admin
-  creates the shared set; users pick from it.
-- **Budgets**: an overall monthly budget and per-category budgets, with
-  spent-versus-budget progress that turns amber near the limit and red when
-  over. Month-by-month navigation.
-- **Dashboard**: today's total, this month's total and amount left, a spending
-  trend chart switchable between week, month, year and all-time, a breakdown by
-  category, and the most recent expenses.
-- **Reports**: totals and averages for a chosen period, a time-series chart,
-  and a category breakdown. Export as **PDF, Excel or CSV** and hand the file to
-  the system share sheet (save, send to Telegram, print).
-- **Workouts** (a secondary module): log exercises with sets, reps, weight in
-  kg or lb, or cardio duration; monthly summary with muscle-group split and
-  personal records.
-- **Profile**: edit name, username and email; change password; choose light,
-  dark or system theme.
+  Search by text, filter by category and date range, a searchable category
+  picker, and an inline "new category" while adding a one-off row.
+- **Income**: add, edit and delete; a monthly summary split by source, largest
+  first; a source picker that also accepts a name it has never seen.
+- **Income sources**: a managed catalogue — add, rename, remove. A rename can
+  rewrite the income filed under the old name. Usage count and total against
+  each name.
+- **Categories**: a colour and an icon per category, created by an admin.
+  In-use protection: a category an expense or budget points at cannot go.
+- **Budgets**: a budget per category per month plus an overall monthly budget,
+  with spent, remaining and percent against each, and an `ok` / `warning` /
+  `over` status.
+- **Savings**: a monthly plan with a deposit and withdrawal ledger. A
+  withdrawal spends the plan's unfilled headroom before touching deposits, an
+  all-time balance carries between months, and overdraw is blocked under a lock.
+- **Borrowing**: debts with a lender and lender type, a repayment ledger per
+  debt, open/paid/all filtering, and a still-owed summary by lender type.
+- **Recurring**: rules that write both expenses and income, daily through
+  yearly, which run on create so today's row appears at once. Rows outlive the
+  rule that wrote them.
+- **Dashboard**: today's spend, the month against its budget with a month
+  stepper, a category breakdown with each category's share, income and balance
+  for the month, a savings card, and recent expenses.
+- **Reports**: week, month, year and all-time, with a spending trend chart and
+  a category breakdown. Export to **PDF, XLSX or CSV** — the whole report or
+  the rows alone — and hand the file to the system share sheet.
+- **Activity log**: every create, change and delete, written from model events,
+  with field-level diffs and foreign keys read as names. Filter by subject.
+- **Profile**: name, username, email, phone and avatar upload; change password;
+  light, dark or system theme.
 
 **For admins**
 
-- Manage users (create, edit, delete, assign role).
+- Manage users (create, edit, deactivate, assign role, avatars).
 - Manage categories for everyone.
-- View all users' expenses with a per-user filter.
-- Edit app settings such as the KHR/USD rate and default weight unit.
-- Maintain a public FAQ (published or draft entries).
+- See everyone's activity log, not just your own.
+- Branding: logo, favicon and theme colours.
+- Edit app settings such as the KHR/USD exchange rate and the default currency
+  amounts start in.
+- Maintain a public FAQ, and CMS pages at `/p/{slug}` (web).
 
 ### 3. Architecture and technology
 
@@ -96,12 +112,15 @@ server and is reused everywhere.
 
 **Mobile / desktop client (Flutter)**
 
-- Dart, Flutter 3.x, single codebase for six platforms.
-- **Riverpod** for state management; every remote resource is a provider that
-  screens watch, so a single write (for example saving an expense) invalidates
-  the dashboard, expenses list and budgets together.
-- **go_router** with a stateful shell: five tabs (Dashboard, Expenses, Budgets,
-  Reports, Profile), each keeping its own navigation stack.
+- Dart (SDK `^3.13.0`), Flutter 3.47.3 stable, single codebase for six
+  platforms.
+- **provider** for state management, with `ChangeNotifier`,
+  `ChangeNotifierProvider` and `ChangeNotifierProxyProvider` composed once in
+  `lib/providers/app_providers.dart`, so a single write (for example saving an
+  expense) refreshes the dashboard, expenses list and budgets together.
+- **go_router** with a `StatefulShellRoute`: four tabs (Home, Expenses,
+  Reports, Menu), each keeping its own navigation stack. Add and edit flows are
+  full pages that hide the nav bar and pin their action to the footer.
 - **Dio** HTTP client with an interceptor that attaches the token and signs the
   user out automatically when the server rejects it.
 - Tokens are kept in the platform's secure storage (Keychain, Keystore, libsecret,
@@ -127,11 +146,15 @@ server and is reused everywhere.
 ### 4. Database entities
 
 users, categories, expenses, budgets, personal_access_tokens, app_settings,
-faqs, pages, exercise_types, workouts, workout_sets, plus the permission tables.
+faqs, pages, plus the permission tables — and the tables behind income, income
+sources, savings, borrowing, recurring rules and the activity log.
+`[Confirm the exact table names in the API repo before citing them.]`
 
 Key relationships: a user has many expenses and budgets; an expense belongs to
 one category; a budget belongs to a user and optionally a category (null means
-the overall budget); a workout has many sets, each referencing an exercise type.
+the overall budget); a debt has many repayments; a savings plan has many
+deposit and withdrawal entries; a recurring rule writes expense and income rows
+that outlive the rule itself.
 
 ### 5. Problem statement to build on
 
@@ -144,13 +167,16 @@ business or a school on their own server.
 
 ### 6. Roadmap ideas (mark as future work, not delivered)
 
-- Offline queue with sync when back online.
-- Recurring expenses and reminders.
+- Offline queue with sync when back online — an offline banner exists today,
+  a queue does not.
+- **Help**: the end-user FAQs from `GET /faqs`. The endpoint is live; the
+  Flutter app does not surface it yet.
+- **CMS pages** at `/p/{slug}`: live on the web, absent from the Flutter app.
+- Email verification on the mobile clients — enforced on the web only today.
 - Receipt photo attachment and OCR.
 - Shared households (multiple users on one budget).
 - Bank/e-wallet import (ABA, Wing, Bakong) if APIs allow.
 - Push notifications when a budget nears its limit.
-- Localisation into Khmer.
 - Widgets for quick entry on the home screen.
 
 ### 7. What I want you to produce
@@ -164,7 +190,7 @@ focused; use short paragraphs and bullet lists where they help.
 4. Objectives (measurable where possible).
 5. Scope: what is included, what is explicitly out of scope.
 6. Proposed solution: features, grouped as in section 2.
-7. System architecture: describe the backend, the API, the two clients and how
+7. System architecture: describe the backend, the API, the clients and how
    they relate. Include a simple text or Mermaid diagram.
 8. Technology stack with a one-line justification for each major choice.
 9. Data model: list the entities and relationships from section 4.
@@ -178,7 +204,8 @@ focused; use short paragraphs and bullet lists where they help.
     adding an expense, crash-free rate, test coverage).
 15. Future work, drawn from section 6.
 16. Conclusion.
-17. References: Flutter, Laravel, Riverpod, Sanctum official documentation.
+17. References: Flutter, Laravel, provider, go_router, Sanctum official
+    documentation.
 
 Rules:
 

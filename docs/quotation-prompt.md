@@ -79,7 +79,7 @@ above. Group them under the headings shown.
 
 | # | Item | What it includes | Effort |
 |---|------|------------------|--------|
-| C1 | App foundation | Riverpod state, go_router five-tab shell, Dio client with token interceptor and auto sign-out, secure token storage, light/dark/system theme | `[hours]` |
+| C1 | App foundation | `provider` state, go_router four-tab stateful shell, Dio client with token interceptor and auto sign-out, secure token storage, light/dark/system theme | `[hours]` |
 | C2 | Auth screens | Splash with session restore, sign in, forgot password, reset password | `[hours]` |
 | C3 | Dashboard | Month stepper, this-month and today cards, trend chart (week/month/year/all), category breakdown, recent expenses | `[hours]` |
 | C4 | Expenses | Search, category and date filters, infinite scroll, add/edit bottom sheet, long-press delete, USD/KHR toggle | `[hours]` |
