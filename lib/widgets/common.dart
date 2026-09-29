@@ -496,25 +496,35 @@ class MonthStepper extends StatelessWidget {
           visualDensity: VisualDensity.compact,
           tooltip: tr('Previous month'),
         ),
-        InkWell(
-          onTap: () => _pick(context),
-          borderRadius: BorderRadius.circular(99),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 6, 4, 6),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  monthLabel(month),
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(width: 2),
-                Icon(
-                  Icons.expand_more,
-                  size: 18,
-                  color: AppTheme.faint(context, 0.5),
-                ),
-              ],
+        // The label is the only part that can give: the two arrows are
+        // fixed. Flexible here and on the text keeps the stepper shrink-wrapped
+        // where there is room, and lets a long month ellipsize at 320pt rather
+        // than running the row off the side.
+        Flexible(
+          child: InkWell(
+            onTap: () => _pick(context),
+            borderRadius: BorderRadius.circular(99),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 4, 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      monthLabel(month),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  Icon(
+                    Icons.expand_more,
+                    size: 18,
+                    color: AppTheme.faint(context, 0.5),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
