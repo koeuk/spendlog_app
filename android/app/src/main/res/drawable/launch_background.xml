@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Modify this file to customize your launch splash screen -->
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@android:color/white" />
+<!--
+    The launch window, before Flutter has drawn anything.
 
-    <!-- You can insert your own image assets here -->
-    <!-- <item>
-        <bitmap
-            android:gravity="center"
-            android:src="@mipmap/launch_image" />
-    </item> -->
+    A flat colour and no image: the app's mark is the logo an admin uploaded,
+    which is fetched at runtime and cannot be baked in here, and the launcher
+    icon is not it. So this paints the ground SplashScreen paints, and the
+    logo arrives on top of it a frame later rather than replacing a white
+    rectangle.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/launch_background" />
 </layer-list>

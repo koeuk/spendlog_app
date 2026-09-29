@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        The window's colour from the moment the icon is tapped until Flutter's
+        own splash takes over. AppTheme.cream, so the two are the same colour
+        and the handover is invisible — only the logo fading in marks it.
+
+        Kept here rather than in the drawable so the -night copy can differ
+        without a second drawable to keep in step.
+    -->
+    <color name="launch_background">#F7F6F2</color>
+</resources>

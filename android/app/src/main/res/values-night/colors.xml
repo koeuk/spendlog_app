@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AppTheme.darkGround, for the same reason as the light copy. -->
+    <color name="launch_background">#121212</color>
+</resources>
