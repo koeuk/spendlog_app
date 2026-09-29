@@ -96,7 +96,7 @@ GoRouter buildRouter(AuthNotifier auth) {
         path: '/verify-email',
         builder: (context, state) => const VerifyEmailScreen(),
       ),
-      // The signed-in app: five tabs behind one bottom bar, each branch
+      // The signed-in app: four tabs behind one bottom bar, each branch
       // keeping its own state when you switch away and back.
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
@@ -107,9 +107,9 @@ GoRouter buildRouter(AuthNotifier auth) {
               GoRoute(
                 path: '/',
                 builder: (context, state) => const DashboardScreen(),
-                // Income and savings are reached from the dashboard's cards (and
-                // Profile), not from a tab of their own. Nested here so the bar
-                // stays put and back returns to the dashboard.
+                // Income, savings and budgets are reached from the dashboard's
+                // cards and the Menu sheet, not from a tab of their own. Nested
+                // here so the bar stays put and back returns to the dashboard.
                 routes: [
                   GoRoute(
                     path: 'income',
@@ -136,6 +136,10 @@ GoRouter buildRouter(AuthNotifier auth) {
                     ],
                   ),
                   GoRoute(
+                    path: 'budgets',
+                    builder: (context, state) => const BudgetsScreen(),
+                  ),
+                  GoRoute(
                     path: 'borrowings',
                     builder: (context, state) => const BorrowingsScreen(),
                     // One borrowing's page — the ledger, and every action on
@@ -158,14 +162,6 @@ GoRouter buildRouter(AuthNotifier auth) {
               GoRoute(
                 path: '/expenses',
                 builder: (context, state) => const ExpensesScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/budgets',
-                builder: (context, state) => const BudgetsScreen(),
               ),
             ],
           ),

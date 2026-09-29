@@ -46,6 +46,12 @@ const _entries = <_Entry>[
     admin: false,
   ),
   (
+    icon: Icons.pie_chart_outline,
+    label: 'Budgets',
+    path: '/budgets',
+    admin: false,
+  ),
+  (
     icon: Icons.category_outlined,
     label: 'Categories',
     path: '/profile/categories',

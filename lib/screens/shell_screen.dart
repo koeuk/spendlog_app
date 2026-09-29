@@ -8,7 +8,7 @@ import '../theme.dart';
 import '../widgets/glass.dart';
 import 'menu_sheet.dart';
 
-/// The signed-in frame: one bottom bar, five tabs, each tab keeping its own
+/// The signed-in frame: one bottom bar, four tabs, each tab keeping its own
 /// navigation state via the router's indexed stack.
 class ShellScreen extends StatelessWidget {
   const ShellScreen({super.key, required this.navigationShell});
@@ -54,11 +54,6 @@ const _destinations = <_Destination>[
     label: 'Expenses',
   ),
   (
-    icon: Icons.savings_outlined,
-    active: Icons.savings_rounded,
-    label: 'Budgets',
-  ),
-  (
     icon: Icons.insights_outlined,
     active: Icons.insights_rounded,
     label: 'Reports',
@@ -69,7 +64,7 @@ const _destinations = <_Destination>[
 /// The Menu tab: opens a sheet rather than switching branch. It still lights
 /// up while the profile branch beneath it is showing, since every row in the
 /// sheet leads there.
-const _menuIndex = 4;
+const _menuIndex = 3;
 
 const _iconSize = 24.0;
 
@@ -82,7 +77,7 @@ const _barRadius = 28.0;
 /// The tab's own pill, sitting inside the bar's curve.
 const _itemRadius = 22.0;
 
-/// A frosted capsule holding the five tabs, floating clear of all four edges
+/// A frosted capsule holding the four tabs, floating clear of all four edges
 /// with the content passing behind it.
 ///
 /// A capsule rather than the full-width shelf it used to be: the bar is the
@@ -147,7 +142,7 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = AppTheme.accent(context);
     // The active tab takes the accent rather than plain ink: over frosted
-    // glass, weight alone stopped telling the five apart.
+    // glass, weight alone stopped telling them apart.
     final color = selected ? accent : AppTheme.faint(context, 0.50);
 
     return Semantics(

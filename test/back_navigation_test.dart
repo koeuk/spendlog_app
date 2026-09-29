@@ -51,6 +51,7 @@ void main() {
     '/income': '/',
     '/recurring': '/',
     '/savings': '/',
+    '/budgets': '/',
     '/borrowings': '/',
     // Reached from the Settings list.
     '/profile/categories': '/profile',
@@ -66,9 +67,9 @@ void main() {
     '/profile/app/colours': '/profile',
   };
 
-  /// The four in the nav bar, plus Settings: nothing sits beneath them to pop
-  /// to, so a back arrow there would be a button that does nothing.
-  const tabRoots = <String>['/', '/expenses', '/budgets', '/reports'];
+  /// The three in the nav bar, plus Settings: nothing sits beneath them to
+  /// pop to, so a back arrow there would be a button that does nothing.
+  const tabRoots = <String>['/', '/expenses', '/reports'];
 
   Future<GoRouter> boot(WidgetTester tester) async {
     late BuildContext outer;
@@ -97,6 +98,8 @@ void main() {
         email: 'ada@example.com',
         // Admin, so the app-settings rows and Users are routable.
         isAdmin: true,
+        // Verified, or the router holds the session on /verify-email.
+        emailVerifiedAt: '2026-01-01T00:00:00+00:00',
       ),
     );
     await tester.pumpAndSettle();
