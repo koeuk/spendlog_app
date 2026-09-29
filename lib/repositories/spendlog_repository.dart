@@ -27,6 +27,36 @@ class SpendLogRepository {
 
   final ApiClient _client;
 
+  /// Every response wraps its payload in a `data` key — the Laravel resource
+  /// envelope. The three helpers below unwrap it, so each method reads as the
+  /// one call it is rather than repeating the same pair of casts.
+  static Object? _payload(Response<dynamic> response) =>
+      (response.data as Map<String, dynamic>)['data'];
+
+  static Map<String, dynamic> _object(Response<dynamic> response) =>
+      _payload(response) as Map<String, dynamic>;
+
+  static List<T> _list<T>(
+    Response<dynamic> response,
+    T Function(Map<String, dynamic>) parse,
+  ) => (_payload(response) as List<dynamic>)
+      .map((e) => parse(e as Map<String, dynamic>))
+      .toList();
+
+  /// A paginated response. `hasMore` reads the envelope's `links.next`, which
+  /// the server omits on the last page.
+  static ({List<T> items, bool hasMore}) _page<T>(
+    Response<dynamic> response,
+    T Function(Map<String, dynamic>) parse,
+  ) {
+    final links = (response.data as Map<String, dynamic>)['links'];
+
+    return (
+      items: _list(response, parse),
+      hasMore: links is Map<String, dynamic> && links['next'] != null,
+    );
+  }
+
   // ------------------------------------------------------------ dashboard
 
   Future<Dashboard> dashboard({String? month}) async {
@@ -35,9 +65,7 @@ class SpendLogRepository {
       queryParameters: {'budget_month': ?month, 'breakdown_month': ?month},
     );
 
-    return Dashboard.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return Dashboard.fromJson(_object(response));
   }
 
   // ------------------------------------------------------------- expenses
@@ -57,15 +85,7 @@ class SpendLogRepository {
       },
     );
 
-    final data = response.data as Map<String, dynamic>;
-    final items = (data['data'] as List<dynamic>)
-        .map((e) => Expense.fromJson(e as Map<String, dynamic>))
-        .toList();
-
-    return (
-      items: items,
-      hasMore: (data['links'] as Map<String, dynamic>?)?['next'] != null,
-    );
+    return _page(response, Expense.fromJson);
   }
 
   Future<void> createExpense({
@@ -117,18 +137,14 @@ class SpendLogRepository {
   Future<MoneySettings> moneySettings() async {
     final response = await _client.dio.get('/settings/money');
 
-    return MoneySettings.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return MoneySettings.fromJson(_object(response));
   }
 
   /// The account's own currency and colours, with the swatches to offer.
   Future<Preferences> preferences() async {
     final response = await _client.dio.get('/preferences');
 
-    return Preferences.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return Preferences.fromJson(_object(response));
   }
 
   /// Only the keys given are sent, and so only they change; a key given as
@@ -136,9 +152,7 @@ class SpendLogRepository {
   Future<Preferences> updatePreferences(Map<String, String?> fields) async {
     final response = await _client.dio.put('/preferences', data: fields);
 
-    return Preferences.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return Preferences.fromJson(_object(response));
   }
 
   // -------------------------------------------------------------- incomes
@@ -151,16 +165,14 @@ class SpendLogRepository {
   Future<List<String>> incomeSources() async {
     final response = await _client.dio.get('/incomes/sources');
 
-    return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>).cast<String>();
+    return (_payload(response) as List<dynamic>).cast<String>();
   }
 
   /// The same names as rows to manage, with what is filed under each.
   Future<List<IncomeSource>> incomeSourceCatalog() async {
     final response = await _client.dio.get('/income-sources');
 
-    return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>)
-        .map((e) => IncomeSource.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return _list(response, IncomeSource.fromJson);
   }
 
   Future<void> createIncomeSource(String name) =>
@@ -199,15 +211,7 @@ class SpendLogRepository {
       },
     );
 
-    final data = response.data as Map<String, dynamic>;
-    final items = (data['data'] as List<dynamic>)
-        .map((e) => Income.fromJson(e as Map<String, dynamic>))
-        .toList();
-
-    return (
-      items: items,
-      hasMore: (data['links'] as Map<String, dynamic>?)?['next'] != null,
-    );
+    return _page(response, Income.fromJson);
   }
 
   Future<IncomeSummary> incomeSummary(String month) async {
@@ -216,9 +220,7 @@ class SpendLogRepository {
       queryParameters: {'month': month},
     );
 
-    return IncomeSummary.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return IncomeSummary.fromJson(_object(response));
   }
 
   Future<void> createIncome({
@@ -273,17 +275,13 @@ class SpendLogRepository {
       queryParameters: {'kind': ?kind},
     );
 
-    return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>)
-        .map((e) => RecurringRule.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return _list(response, RecurringRule.fromJson);
   }
 
   Future<RecurringRule> recurringRule(String uuid) async {
     final response = await _client.dio.get('/recurring/$uuid');
 
-    return RecurringRule.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return RecurringRule.fromJson(_object(response));
   }
 
   /// [kind] is expense | income and cannot change afterwards. The category
@@ -318,9 +316,7 @@ class SpendLogRepository {
       },
     );
 
-    return RecurringRule.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return RecurringRule.fromJson(_object(response));
   }
 
   Future<RecurringRule> updateRecurringRule(
@@ -352,9 +348,7 @@ class SpendLogRepository {
       },
     );
 
-    return RecurringRule.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return RecurringRule.fromJson(_object(response));
   }
 
   /// The rows a rule already created stay put; only the template goes.
@@ -375,9 +369,7 @@ class SpendLogRepository {
       queryParameters: {'month': month},
     );
 
-    return SavingsSummary.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return SavingsSummary.fromJson(_object(response));
   }
 
   /// The month's deposits and withdrawals, newest first. No pagination — a
@@ -388,9 +380,7 @@ class SpendLogRepository {
       queryParameters: {'month': month},
     );
 
-    return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>)
-        .map((e) => SavingsEntry.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return _list(response, SavingsEntry.fromJson);
   }
 
   /// The stored plan row for the month, or null when none is set. Only the
@@ -402,7 +392,7 @@ class SpendLogRepository {
       queryParameters: {'month': month},
     );
 
-    final data = (response.data as Map<String, dynamic>)['data'];
+    final data = _payload(response);
 
     return data is Map<String, dynamic> ? SavingsPlan.fromJson(data) : null;
   }
@@ -491,18 +481,14 @@ class SpendLogRepository {
       queryParameters: {'status': status, 'per_page': 100},
     );
 
-    return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>)
-        .map((e) => Borrowing.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return _list(response, Borrowing.fromJson);
   }
 
   /// All time — what is still owed, and to which kinds of lender.
   Future<BorrowingSummary> borrowingSummary() async {
     final response = await _client.dio.get('/borrowings/summary');
 
-    return BorrowingSummary.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return BorrowingSummary.fromJson(_object(response));
   }
 
   /// The lender names used before, most frequent first, and the fixed types
@@ -510,18 +496,14 @@ class SpendLogRepository {
   Future<LenderOptions> borrowingLenders() async {
     final response = await _client.dio.get('/borrowings/lenders');
 
-    return LenderOptions.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return LenderOptions.fromJson(_object(response));
   }
 
   /// One borrowing with its ledger of repayments, newest first.
   Future<Borrowing> borrowing(String uuid) async {
     final response = await _client.dio.get('/borrowings/$uuid');
 
-    return Borrowing.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return Borrowing.fromJson(_object(response));
   }
 
   /// [lenderType] is one of [lenderTypes]. [borrowedOn] cannot be in the
@@ -548,9 +530,7 @@ class SpendLogRepository {
       },
     );
 
-    return Borrowing.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return Borrowing.fromJson(_object(response));
   }
 
   /// Takes the full shape. A 422 on `amount` when it would drop below what
@@ -579,9 +559,7 @@ class SpendLogRepository {
       },
     );
 
-    return Borrowing.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return Borrowing.fromJson(_object(response));
   }
 
   /// The repayments against it go with it.
@@ -626,9 +604,7 @@ class SpendLogRepository {
       queryParameters: {'period': period, 'at': ?at},
     );
 
-    return Report.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return Report.fromJson(_object(response));
   }
 
   // ----------------------------------------------------------- categories
@@ -636,9 +612,7 @@ class SpendLogRepository {
   Future<List<Category>> categories() async {
     final response = await _client.dio.get('/categories');
 
-    return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>)
-        .map((e) => Category.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return _list(response, Category.fromJson);
   }
 
   /// Creating and editing need the `categories:write` ability *and* the admin
@@ -680,9 +654,7 @@ class SpendLogRepository {
       queryParameters: {'month': month},
     );
 
-    return BudgetSummary.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return BudgetSummary.fromJson(_object(response));
   }
 
   Future<List<Budget>> budgets(String month) async {
@@ -691,9 +663,7 @@ class SpendLogRepository {
       queryParameters: {'month': month},
     );
 
-    return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>)
-        .map((e) => Budget.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return _list(response, Budget.fromJson);
   }
 
   /// Upserts the (category, month) slot — omit the category for the overall
@@ -724,9 +694,7 @@ class SpendLogRepository {
   Future<Branding> branding() async {
     final response = await _client.dio.get('/branding');
 
-    return Branding.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return Branding.fromJson(_object(response));
   }
 
   // ------------------------------------------------------------- activity
@@ -760,14 +728,7 @@ class SpendLogRepository {
       },
     );
 
-    final data = response.data as Map<String, dynamic>;
-
-    return (
-      items: (data['data'] as List<dynamic>)
-          .map((e) => ActivityEntry.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      hasMore: (data['links'] as Map<String, dynamic>?)?['next'] != null,
-    );
+    return _page(response, ActivityEntry.fromJson);
   }
 
   // ---------------------------------------------------------------- admin
@@ -785,9 +746,7 @@ class SpendLogRepository {
       },
     );
 
-    return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>)
-        .map((e) => AdminUser.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return _list(response, AdminUser.fromJson);
   }
 
   Future<void> saveAdminUser({
@@ -833,26 +792,20 @@ class SpendLogRepository {
       }),
     );
 
-    return AdminUser.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return AdminUser.fromJson(_object(response));
   }
 
   Future<AdminUser> removeAdminUserAvatar(String uuid) async {
     final response = await _client.dio.delete('/admin/users/$uuid/avatar');
 
-    return AdminUser.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return AdminUser.fromJson(_object(response));
   }
 
   /// Published entries for everyone; drafts included for admins.
   Future<List<FaqEntry>> faqs() async {
     final response = await _client.dio.get('/faqs');
 
-    return ((response.data as Map<String, dynamic>)['data'] as List<dynamic>)
-        .map((e) => FaqEntry.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return _list(response, FaqEntry.fromJson);
   }
 
   Future<void> saveFaq({
@@ -874,9 +827,7 @@ class SpendLogRepository {
   Future<BrandingSettings> brandingSettings() async {
     final response = await _client.dio.get('/admin/settings/branding');
 
-    return BrandingSettings.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return BrandingSettings.fromJson(_object(response));
   }
 
   /// Multipart on POST, since it can carry the marks. Each image is replaced
@@ -902,17 +853,13 @@ class SpendLogRepository {
       }),
     );
 
-    return BrandingSettings.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return BrandingSettings.fromJson(_object(response));
   }
 
   Future<ColorSettings> colorSettings() async {
     final response = await _client.dio.get('/admin/settings/colors');
 
-    return ColorSettings.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return ColorSettings.fromJson(_object(response));
   }
 
   Future<ColorSettings> updateColors({
@@ -924,17 +871,13 @@ class SpendLogRepository {
       data: {'button_color': buttonColor, 'body_color': bodyColor},
     );
 
-    return ColorSettings.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return ColorSettings.fromJson(_object(response));
   }
 
   Future<SpendingSettings> spendingSettings() async {
     final response = await _client.dio.get('/admin/settings/spending');
 
-    return SpendingSettings.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return SpendingSettings.fromJson(_object(response));
   }
 
   Future<SpendingSettings> updateSpendingSettings({
@@ -955,9 +898,7 @@ class SpendLogRepository {
       },
     );
 
-    return SpendingSettings.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return SpendingSettings.fromJson(_object(response));
   }
 
   // -------------------------------------------------------------- profile
@@ -976,17 +917,13 @@ class SpendLogRepository {
       }),
     );
 
-    return User.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return User.fromJson(_object(response));
   }
 
   Future<User> removeAvatar() async {
     final response = await _client.dio.delete('/profile/avatar');
 
-    return User.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return User.fromJson(_object(response));
   }
 
   Future<User> updateProfile({
@@ -1007,9 +944,7 @@ class SpendLogRepository {
       },
     );
 
-    return User.fromJson(
-      (response.data as Map<String, dynamic>)['data'] as Map<String, dynamic>,
-    );
+    return User.fromJson(_object(response));
   }
 
   Future<void> changePassword({
