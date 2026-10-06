@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../theme.dart';
 import '../api/api_client.dart';
 import '../repositories/auth_repository.dart';
+import '../widgets/common.dart';
 import 'auth_shell.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
@@ -128,28 +129,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   (v == null || v.trim().isEmpty) ? 'Enter your email.' : null,
             ),
             const SizedBox(height: 14),
-            TextFormField(
+            CodeField(
               controller: _code,
-              decoration: InputDecoration(hintText: tr('6-digit code')),
-              keyboardType: TextInputType.number,
-              maxLength: 6,
-              autofocus: true,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 12,
-              ),
-              buildCounter: (
-                context, {
-                required currentLength,
-                required isFocused,
-                maxLength,
-              }) => null,
               textInputAction: TextInputAction.next,
-              validator: (v) => (v == null || v.trim().length != 6)
-                  ? 'Enter the 6-digit code.'
-                  : null,
             ),
             const SizedBox(height: 14),
             TextFormField(

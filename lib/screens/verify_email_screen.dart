@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../api/api_client.dart';
 import '../l10n/l10n.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/common.dart';
 import 'auth_shell.dart';
 
 /// Where a signed-in account with an unconfirmed email is held: type the
@@ -156,40 +156,15 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextFormField(
+            CodeField(
               controller: _code,
-              decoration: InputDecoration(
-                hintText: tr('6-digit code'),
-                // The server's 422 on `code` (wrong, expired, out of guesses,
-                // too soon to resend) sits right under the field it is about.
-                errorText: _error,
-                errorMaxLines: 3,
-              ),
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              autofillHints: const [AutofillHints.oneTimeCode],
-              maxLength: 6,
-              autofocus: true,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 12,
-              ),
-              buildCounter: (
-                context, {
-                required currentLength,
-                required isFocused,
-                maxLength,
-              }) => null,
-              textInputAction: TextInputAction.done,
+              // The server's 422 on `code` (wrong, expired, out of guesses, too
+              // soon to resend) sits right under the field it is about.
+              errorText: _error,
               onChanged: (_) {
                 if (_error != null) setState(() => _error = null);
               },
-              onFieldSubmitted: (_) => _verify(),
-              validator: (v) => (v == null || v.trim().length != 6)
-                  ? tr('Enter the 6-digit code.')
-                  : null,
+              onSubmitted: (_) => _verify(),
             ),
             const SizedBox(height: 20),
             FilledButton(

@@ -136,6 +136,7 @@ Functional requirements, as built. Use the verb, not just the noun.
 | **Recurring** | Runs rules that write both expenses and income — daily to yearly — firing on create so today's row appears at once. Rows outlive the rule |
 | **Reports** | Reports week, month, year and all-time with a trend chart and category breakdown, and exports to PDF, XLSX or CSV — the whole report or the rows alone |
 | **Activity log** | Records every create, change and delete from model events, with field-level diffs and foreign keys read as names. Filters by subject |
+| **Settings** | Lets each account pick the currency amounts start in — app default, USD or KHR — and set its own button and background colours, for that user only, with a one-tap return to the app's own. Switches language between English and Khmer, and theme between light, dark and system |
 | **Admin** | Manages users and categories, branding and theme colours, the exchange rate and default currency, and the FAQ |
 
 ### 5. Architecture
@@ -204,7 +205,7 @@ Mark every slide with the presenter who owns it, as `Presenter 1` …
 9. Requirements — non-functional
 10. Features, part 1 — Auth, Dashboard, Expenses, Income, Income sources
 11. Features, part 2 — Categories, Budgets, Savings, Borrowing, Recurring
-12. Features, part 3 — Reports, Activity log, Admin
+12. Features, part 3 — Reports, Activity log, Settings, Admin
 
 **Presenter 4 — how it is built**
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../l10n/l10n.dart';
 import '../models/recurring.dart';
@@ -7,6 +8,110 @@ import '../theme.dart';
 import '../utils/category_style.dart';
 import '../utils/format.dart';
 import 'glass.dart';
+
+/// The field a mailed 6-digit code goes in.
+///
+/// Sized to the code rather than to the form. A full-width box is an invitation
+/// to write a sentence, and what this wants is six characters — so it takes
+/// only the width those six need, and sits centred under the line that asked
+/// for them.
+class CodeField extends StatelessWidget {
+  const CodeField({
+    super.key,
+    required this.controller,
+    this.errorText,
+    this.autofocus = true,
+    this.textInputAction = TextInputAction.done,
+    this.onChanged,
+    this.onSubmitted,
+  });
+
+  /// How many digits the server mails.
+  static const length = 6;
+
+  /// Enough air to read the digits as separate slots without them falling into
+  /// pairs.
+  static const _tracking = 10.0;
+
+  /// Six digits, their tracking, and the pill's padding — fixed rather than
+  /// intrinsic, so the box does not breathe as the code is typed.
+  static const _width = 214.0;
+
+  final TextEditingController controller;
+
+  /// A message from the server, shown under the field. The validator's own
+  /// message uses the same slot, so the two read alike.
+  final String? errorText;
+
+  final bool autofocus;
+  final TextInputAction textInputAction;
+  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Center(
+      child: SizedBox(
+        width: _width,
+        child: TextFormField(
+          controller: controller,
+          decoration: InputDecoration(
+            // Six dashes rather than the words "6-digit code": carrying the
+            // digits' own size and tracking, they land exactly where the digits
+            // will, so the empty field shows the six slots it wants. Words here
+            // read badly whichever style they take — the field is centred, so
+            // the caret sits in the middle of them.
+            hintText: '\u2013' * length,
+            hintStyle: TextStyle(
+              color: scheme.onSurface.withValues(alpha: 0.30),
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              letterSpacing: _tracking,
+            ),
+            errorText: errorText,
+            errorMaxLines: 3,
+            // Tracking lands after the last digit as well as between them, so a
+            // centred code sits half a space left of true. The extra left
+            // padding puts it back under the middle of the pill.
+            contentPadding: const EdgeInsets.fromLTRB(
+              16 + _tracking,
+              16,
+              16,
+              16,
+            ),
+          ),
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          autofillHints: const [AutofillHints.oneTimeCode],
+          maxLength: length,
+          autofocus: autofocus,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            letterSpacing: _tracking,
+          ),
+          // The counter tells you nothing the six filling slots do not.
+          buildCounter:
+              (
+                context, {
+                required currentLength,
+                required isFocused,
+                maxLength,
+              }) => null,
+          textInputAction: textInputAction,
+          onChanged: onChanged,
+          onFieldSubmitted: onSubmitted,
+          validator: (v) => (v == null || v.trim().length != length)
+              ? tr('Enter the 6-digit code.')
+              : null,
+        ),
+      ),
+    );
+  }
+}
 
 /// The small pieces every tab shares — eyebrow labels, progress bars, error
 /// states — kept in one place so the tabs read alike.
